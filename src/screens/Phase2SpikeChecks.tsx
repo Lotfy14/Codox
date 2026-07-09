@@ -5,7 +5,17 @@ import { useEffect, useMemo, useState } from 'react'
 import { strToU8, zipSync } from 'fflate'
 import { db } from '../state/db'
 
-const geminiModelId = 'gemini-3.5-flash'
+// Editable in the widget so the key check survives any single model being
+// overloaded — the point is to prove the key + browser call, not a model.
+// Default is the most generous free tier (flash-lite: 15 RPM, 1,000/day).
+const defaultGeminiModel = 'gemini-2.5-flash-lite'
+const geminiModelSuggestions = [
+  'gemini-2.5-flash-lite',
+  'gemini-2.5-flash',
+  'gemini-2.5-pro',
+  'gemini-3-flash',
+  'gemini-3.1-flash-lite',
+]
 const firstSeenKey = 'phase2-spike-first-seen'
 
 type PersistenceState = 'checking' | 'granted' | 'denied' | 'unsupported'
@@ -92,9 +102,9 @@ async function shareDummyZip() {
   return 'Downloaded dummy zip.'
 }
 
-async function testGemini(apiKey: string) {
+async function testGemini(apiKey: string, modelId: string) {
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${geminiModelId}:generateContent?key=${encodeURIComponent(
+    `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${encodeURIComponent(
       apiKey,
     )}`,
     {
@@ -131,6 +141,7 @@ export function Phase2SpikeChecks() {
     useState<PersistenceState>('checking')
   const [firstSeen, setFirstSeen] = useState('Checking...')
   const [apiKey, setApiKey] = useState('')
+  const [modelId, setModelId] = useState(defaultGeminiModel)
   const [geminiStatus, setGeminiStatus] = useState('Not tested.')
   const isNative = useMemo(() => Capacitor.isNativePlatform(), [])
 
@@ -237,11 +248,27 @@ export function Phase2SpikeChecks() {
               value={apiKey}
             />
           </label>
+          <label className="spike-field">
+            <span>Model (switch if one is overloaded)</span>
+            <input
+              autoComplete="off"
+              list="gemini-model-options"
+              onChange={(event) => setModelId(event.target.value)}
+              spellCheck={false}
+              type="text"
+              value={modelId}
+            />
+          </label>
+          <datalist id="gemini-model-options">
+            {geminiModelSuggestions.map((suggestion) => (
+              <option key={suggestion} value={suggestion} />
+            ))}
+          </datalist>
           <button
-            disabled={!apiKey.trim()}
+            disabled={!apiKey.trim() || !modelId.trim()}
             onClick={() => {
-              setGeminiStatus(`Testing ${geminiModelId}...`)
-              void testGemini(apiKey.trim())
+              setGeminiStatus(`Testing ${modelId.trim()}...`)
+              void testGemini(apiKey.trim(), modelId.trim())
                 .then(setGeminiStatus)
                 .catch((error: unknown) => {
                   setGeminiStatus(
@@ -254,7 +281,7 @@ export function Phase2SpikeChecks() {
             Test Gemini
           </button>
           <p className="spike-result">
-            Model: {geminiModelId}. {geminiStatus}
+            Model: {modelId.trim() || '(none)'}. {geminiStatus}
           </p>
         </div>
       </div>
