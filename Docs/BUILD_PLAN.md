@@ -17,11 +17,11 @@ builds on an unproven assumption. Each phase ends with a "Done when" gate.
 
 ## Phase 0 — Repo & ground rules (~half a day)
 
-- [ ] `git init`, first commit with the three context docs
-- [ ] Create `CLAUDE.md` for coding agents: the three hard rules (COST-ZERO,
+- [x] `git init`, first commit with the three context docs
+- [x] Create `CLAUDE.md` for coding agents: the three hard rules (COST-ZERO,
       NEVER-GUESS, minimal-consent), the output contract pointer, "engine
       semantics are pinned — never edit the three prompts," code conventions
-- [ ] `CLAUDE.md` rule — **search before build**: before implementing any
+- [x] `CLAUDE.md` rule — **search before build**: before implementing any
       non-trivial functionality from scratch, dispatch a Claude Sonnet 5
       research subagent (web search) to check whether an existing package
       already does it. Adopt the package if it's maintained, permissively
@@ -29,9 +29,9 @@ builds on an unproven assumption. Each phase ends with a "Done when" gate.
       sized; hand-write code only when the subagent comes back empty.
       Goal: minimize hand-written code. (Trivial glue — a loop, a small
       helper — needs no search)
-- [ ] `.gitignore`, basic folder layout (`src/`, `src-tauri/` later,
+- [x] `.gitignore`, basic folder layout (`src/`, `src-tauri/` later,
       `android/` later)
-- [ ] Create the GitHub repo, push
+- [x] Create the GitHub repo, push
 
 **Done when:** repo exists on GitHub with docs + CLAUDE.md committed.
 
