@@ -5,7 +5,9 @@ Parent plan: [../BUILD_PLAN.md](../BUILD_PLAN.md) Phase 2._
 
 ## Status
 
-**Not yet executed** (plan written 2026-07-09). This plan serves two modes:
+**Partially executed** (agent file-level execution started 2026-07-09).
+Android Studio/JDK 21 is not installed on the local Mac, so APK assembly and
+all owner device/install checks remain pending. This plan serves two modes:
 
 - **EXECUTE mode** (default while no `android/` or `src-tauri/` exists): run
   each task's Steps, then its Acceptance checks.
@@ -16,10 +18,10 @@ Parent plan: [../BUILD_PLAN.md](../BUILD_PLAN.md) Phase 2._
 
 | Question | Answer | Date |
 |---|---|---|
-| Gemini direct browser call works (T2.8) → relay dropped for Phase 4? | _pending_ | |
-| Android device proofs (T2.4): picker / share / persistence | _pending_ | |
-| Windows install proof (T2.6): SmartScreen walk + launch | _pending_ | |
-| Release-link installs on both devices (T2.7) | _pending_ | |
+| Gemini direct browser call works (T2.8) → relay dropped for Phase 4? | _pending owner deployed-origin test; widget uses `gemini-3.5-flash` via `models.generateContent`_ | 2026-07-09 |
+| Android device proofs (T2.4): picker / share / persistence | _pending owner Android Studio/JDK 21 install, signed APK build, and real-phone test_ | 2026-07-09 |
+| Windows install proof (T2.6): SmartScreen walk + launch | _pending owner push, Actions run, and Windows machine/VM test_ | 2026-07-09 |
+| Release-link installs on both devices (T2.7) | _pending owner APK + EXE artifacts and prerelease dry run_ | 2026-07-09 |
 
 ## Package & tooling decisions (search-before-build, researched 2026-07-09)
 

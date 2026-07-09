@@ -1,3 +1,5 @@
+import { Phase2SpikeChecks } from './Phase2SpikeChecks'
+
 export function Export() {
   return (
     <section className="screen" aria-labelledby="export-heading">
@@ -6,6 +8,7 @@ export function Export() {
         Export early and often so browser storage is never the only holder of a
         user's converted work.
       </p>
+      <Phase2SpikeChecks />
     </section>
   )
 }

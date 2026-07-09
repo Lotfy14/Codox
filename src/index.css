@@ -111,3 +111,80 @@ a:focus-visible {
   margin: 0;
   color: #4b5563;
 }
+
+.phase-2-spike {
+  margin-top: 32px;
+  border-top: 1px solid #dbe3ee;
+  padding-top: 24px;
+}
+
+.phase-2-spike-header {
+  margin-bottom: 16px;
+}
+
+.phase-2-spike-label {
+  margin: 0 0 4px;
+  color: #8a4b0f;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.phase-2-spike h2 {
+  margin: 0;
+  color: #17202a;
+  font-size: 1.35rem;
+}
+
+.spike-grid {
+  display: grid;
+  gap: 16px;
+  max-width: 760px;
+}
+
+.spike-field {
+  display: grid;
+  gap: 6px;
+  color: #17202a;
+  font-weight: 650;
+}
+
+.spike-field input {
+  min-height: 44px;
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: #ffffff;
+  color: #17202a;
+}
+
+.spike-action,
+.spike-gemini,
+.spike-readout {
+  display: grid;
+  gap: 10px;
+}
+
+.spike-action button,
+.spike-gemini button {
+  min-height: 44px;
+  width: fit-content;
+  border: 1px solid #17202a;
+  border-radius: 6px;
+  padding: 8px 14px;
+  background: #17202a;
+  color: #ffffff;
+  font-weight: 650;
+}
+
+.spike-gemini button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.spike-result,
+.spike-readout p {
+  overflow-wrap: anywhere;
+  color: #4b5563;
+}
