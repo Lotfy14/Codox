@@ -24,7 +24,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Build Tauri NSIS installer
-        uses: tauri-apps/tauri-action@action-v1
+        uses: tauri-apps/tauri-action@v1.0.0
 
       - name: Upload NSIS installer
         uses: actions/upload-artifact@v4
