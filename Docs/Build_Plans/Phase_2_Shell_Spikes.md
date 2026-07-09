@@ -18,9 +18,9 @@ all owner device/install checks remain pending. This plan serves two modes:
 
 | Question | Answer | Date |
 |---|---|---|
-| Gemini direct browser call works (T2.8) → relay dropped for Phase 4? | _pending owner deployed-origin test; widget uses `gemini-3.5-flash` via `models.generateContent`_ | 2026-07-09 |
-| Android device proofs (T2.4): picker / share / persistence | _pending owner Android Studio/JDK 21 install, signed APK build, and real-phone test_ | 2026-07-09 |
-| Windows install proof (T2.6): SmartScreen walk + launch | _pending owner push, Actions run, and Windows machine/VM test_ | 2026-07-09 |
+| Gemini direct browser call works (T2.8) → relay dropped for Phase 4? | **YES — HTTP 200 from the deployed origin (`codox.eriksonlegend1.workers.dev`), model `gemini-2.5-flash` via `models.generateContent`, response body returned model text. Direct browser→Gemini call works; relay dropped for Phase 4.** Widget now exposes an editable model picker (default `gemini-2.5-flash-lite`). Re-verify against Auth-type keys ~Sept 2026 (Owner flag 2). | 2026-07-09 |
+| Android device proofs (T2.4): picker / share / persistence | Signed release APK built locally 2026-07-09 (JDK 21 + Android cmdline-tools installed via Homebrew, keystore in owner custody at `~/Keys/codox-release.keystore`). _Real-phone picker/share/persistence test still pending owner._ | 2026-07-09 |
+| Windows install proof (T2.6): SmartScreen walk + launch | NSIS `.exe` built green on GitHub Actions 2026-07-09 (`Codox_0.1.0_x64-setup.exe`, after fixing the workflow's `tauri-action` tag to `@v1.0.0`). _SmartScreen walk + launch on a Windows machine still pending owner._ | 2026-07-09 |
 | Release-link installs on both devices (T2.7) | _pending owner APK + EXE artifacts and prerelease dry run_ | 2026-07-09 |
 
 ## Package & tooling decisions (search-before-build, researched 2026-07-09)
