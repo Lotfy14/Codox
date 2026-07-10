@@ -117,33 +117,53 @@ first card marked "used first".
 first-run; denser row layouts inside History and Review where users
 scan many items.
 
+**Surface treatment (owner ruling 2026-07-10): Triviadox
+glassmorphism.** Cards and inputs use Triviadox's glass specs as-is
+(see [TRIVIADOX_PALETTE.md](TRIVIADOX_PALETTE.md)) so Codox visually
+matches Triviadox — chosen over solid soft cards, GPU cost noted and
+accepted. Engineering guardrails (solid fallback, no per-row glass in
+dense lists) live in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
+
+## Design system build (owner-approved, 2026-07-10)
+
+The design system is built ahead of the Phase 3 mockups at the fullest
+scope (owner choice): a canonical `DESIGN_SYSTEM.md` spec, real CSS
+tokens in `src/`, **and** the reusable React component library. All
+design assets and the step-by-step AI plan live in `design-system/`
+(this folder). See [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
+
 ## What is NOT decided yet (simple version — for the owner)
 
 Think of the app like a house we are building. The rooms and furniture
 are all decided above. These things are still missing, and here is who
 brings each one:
 
-1. **The colors** 🎨 — *waiting on you.*
-   The app will use Triviadox's colors, and you don't have them yet.
-   Until then, I paint everything in temporary "stand-in" colors.
-   **What you do:** when you get the Triviadox colors (even a simple
-   list like "main color is #2E7D32"), just paste them to me. I will
-   repaint the whole app and make matching light-mode and dark-mode
-   versions myself — you don't need to prepare anything else.
+1. **The colors** 🎨 — *received (2026-07-10).* The owner delivered
+   the Triviadox palette (extracted from Triviadox's
+   DESIGN_SYSTEM.md): burgundy primary `#800020` light /
+   `#af2b3e` dark, parchment `#fff8f7` light surface, midnight
+   `#011a36` dark surface, amber `#f59e0b` warnings, emerald
+   `#10b981` success, plus glassmorphism specs. I repaint the app
+   with these and build matching light/dark modes when Phase 3 UI
+   work starts.
 
-2. **The logo** 🖼️ — *yours completely, I never touch it.*
-   You said it will look like Triviadox's logo with a Codox identity
-   on top. **What you do:** when it exists, send me the image file
-   (the bigger/sharper the better — one big square PNG or SVG is
-   perfect). I will shrink and place it everywhere it's needed: the
-   app icon on phones, the Windows icon, the browser tab, inside the
-   app.
+2. **The logo** 🖼️ — *done (2026-07-10).* The owner picked the
+   "Neon Scan" concept: a glowing scanner beam sweeping a white
+   document on a midnight-blue square — gray text above the beam,
+   colorful structured cells below, a finished row dropping out.
+   Files: `design-system/assets/codox-logo.svg` (master, infinitely
+   scalable) and `codox-logo.png` (1024×1024) beside it. I generate all
+   icon sizes (phone, Windows, browser tab) from the SVG when the
+   shells need them. Note: the logo deliberately does **not** use
+   the Triviadox burgundy palette — owner chose a free-style
+   direction over letterform/palette-matched concepts.
 
-3. **The letters (font)** ✍️ — *waiting on the same Triviadox kit.*
-   If Triviadox uses a specific font, tell me its name and I'll use it
-   (if it's free). If you never find out, no problem — I'll pick a
-   clean free font and that's the end of it. Nothing for you to do
-   unless you learn the font's name.
+3. **The letters (font)** ✍️ — *resolved (2026-07-10).* The Triviadox
+   kit arrived with its typography: Plus Jakarta Sans (headers 900,
+   labels 800 + wide tracking) and Inter (body) — both free (OFL
+   license, COST-ZERO safe). Codox is English-only UI, so Triviadox's
+   Arabic font (Tajawal) is not needed. Fonts will be self-hosted
+   (bundled, no CDN) so the PWA works offline. Nothing for you to do.
 
 4. **The exact words in error messages** 💬 — *my job, then your
    check.* I will write every error a tutor can see in plain English
