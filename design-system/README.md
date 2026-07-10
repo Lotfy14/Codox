@@ -8,9 +8,9 @@ folder. Created 2026-07-10.
 | File | What it is |
 |------|-----------|
 | [PHASE3_DESIGN_DECISIONS.md](PHASE3_DESIGN_DECISIONS.md) | Every owner-approved UX decision: layout, navigation, progress/motion rules, theming, per-screen behavior. The requirements source. |
-| [TRIVIADOX_PALETTE.md](TRIVIADOX_PALETTE.md) | The exact colors, glassmorphism specs, and typography, extracted unmodified from Triviadox's design system. The values source. |
+| [TRIVIADOX_PALETTE.md](TRIVIADOX_PALETTE.md) | The exact colors, glassmorphism specs, typography, and recovered geometry from Triviadox, with Codox implementation notes. The values source. |
 | [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) | Step-by-step plan for an AI agent to build the design system: tokens, fonts, theme controller, component library, gallery — ending with the creation of `DESIGN_SYSTEM.md`. |
-| `DESIGN_SYSTEM.md` | **Not yet written** — the canonical spec of the system as built. Created as the final step of the implementation plan. |
+| [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) | The canonical spec of the system as built: tokens, typography, surfaces, motion, component APIs, theming, screen rules, and provenance. |
 | [assets/codox-logo.svg](assets/codox-logo.svg) | Master logo ("Neon Scan"), infinitely scalable. Deliberately does **not** use the UI palette. |
 | [assets/codox-logo.png](assets/codox-logo.png) | 1024×1024 raster export of the logo, for stores/shells. |
 

@@ -30,5 +30,24 @@ logo (`assets/codox-logo.svg`) intentionally does not use this palette.
 - `.glass-panel`: `background: rgba(255, 255, 255, 0.1)`; `backdrop-filter: blur(40px) saturate(160%)`; `box-shadow: 0 15px 45px -12px rgba(0, 0, 0, 0.15)`
 
 ## Typography
-- English: Plus Jakarta Sans (headers 900, labels 800 + tracking-widest), Inter (body)
+- English: Plus Jakarta Sans (source calls for headers 900, labels 800 +
+  tracking-widest), Inter (body). The shipped Plus Jakarta Sans files top out
+  at a genuine 800 weight, so Codox implements headings and labels at 800
+  rather than synthesizing a nonexistent 900.
 - Arabic: Tajawal
+
+## Component Geometry
+
+These values are also present in the Triviadox source and were omitted from
+the first palette summary:
+
+- Main dashboard containers: 32px or 40px radius
+- Action buttons: 28px radius
+- Selection cards: 20px radius
+- Inputs and chips: 12px to 16px radius
+- Responsive layout gaps: 32px desktop, 16px mobile
+- Minimum interactive target: 44×44px
+
+Triviadox's decorative starfield, twinkle, pulse, and hover-scale effects are
+not part of this palette transfer. Codox follows its separately approved
+subtle, purposeful motion rule.

@@ -76,7 +76,7 @@ a GitHub Release link on real devices, and the Gemini answer is known.
 Design before feature code. Each screen's *intent* from CODOX_CONTEXT.md §6
 must survive; the surface is free.
 
-- [ ] Pick a component approach (headless primitives — Radix/React Aria — plus
+- [x] Pick a component approach (headless primitives — Radix/React Aria — plus
       a small design system: colors, type, spacing)
 - [ ] Clickable mockups of all five screens (desktop + phone widths):
       - Setup: **one** key first, "add more keys" deferred; live validation
@@ -86,8 +86,8 @@ must survive; the surface is free.
         designed as a calm state, not an error
       - Review: flagged row + source crop side-by-side, full keyboard flow
         (next flag / pick answer / confirm without touching the mouse)
-      - Export: loud, early, automatic-on-completion; share sheet on mobile,
-        zip download on desktop
+      - Export: prominent manual export with no auto-download; share sheet on
+        mobile, zip download on desktop
 - [ ] Error-language pass: every failure a tutor can hit, written in plain
       English ("provider unreachable, trying the next one" ≠ "your key is
       wrong")
@@ -176,9 +176,9 @@ Where the product quality lives.
 - [ ] Export: fflate streaming zip; `navigator.share({files})` on
       mobile (files-only payload — iOS quirk), download on desktop;
       Capacitor share plugin inside the `.apk`
-- [ ] **Export-early**: auto-export (or loud nudge) the moment review
-      completes; visible "your work is not saved anywhere else" state before
-      that
+- [ ] **Export-early**: keep the primary manual export action prominent when
+      review completes; no auto-download or eviction nags beyond the quiet
+      "not exported yet" badge
 - [ ] Bundle correctness: unzip → folder moves anywhere → image paths still
       resolve; batch of 3 PDFs → 3 namespaced bundles
 - [ ] Run the hard gold inputs end-to-end (scanned IM ×2, derm
