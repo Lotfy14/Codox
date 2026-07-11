@@ -24,11 +24,11 @@ and are all visible inside the clickable mockups (`npm run dev`, then open
 | Empty field | Paste a key first. | Shortest possible nudge. |
 | Checking | Checking your key… | Present tense, something is happening. |
 | Key works | Key works. You are ready to convert. | Confirms and points forward. |
-| Wrong key | Groq rejected this key. Check that you copied the whole key, or make a new one on Groq's website. | Names the provider, gives the two realistic fixes (partial paste is the #1 cause). |
-| Can't reach | Can't reach Groq right now. This is not about your key — the service may be down or blocked on this network. During a run, Codox simply tries your next provider. | Explicitly separates from "wrong key" (the #1 misdiagnosis risk), and reassures the chain handles it. |
-| Quota used up | This Groq key has used up its free daily allowance. Nothing is broken — it rests until Groq resets the limit, then works again on its own. | "Allowance / rests" instead of "quota exceeded / error". Says it self-heals. |
+| Wrong key | Gemini rejected this key. Check that you copied the whole key, or make a new one on Google's API key page. | Names the only provider and gives the two realistic fixes. |
+| Can't reach | Can't reach Gemini right now. This is not about your key — Gemini may be down or blocked on this network. Your progress is saved; Codox will try again when the connection returns. | Explicitly separates reachability from a wrong key without promising another provider. |
+| Quota used up | Your Gemini key has used its available free allowance. Nothing is broken — your progress is saved, and the run resumes when Gemini allows requests again. | Explains that this user's own quota is paused and avoids implying pooled capacity. |
 | Status chip words | Working · Wrong key · Can't reach · Resting until quota returns · Checking · Not checked | Chip-length versions of the same distinctions (built into the design system). |
-| Failover note | Codox tries your providers in this order. If one is resting or unreachable mid-run, the next takes over — the run keeps going. | Explains why order matters, in one line. |
+| Key ownership note | Codox uses only your Gemini key. Requests count against your Gemini quota and never another user's. | States the quota-isolation guarantee directly. |
 
 ## Progress (during a run)
 
@@ -36,8 +36,8 @@ and are all visible inside the clickable mockups (`npm run dev`, then open
 |---|---|---|
 | Quota pause | Paused — resumes when quota allows. Your progress is saved; there is nothing you need to do. | The owner-approved calm-pause line, plus the two reassurances. |
 | Offline | No internet connection. The run picks up exactly where it left off when you are back online. | "Picks up where it left off" kills the fear of restarting. |
-| Provider switch | Groq is unavailable — continuing with OpenRouter. The run keeps going. | Informational, not alarming; shown briefly, run continues. |
-| All providers resting | All your providers are resting until their free quota returns. The run resumes on its own — you can close Codox and come back later. | Permission to walk away — the calm version of the worst quota case. |
+| Gemini unreachable | Gemini is unavailable right now. Your progress is saved, and the run resumes when Gemini is reachable again. | There is no fallback provider; the truthful state is a safe pause. |
+| Gemini quota pause | Your Gemini allowance is resting. The run resumes when Gemini allows requests again — you can close Codox and come back later. | Permission to walk away without implying another key or provider will be used. |
 | One bad page | Page 7 of bio_exam.pdf could not be read reliably. It is flagged for your review — the rest of the run continues. | One bad page never kills a job; says so. |
 | Wrong declaration | The answers in maths_mock.pdf do not match what you declared. To be safe, every question from this file is flagged for your review — Codox never guesses. | The degrade-to-all-flagged path, framed as safety, not failure. |
 | Finished, flags | Done. 4 answers need your eyes — everything else is ready. | "Need your eyes" instead of "errors" — these are not mistakes. |
@@ -79,6 +79,6 @@ and are all visible inside the clickable mockups (`npm run dev`, then open
 
 | Situation | Exact words | Why phrased this way |
 |---|---|---|
-| Welcome | Codox turns exam PDFs into ready-to-import Triviadox question sets. It runs entirely on this device — you bring one free AI key. | The product in two sentences. |
-| One key first | One key is enough to start. You can add more providers later in the Keys tab for a bigger daily allowance. | The BLIND-SPOTS #12 fix: exactly one key up front. |
-| Privacy notice | Exam pages go straight from this device to the AI provider, under your key. Your key never leaves this device. | The owner-approved one-line minimal notice. |
+| Welcome | Codox turns exam PDFs into ready-to-import Triviadox question sets. It runs on this device — you bring your own Gemini API key. | The product in two sentences, with the only supported provider named. |
+| Gemini key | Codox uses only this Gemini key. Every request counts against your own Gemini quota, never another user's. | States the quota-isolation rule directly; there is no add-provider promise. |
+| Privacy notice | Exam pages go straight from this device to Gemini, under your key. Your key never leaves this device. | The owner-approved one-line minimal notice, naming the only provider. |

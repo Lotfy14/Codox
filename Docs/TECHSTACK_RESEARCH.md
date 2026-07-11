@@ -7,6 +7,11 @@ Android, iPhone, and web are ALL must-have at launch; one codebase with
 identical behavior everywhere (no per-platform OS-OCR path); Android must ship
 as a real `.apk` file, not just an installable link._
 
+_Provider update 2026-07-11: the multi-provider recommendations below are
+historical research only. The binding roadmap is Gemini-only: one
+user-supplied Gemini key per installation, with no shared quota, fallback key,
+or provider chain. See `CODOX_CONTEXT.md` §7 and `PHASE4_PLAN.md`._
+
 ---
 
 ## The recommended stack (one table)
@@ -21,12 +26,13 @@ as a real `.apk` file, not just an installable link._
 | PDF text layer | **pdf.js `getTextContent()`** (alongside pdfium) | new hybrid detail | Medium |
 | Zip export | **fflate** (streaming) | same | High |
 | Figure cropping | `createImageBitmap(sx,sy,sw,sh)` → small canvas → blob | new detail | Medium-High |
-| Provider chain | **Groq → Gemini (direct!) → OpenRouter `:free` → GitHub Models → Mistral** | changed (Gemini may not need the relay; two new providers) | High on CORS, Medium on quota numbers |
+| AI provider | **Google Gemini only, using the current user's key** | supersedes the researched multi-provider chain | Binding owner decision; current endpoint/model facts still require verification |
 | Relay | **Probably delete it** (pending one browser smoke test of Gemini) | changed | Medium until smoke-tested |
 
 **In one sentence:** the old plan survives almost intact — the only structural
-changes are *Capacitor instead of Tauri on Android*, and *Gemini may now work
-without the relay*, which would make Codox 100% serverless.
+changes are *Capacitor instead of Tauri on Android* and direct Gemini calls,
+which keep Codox serverless. Multi-provider sections below are retained only
+as historical research.
 
 ---
 

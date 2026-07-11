@@ -67,7 +67,7 @@ published to app stores.
 |---|---|
 | **COST-ZERO** | $0 recurring cost to the developer. Free hosting, no stores, no signing certificates, no paid dependencies, no developer-paid API usage. Anything with a price must be flagged to the human and worked around by default. |
 | **NEVER-GUESS** | Never emit a guessed `correct_index`. Any ambiguity → blank value + `needs_review` flag. A confidently wrong medical answer shown to a student is strictly worse than a blank one. This rule has teeth at every layer: prompts forbid it, deterministic code enforces it, and the audit gate checks it. |
-| **PRIVACY-TOLD** | The user's PDF pages go **directly from their device to the LLM provider** using **their own API key** — never through a Codox-operated server. The consent notice states plainly that full page images are sent to the provider and that free tiers may train on the data. Keys are stored only on the user's device. |
+| **PRIVACY-TOLD** | The user's PDF pages go **directly from their device to Google Gemini** using **their own Gemini API key** — never through a Codox-operated server. The consent notice states plainly that full page images are sent to Gemini and that its free tier may train on the data. The one key is stored only on that user's device, and every request consumes only that user's Gemini quota. |
 
 Derived invariants that must also survive:
 
@@ -130,12 +130,12 @@ stays in CodoxSandbox).
 The v2 PRD specified **five screens**. Each carries a reason; a redesign may
 change the surface but must keep the reason satisfied:
 
-1. **Setup (first run)** — paste ≥1 free API key; deep link to each provider's
-   key page; paste-and-validate with a live test call; green check or
+1. **Setup (first run)** — paste exactly one Gemini API key; deep link to
+   Google's key page; paste-and-validate with a live test call; green check or
    plain-English failure. *Intent:* key onboarding is the #1 drop-off risk for
-   this audience; a known refinement (BLIND-SPOTS #12) says ask for **exactly
-   one key first** and defer "add more keys for higher limits" to an optional
-   later step — never four equal-weight fields on first run.
+   this audience. Ask for exactly one user-supplied Gemini key. The user may
+   replace or remove it later, but Codox does not accept additional provider
+   keys or provide any shared key.
 2. **Upload** — one drop zone (1..n PDFs) plus a single declaration question:
    *Where are the answers?* (inside the PDF / in a separate file → second drop
    zone appears / there are no answers). *Intent:* the declaration routes the
@@ -165,35 +165,39 @@ be a real-DOM, keyboard-navigable UI (Flutter-web was rejected partly on this).
 
 ## 7. Provider & key model (facts + prior design)
 
-**Design:** each user brings their own free-tier API key(s). Multiple
-providers supported; the engine walks a provider chain and **hot-swaps on
-quota/failure mid-PDF**; more keys = more combined free daily quota. Adapters
-are thin — the candidate providers are all roughly OpenAI-compatible.
-Latency-insensitive batch work may use provider batch APIs where free.
+**Current design (owner decision 2026-07-11):** each user brings exactly one
+Google Gemini API key. Codox has no shared key pool, bundled key, developer
+key, fallback key, or second provider. Every request from an installation uses
+only the key entered on that installation. This is a quota-isolation rule as
+well as an on-device-storage rule: one user can never consume requests from
+another user's Gemini quota through Codox. A user may replace or remove their
+key, but cannot add multiple active keys for quota aggregation.
 
-**Measured facts (2026-07-08, from browser context — re-verify if the new
-stack is not browser-based):**
+When that user's Gemini quota is exhausted, the job pauses and resumes when
+Gemini allows requests again. Codox does not switch to another key or provider.
+
+**Historical measured facts (2026-07-08, from browser context):** these
+measurements explain earlier plans but do not override the current Gemini-only
+decision above.
 
 - **Gemini's API is CORS-blocked for direct browser calls** (verified). In a
   browser architecture it participates only via a stateless free-tier
   Cloudflare Worker relay (pass-through, no logging/storage) or drops out.
 - **Groq and OpenRouter (`:free` models) accept direct browser calls.**
 - **NVIDIA NIM browser CORS is unverified.**
-- Prior chain order: Groq → OpenRouter `:free` → NVIDIA NIM → Gemini
-  (relay-only). CORS policy is the provider's choice and can change silently;
-  the chain must re-verify reachability at startup and the UI must distinguish
-  "provider unreachable, trying next" from "your key is wrong" — otherwise
-  every CORS breakage is misdiagnosed as a key problem (BLIND-SPOTS #9).
+- Prior chain order was Groq → OpenRouter `:free` → NVIDIA NIM → Gemini
+  (relay-only). That chain is superseded. CORS can still change silently, so
+  the Gemini-only client must probe reachability and distinguish "Gemini is
+  unreachable" from "your key is wrong."
 - A native (non-browser) runtime is not CORS-bound at all — if the new stack
   has a native network layer, the Gemini relay question disappears. This is a
   real lever in the stack re-decision.
 
-**Update (2026-07-11) — provider set narrowed + Gemini re-measured:** the
-provider chain is now **Google Gemini + NVIDIA NIM only** (owner decision);
-Groq / OpenRouter `:free` / GitHub Models / Mistral are dropped as downgrades
-and clutter versus these two, which carry many multimodal models on generous
-free tiers. Gemini is the workhorse, NVIDIA the backup (see §11 bench caveat).
-The Phase-2 spike measured `gemini-3.5-flash` returning **HTTP 200** from
+**Update (2026-07-11) — Gemini only + Gemini re-measured:** Google Gemini is
+the only active provider. NVIDIA NIM, Groq, OpenRouter, GitHub Models, Mistral,
+and all multi-provider failover behavior are out of scope unless the owner
+explicitly revisits this decision. The Phase-2 spike measured
+`gemini-3.5-flash` returning **HTTP 200** from
 inside the Tauri (WebView2) and Capacitor shells — direct calls work there, so
 the relay is dropped, superseding the 2026-07-08 CORS-blocked measurement.
 Re-confirm one call from the deployed browser PWA before deleting the relay
@@ -246,7 +250,7 @@ for the new repo. It is the benchmark to beat, with each choice's rationale:
 | PWA (web + iOS) | manifest + service worker | browser-installable where Apple blocks file installs; offline review/export |
 | PDF render/text/crop | pdfium-wasm | same engine class as v1's pypdfium2, so rendering behavior carries over |
 | Zip export | client-side archiver (fflate-class) | MIT, no server |
-| Multimodal | user-keyed provider chain (§7) | free tiers, COST-ZERO |
+| Multimodal | user-supplied Gemini key (§7) | each user consumes only their own free-tier quota |
 | Hosting | Cloudflare Pages | free, unlimited bandwidth |
 | Relay (only if kept) | Cloudflare Worker free tier, stateless | $0; only exists because of Gemini's browser CORS block |
 
@@ -260,10 +264,11 @@ Known caveats attached to that decision (must be answered by any successor):
   §8), **Electron-class bundles** implicitly by the thin-shell requirement,
   and v1's **Python desktop app** (superseded; a 300–600 MB Python+OCR bundle
   was itself a documented adoption barrier).
-- The single most decision-relevant unmeasured number: **LLM calls / quota
-  consumed per real 25-page scan**, and whether 2–3 free keys' combined quota
-  survives it (BLIND-SPOTS #8, rated the one number that could force a
-  redesign). Measure it before building deep, whatever the stack.
+- The single most decision-relevant unmeasured number: **Gemini calls / quota
+  consumed per real 25-page scan under one user's key** (BLIND-SPOTS #8,
+  rated the one number that could force a redesign). Measure it before
+  building deep, whatever the stack. Never solve quota pressure by pooling
+  keys between users.
 
 Prior phasing (P0 docs → P1 skeleton+shells spike → P2 easy screens + pure
 logic ports → P3 PDF+AI reader end-to-end → P4 hard inputs + review screen)
@@ -321,7 +326,8 @@ in around them":
 
 - **#8 Quota burn (High):** LLM-only reading sends every scanned page to the
   cloud; quota-per-25-page-scan is unmeasured. Mitigations in design:
-  declaration-routed smaller prompts, multi-key failover, coarse batch calls.
+  declaration-routed smaller prompts and coarse batch calls. Quota is never
+  pooled across users or keys.
   Measure early and publish the number.
 - **#9 CORS drift (Medium):** provider CORS can change silently; needs
   startup re-verification + an error UX distinguishing provider-down from
@@ -331,8 +337,8 @@ in around them":
 - **#11 Tauri Android maturity (Medium):** hard P1 gate — produce a real
   clean `.apk` before anything depends on it; fallback named (Capacitor for
   Android only).
-- **#12 Multi-key onboarding (Medium):** first run asks for exactly one key;
-  more keys are a deferred optional step.
+- ~~**#12 Multi-key onboarding (Medium)**~~ — **RESOLVED 2026-07-11:** Codox
+  accepts exactly one user-supplied Gemini key. There is no multi-key flow.
 - **#13 Zip on phones (Medium):** prefer the OS share sheet on mobile; zip is
   the fallback, not the mobile default.
 
@@ -341,8 +347,8 @@ in around them":
 - ~~**Gemini: relay vs drop**~~ — **RESOLVED 2026-07-11:** direct calls work in
   the shells (HTTP 200); relay dropped. One re-confirm left: the deployed
   browser PWA path.
-- **NVIDIA NIM CORS** — verify in Phase-4 Step-1 research (now an active
-  provider, so this is no longer "when relevant" — it is required).
+- ~~**NVIDIA NIM CORS**~~ — **REMOVED 2026-07-11:** NVIDIA is not an active
+  provider. Its historical benchmark remains in §10 for context only.
 - **Flag-rate ceiling** — set from the first real measurement on hard inputs,
   not guessed; a nonzero rate is *correct* (genuinely ambiguous marks should
   flag), the target is "low enough to still feel automatic."

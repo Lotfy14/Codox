@@ -16,11 +16,19 @@ for why each stack piece was chosen.
    ambiguity → blank value + `needs_review` flag. Enforced in deterministic
    code and the audit gate, not just prompts. A confidently wrong answer is
    strictly worse than a blank one.
-3. **Keys stay on-device** — users bring their own API keys; calls go
-   directly from their device to the provider. No Codox-operated server ever
+3. **The key stays on-device** — each user brings their own Gemini API key;
+   calls go directly from their device to Gemini. No Codox-operated server ever
    sees a key or a page. First run shows a one-line notice that pages are
-   sent to the provider under the user's key (owner chose minimal notice —
+   sent to Gemini under the user's key (owner chose minimal notice —
    users are a known group working with public documents).
+
+## Provider and quota rule (non-negotiable)
+
+- **Gemini only.** Each installation stores exactly one user-supplied Google
+  Gemini API key. Codox has no shared, bundled, developer, fallback, or second
+  provider key. Every cloud request uses only the key entered on that
+  installation, so one user can never consume another user's Gemini quota.
+  The user may replace or remove the key, but cannot pool multiple keys.
 
 ## Engine semantics are pinned
 

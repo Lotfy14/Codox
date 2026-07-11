@@ -520,6 +520,11 @@ library; Setup, Upload, Progress, Review, and Export remain placeholders.
 
 ### `ProviderOrderList`
 
+> Historical Phase 3 component. The Gemini-only owner decision of 2026-07-11
+> removes provider ordering from the production roadmap. Do not use this
+> component for the real API-key flow unless the owner explicitly restores
+> multi-provider support.
+
 - **Props:** required `items` and `onReorder`; optional `ariaLabel` (default
   “Provider failover order”), `className`, and `renderDetails`. Each item has
   `id`, `name`, optional `description`, and optional `StatusChip` status.

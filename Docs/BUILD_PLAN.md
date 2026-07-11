@@ -95,7 +95,7 @@ must survive; the surface is free.
 - [x] Clickable mockups of all five screens (desktop + phone widths) —
       dev-only prototype at `/?mockups=1` (`src/mockups/`), composed from the
       Phase-3A component library on fake data:
-      - Setup: **one** key first, "add more keys" deferred; live validation
+      - Setup: exactly one user-supplied Gemini key; live validation
       - Upload: drop zone + the one declaration question (answers inside /
         separate file / none); second drop zone appears conditionally
       - Progress: per-file bars, "paused — resumes when quota allows" state
@@ -105,8 +105,8 @@ must survive; the surface is free.
       - Export: prominent manual export with no auto-download; share sheet on
         mobile, zip download on desktop
 - [x] Error-language pass: every failure a tutor can hit, written in plain
-      English ("provider unreachable, trying the next one" ≠ "your key is
-      wrong") — see `design-system/ERROR_LANGUAGE.md`; all strings visible
+      English ("Gemini is unreachable" ≠ "your key is wrong") — see
+      `design-system/ERROR_LANGUAGE.md`; all strings visible
       in the mockups (Help tab shows the full catalog)
 - [x] One-screen relayout (2026-07-11): mockups restructured to the owner's
       one-screen design — left workspace nav (Convert/History + storage),
@@ -117,24 +117,23 @@ must survive; the surface is free.
 
 **Done when:** owner has clicked through the five screens and approved them.
 
-## Phase 4 — Setup screen + provider layer (~3–4 days)
+## Phase 4 — Setup screen + Gemini integration (~3–4 days)
 
 The first real feature, because everything downstream needs a working key.
 Detailed AI handoff plan: [PHASE4_PLAN.md](PHASE4_PLAN.md).
 
-- [ ] Key storage on-device (per provider, never leaves the device)
-- [ ] Provider adapters (OpenAI-compatible, thin): **Google Gemini + NVIDIA
-      NIM only** — behind one interface. (Owner decision 2026-07-11: only these
-      two carry many multimodal models on generous free tiers; Groq /
-      OpenRouter `:free` / GitHub Models / Mistral are a downgrade and clutter,
-      dropped. Gemini is the workhorse; NVIDIA is the backup — the 2026-07-04
-      bench in CODOX_CONTEXT §11 showed free NVIDIA models weak on the hard
-      corpus. Verify NVIDIA's free-tier terms in Phase-4 research before
-      relying on it.)
-- [ ] Chain walker: ordered providers, hot-swap on quota/429/failure
-      mid-job; startup reachability probe per provider
+- [ ] Store exactly one user-supplied Gemini API key on-device
+- [ ] **Per-user quota isolation:** Codox has no shared, bundled, developer, or
+      fallback API key. Every Gemini request from an installation uses only
+      the key entered on that installation, so one user can never consume
+      another user's Gemini quota.
+- [ ] Thin Google Gemini adapter behind the engine-facing provider interface;
+      no NVIDIA NIM or other provider implementation for now
+- [ ] Gemini request controller: startup reachability probe, deterministic
+      error taxonomy, and pause/resume on quota or connectivity loss; no
+      cross-provider failover
 - [ ] Setup screen per the mockup: paste key → live test call → green check
-      or plain-English failure; add-more-keys as an optional second step
+      or plain-English failure; replace/remove the key, but do not add more
 - [ ] Error taxonomy wired: bad key vs. provider unreachable vs. quota
       exhausted are three distinct, user-visible states
 - [ ] One-line first-run notice (pages are sent to the provider under your
@@ -143,9 +142,10 @@ Detailed AI handoff plan: [PHASE4_PLAN.md](PHASE4_PLAN.md).
       shells (2026-07-11). One open re-confirm: the deployed browser PWA path,
       before the relay option is deleted for good.
 
-**Done when:** a real key validates in the UI, and a test image call
-round-trips through the chain with a forced failover (wrong key on provider 1
-→ provider 2 answers).
+**Done when:** a user's real Gemini key validates in the UI, a test image call
+round-trips using that exact key, and inspection confirms there is no code path
+that can substitute a shared, bundled, developer, fallback, or second user's
+key.
 
 ## Phase 5 — PDF pipeline (~4–5 days)
 
