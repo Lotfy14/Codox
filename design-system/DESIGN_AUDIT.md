@@ -2,195 +2,106 @@
 
 ## Scope
 
-This audit treats `design-system/one-screen-layout.html` as the newest visual
-source of truth. It covers the standalone prototype, the current React
-frontend, authored CSS, generated output, and installed package styles.
+`design-system/one-screen-layout.html` is the newest visual source of truth —
+but as a **structural reference only**. It is a static throwaway mockup and
+will be deleted once the layout is rebuilt in React. Defects internal to the
+prototype file (dead CSS, duplicated literals, fake `div` controls, inline
+SVG copies, missing hover/focus rules, generic class names) are therefore not
+tracked here: fixing them would be work on a file destined for deletion, and
+rebuilding from the existing component library resolves all of them at once.
+
+Note the prototype's own caption claims "colors are the existing tokens" —
+this is false (see finding 2). Do not trust the caption; map every value.
+
+Generated output (`dist/`) and package styles (`node_modules/`) are expected
+duplication and are never edited by hand.
 
 No application code or styles were changed as part of the audit.
 
-## Major Findings
+## Findings, in priority order
 
-### 1. The new design is not part of the application
+### 1. Only the happy state is designed
+
+The prototype shows one state: files loaded, key present, nothing running.
+There are no empty, dragging, invalid-file, missing-key, running, paused,
+failed, review, export, disabled, loading, or completed layouts. Several of
+these are project law, not polish: provider errors must be distinguishable
+(bad key ≠ unreachable ≠ quota, and quota reads as "paused"), review and
+loud/automatic export are core flows, and one bad page must flag-and-continue
+visibly.
+
+**Action:** Define state-driven variants of the one-screen structure before
+or during the rebuild. This is the largest missing piece of the design.
+
+### 2. Open owner decision blocks the rebuild
+
+The prototype's legend still asks: keep **History** as a left-nav item, drop
+it, or fold "last runs" into the Convert screen? (Inline review was already
+confirmed 2026-07-11.) The sidebar structure can't be finalized until this is
+answered.
+
+**Action:** Get the owner's call on History before building the nav.
+
+### 3. The new design is not part of the application
 
 The one-screen design is an untracked standalone HTML file. Production still
-renders the older scaffold screens, while the existing design gallery and
-clickable mockups are development-only.
+renders the older scaffold screens; the design gallery and clickable mockups
+are development-only.
 
-**Proposed fix:** Implement the one-screen structure using the existing React
-components and make it the production shell. Do not copy the prototype HTML
-verbatim.
+**Action:** Rebuild the one-screen structure as the production shell using
+the existing `TabNav`, `FileDropZone`, `Select`, `Toggle`, `ThemeSwitcher`,
+and button components — never by copying prototype HTML. Reusing these
+components is also what delivers the accessibility, interaction states,
+44px touch targets, theming, and semantics the static prototype lacks;
+verify each of those in the rebuilt screen rather than assuming them.
 
-### 2. The prototype creates a second design system
+### 4. Prototype values must be mapped to existing tokens, not copied
 
-The prototype defines its own colors, typography, radii, spacing, and shadows.
-These conflict with `src/design/tokens.css`. Examples include a 22px card
-radius instead of 20px, a different muted color, and Plus Jakarta Sans for all
-text instead of the established heading/body font pair.
+The prototype invents its own colors, typography, radii, spacing, and
+shadows, and they conflict with `src/design/tokens.css`: a 22px card radius
+vs the 20px token, a muted color (`#8c797e`, 4.08:1 on white — fails
+contrast) vs the accessible `--color-text-muted`, Plus Jakarta Sans for all
+text vs the established heading/body pair (the app ships only PJS 800 and
+Inter 400/500; the prototype assumes weights 600/650/700).
 
-**Proposed fix:** Map every prototype value to the existing semantic tokens.
-Add a token only when no existing token represents the design decision.
+**Action:** During the rebuild, map every prototype value to an existing
+semantic token. Add a token only when no existing token represents the
+design decision. Display data (file names, page counts, sizes, storage %)
+comes from `src/mockups/mockData.ts` or real state — the prototype's
+hardcoded values disagree with it (14 vs 12 pages, 3.1 vs 4.5 MB) and with
+themselves.
 
-### 3. Most controls only look interactive
+### 5. Responsive behavior is incomplete
 
-Navigation items are `div` elements, answer selectors are `span` or `div`
-elements, the switch and theme options are `div` elements, and the drop zone
-is not interactive.
+The prototype's only breakpoint collapses three columns into one. At 760px
+the header is cramped, the storage label and percentage run together, and
+API/Help fall below the entire workflow.
 
-**Proposed fix:** Build the design from the existing `TabNav`, `FileDropZone`,
-`Select`, `Toggle`, `ThemeSwitcher`, and button components.
+**Action:** Design a deliberate mobile header and navigation, keep utilities
+immediately reachable, stack file-row controls when needed, and test at
+320px, 375px, 768px, and tablet landscape widths.
 
-### 4. Display data is hardcoded in multiple places
+### 6. Existing frontend selectors have split ownership
 
-Storage is written as both `34%` text and `width: 34%`. Filenames, page counts,
-file sizes, file count, total pages, and estimated time are manually repeated.
-The prototype says `bio_exam.pdf` has 14 pages while shared mock data says 12.
+This is the one finding in real authored app code, so it survives regardless
+of the prototype. Examples: `.ds-select__trigger` (components.css:165 and
+:217), `.ds-file-row__flag` (:541 and :546), `.ds-status-chip`,
+`.ds-resume-card__continue`, `.mock-review__source`, and several gallery
+selectors — declarations spread across distant rules, sometimes overriding
+earlier ones.
 
-**Proposed fix:** Keep values in one in-memory data structure and render or
-compute all display values from it. A database is not required.
-
-### 5. Only the happy state is designed
-
-There are no empty, dragging, invalid-file, missing-key, running, paused,
-failed, review, export, disabled, loading, or completed layouts.
-
-**Proposed fix:** Define state-driven variants while retaining the one-screen
-structure.
-
-### 6. Responsive behavior is incomplete
-
-The only breakpoint changes the three-column frame into one column. At 760px,
-the header is cramped and the storage label and percentage run together. API
-and Help move below the entire workflow.
-
-**Proposed fix:** Design a deliberate mobile header and navigation, keep
-utilities immediately reachable, stack file-row controls when needed, and test
-at 320px, 375px, 768px, and tablet landscape widths.
-
-### 7. Several touch targets are too small
-
-Remove buttons are 30 by 30px, theme options are 26 by 24px, and the visible
-switch is 44 by 26px.
-
-**Proposed fix:** Apply the existing 44 by 44px minimum touch-target token while
-keeping the visible icons compact.
-
-### 8. Muted text fails contrast
-
-The prototype's `--muted` color provides approximately 4.08:1 contrast on
-white and 3.93:1 on the frame. Both are below the 4.5:1 target for normal text.
-
-**Proposed fix:** Use the existing accessible muted-text token or darken the
-prototype value.
-
-### 9. The theme control has no functional theme
-
-The prototype contains only a light palette and has no dark overrides or theme
-behavior.
-
-**Proposed fix:** Use the existing theme service and semantic tokens. The
-control should select system, light, or dark.
-
-### 10. The declared font is not fully available
-
-The standalone page requests Plus Jakarta Sans without loading it. The
-application currently ships only its 800 weight, while the prototype requests
-600, 650, and 700.
-
-**Proposed fix:** Preserve Plus Jakarta Sans for headings and Inter for body
-text, using shipped weights or intentionally adding the missing font files.
-
-### 11. Interaction states are absent
-
-The prototype CSS has no hover, focus-visible, pressed, disabled, or loading
-rules.
-
-**Proposed fix:** Reuse the accessible component states and shared focus-ring
-recipe already present in the frontend.
-
-### 12. Accessibility semantics are incomplete
-
-The remove buttons have no accessible names. Theme controls have no roles or
-labels. The storage meter has no meter semantics, and the visible `label` is not
-connected to a real form control.
-
-**Proposed fix:** Add contextual accessible names, native or React Aria
-semantics, proper form associations, and meter/progress attributes.
-
-## CSS Findings
-
-### 13. Raw values bypass the prototype's own tokens
-
-`#fff` is repeated despite `--white`. A 99px pill radius appears repeatedly
-instead of a full-radius token. Colors such as `#ead9dd`, `#5f4e52`, and
-`#6f5e62` are also duplicated as literals.
-
-**Proposed fix:** Use semantic color tokens plus shared spacing, radius, size,
-shadow, and layout scales.
-
-### 14. One selector is split inside the same media block
-
-`.rail` is declared once with flex direction and wrapping, then reopened on the
-next line for justification.
-
-**Proposed fix:** Combine the declarations into one media-query rule.
-
-### 15. Identical style fragments are maintained separately
-
-`.panel-head span` and `.fsize` have the same declarations. Toggle help and the
-start note are also identical. `.btn.ghost` and `.tag.ask` use the same colors.
-
-**Proposed fix:** Group truly identical selectors or apply a shared text/tone
-class.
-
-### 16. Dead CSS and unused tokens exist
-
-`.btn.ghost` is never used. `--burg-hi`, `--amber`, and `--emerald` are declared
-but never consumed.
-
-**Proposed fix:** Remove them or connect them to a documented component state.
-
-### 17. Class names are globally generic
-
-Classes such as `.card`, `.field`, `.control`, `.switch`, `.btn`, and `.wrap`
-can easily collide when moved into the application.
-
-**Proposed fix:** Scope them beneath a layout root or use the existing `ds-*`
-component classes.
-
-### 18. The logo and icons are duplicated inline
-
-The complete logo SVG is copied into the HTML despite existing logo assets.
-Chevron and remove icons are also repeated.
-
-**Proposed fix:** Reference the shared logo asset and use reusable icon
-components.
-
-### 19. Existing frontend selectors have split ownership
-
-Examples include `.ds-select__trigger`, `.ds-status-chip`,
-`.ds-file-row__flag`, `.ds-resume-card__continue`, `.mock-review__source`, and
-multiple gallery selectors. Their declarations are spread across distant
-rules, sometimes overriding earlier declarations.
-
-**Proposed fix:** Consolidate each base selector, use explicit modifier classes,
-and reserve separate declarations for genuine responsive overrides.
-
-### 20. Generated and package duplication should not be edited
-
-The 238 CSS files under `node_modules` are Fontsource-generated declarations.
-The `dist` directory is generated build output. Their repetition is expected
-and is not authored design debt.
-
-**Proposed fix:** Fix authored source files and regenerate builds. Never edit or
-manually deduplicate generated and third-party files.
+**Action:** Consolidate each base selector, use explicit modifier classes,
+and reserve separate declarations for genuine responsive overrides. Worth
+doing before the rebuild adds more rules to the same files.
 
 ## Verification
 
-- Inspected the new HTML source and rendered it at desktop, breakpoint, and
+- Inspected the prototype HTML and rendered it at desktop, breakpoint, and
   narrow viewport sizes.
-- Compared prototype values with `src/design/tokens.css`.
-- Scanned authored CSS for duplicate selectors, repeated declaration blocks,
-  raw values, dead rules, and unused custom properties.
-- Compared prototype data with existing mock data.
-- Confirmed the existing TypeScript build and lint checks pass; the standalone
-  HTML is not currently included in either check.
+- Compared prototype values with `src/design/tokens.css`,
+  `src/design/fonts.css`, and `src/mockups/mockData.ts`; contrast ratio
+  recomputed independently.
+- Confirmed duplicate declarations for the finding-6 selectors in
+  `src/design/components/components.css`.
+- Confirmed the existing TypeScript build and lint checks pass; the
+  standalone HTML is not included in either check.
