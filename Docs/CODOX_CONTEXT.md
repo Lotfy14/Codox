@@ -188,6 +188,17 @@ stack is not browser-based):**
   has a native network layer, the Gemini relay question disappears. This is a
   real lever in the stack re-decision.
 
+**Update (2026-07-11) — provider set narrowed + Gemini re-measured:** the
+provider chain is now **Google Gemini + NVIDIA NIM only** (owner decision);
+Groq / OpenRouter `:free` / GitHub Models / Mistral are dropped as downgrades
+and clutter versus these two, which carry many multimodal models on generous
+free tiers. Gemini is the workhorse, NVIDIA the backup (see §11 bench caveat).
+The Phase-2 spike measured `gemini-3.5-flash` returning **HTTP 200** from
+inside the Tauri (WebView2) and Capacitor shells — direct calls work there, so
+the relay is dropped, superseding the 2026-07-08 CORS-blocked measurement.
+Re-confirm one call from the deployed browser PWA before deleting the relay
+option for good.
+
 **Consent:** before the first cloud call, a plain notice: full page images go
 to the provider under the user's key; free tiers may train on the data; the
 key lives only on this device.
@@ -327,10 +338,11 @@ in around them":
 
 ## 12. Open decisions (carried into the new repo)
 
-- **Gemini: relay vs drop** — decide by measuring whether the non-Gemini free
-  quotas alone sustain a 25-page scan; if yes, drop the relay and with it the
-  last server component. (Moot if the new stack is native.)
-- **NVIDIA NIM CORS** — verify when relevant.
+- ~~**Gemini: relay vs drop**~~ — **RESOLVED 2026-07-11:** direct calls work in
+  the shells (HTTP 200); relay dropped. One re-confirm left: the deployed
+  browser PWA path.
+- **NVIDIA NIM CORS** — verify in Phase-4 Step-1 research (now an active
+  provider, so this is no longer "when relevant" — it is required).
 - **Flag-rate ceiling** — set from the first real measurement on hard inputs,
   not guessed; a nonzero rate is *correct* (genuinely ambiguous marks should
   flag), the target is "low enough to still feel automatic."

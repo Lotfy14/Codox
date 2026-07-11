@@ -37,9 +37,14 @@ round-trips through the chain with a forced failover** (wrong key on provider 1
 
 ## 1. Locked decisions — do not re-litigate
 
-- **Providers (initial set):** Groq, OpenRouter `:free`, Google Gemini,
-  GitHub Models, Mistral — behind **one adapter interface**. All are
-  roughly OpenAI-compatible; adapters stay thin.
+- **Providers (locked set):** Google Gemini + NVIDIA NIM — behind **one
+  adapter interface**. Both are roughly OpenAI-compatible; adapters stay thin.
+  (Owner decision 2026-07-11: only these two carry many multimodal models on
+  generous free tiers; Groq / OpenRouter `:free` / GitHub Models / Mistral were
+  dropped as downgrades and clutter. **Gemini is the workhorse, NVIDIA the
+  backup** — the 2026-07-04 bench in CODOX_CONTEXT §11 found free NVIDIA models
+  weak on the hard corpus. Verify NVIDIA's free-tier terms in the Step-1
+  research table before relying on it — COST-ZERO is non-negotiable.)
 - **One key first.** First run asks for exactly one key; more keys are an
   optional later step in the Keys tab (BLIND-SPOTS #12). Never show multiple
   equal-weight key fields up front.
@@ -57,28 +62,27 @@ round-trips through the chain with a forced failover** (wrong key on provider 1
 - **First-run notice is one line**, the exact sentence in
   `firstRunCopy.privacyNotice` (owner-approved minimal consent).
 
-## 2. Open question to resolve FIRST: the Gemini/relay decision
+## 2. RESOLVED: the Gemini/relay decision
 
-BUILD_PLAN Phase 2 included a Gemini direct-browser-call check whose result
-"decides relay-drop for Phase 4" — but the result is **not recorded** in the
-repo. Resolve before building the Gemini adapter:
+**Resolved 2026-07-11.** The Phase-2 spike ran a real `generateContent` call
+with a real key from inside both installed shells (Tauri WebView2 on Windows,
+Capacitor on Android): **`gemini-3.5-flash` returned HTTP 200 with candidates.**
+Direct provider calls work. WebView2 is Chromium and enforces CORS like a
+browser, so this supersedes the 2026-07-08 "Gemini CORS-blocked" observation.
+Therefore:
 
-1. Look for evidence: `Phase2SpikeChecks.tsx` output notes, `Docs/RELEASING.md`,
-   git history, `Docs/` — anywhere the answer was written down.
-2. If not recorded: re-run the check. The spike screen already makes a
-   `generateContent` call from the browser — run it with a real key (ask the
-   owner for one) from the deployed origin.
-3. Record the answer **in this file and in BUILD_PLAN Phase 2**, then:
-   - **Direct calls work** → build the Gemini adapter like the others; no
-     relay, forever.
-   - **CORS-blocked** → ship Phase 4 **without Gemini** (four providers are
-     plenty for the gate) and file the relay as a separate owner decision.
-     A Cloudflare-Worker relay is COST-ZERO-compatible (free tier,
-     stateless pass-through) but is its own small project — do not build it
-     inside Phase 4.
+- Build the Gemini adapter like any other; **no relay.**
+- Recorded in BUILD_PLAN Phase 2.
 
-**Done when:** the Gemini answer is written down here with a date, and the
-adapter list for this phase is fixed.
+**One open re-confirm** (not a blocker): the check ran in the shells, not the
+deployed browser PWA. WebView2 evidence makes a browser block unlikely, but
+confirm one `generateContent` call from the deployed PWA origin during Step-1
+research before deleting the relay option for good. If — unexpectedly — the
+pure browser is blocked while the shells are not, that is a runtime-selected
+transport behind the same adapter interface, **never a UI fork.**
+
+**Done:** answer recorded here and in BUILD_PLAN with a date; the adapter list
+for this phase is fixed (Gemini + NVIDIA, §1).
 
 ## 3. Step 1 — Search-before-build dispatches (CLAUDE.md rule)
 

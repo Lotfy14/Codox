@@ -37,14 +37,16 @@ builds on an unproven assumption. Each phase ends with a "Done when" gate.
 
 ## Phase 1 — Core web scaffold (~1 day)
 
-- [ ] Scaffold Vite + React 19 + TypeScript
-- [ ] Add vite-plugin-pwa (manifest, service worker, installability)
-- [ ] Router with the five screens as empty placeholder routes:
+- [x] Scaffold Vite + React 19 + TypeScript
+- [x] Add vite-plugin-pwa (manifest, service worker, installability)
+- [x] Router with the five screens as empty placeholder routes:
       Setup → Upload → Progress → Review → Export
-- [ ] App-wide state store skeleton (job state shape defined, persisted to
+- [x] App-wide state store skeleton (job state shape defined, persisted to
       IndexedDB via Dexie — even if empty for now)
 - [ ] Deploy to Cloudflare Pages; confirm the PWA installs on an iPhone
       (Add to Home Screen) and on Android Chrome
+      _(Cloudflare auto-deploy live; Android shell confirmed 2026-07-11.
+      iPhone Add-to-Home-Screen still unconfirmed — leave unchecked until tested.)_
 
 **Done when:** a public URL serves an installable empty app with five
 navigable screens.
@@ -54,19 +56,31 @@ navigable screens.
 The point is to prove distribution while the app is still trivial, so a shell
 failure costs a day, not a rewrite.
 
-- [ ] **Capacitor Android spike** (hardest, do first): wrap the Phase-1 build,
+- [x] **Capacitor Android spike** (hardest, do first): wrap the Phase-1 build,
       generate a signed `.apk` (self-signed keystore), sideload on a real
       Android phone. Prove: file picker opens a PDF, share sheet exports a
       dummy zip, IndexedDB persists across restarts
-- [ ] **Tauri Windows spike**: NSIS `.exe`, install on a clean Windows
+      _(Confirmed 2026-07-11: sideloaded, file picker + share sheet + zip
+      download + IndexedDB persistence all worked.)_
+- [x] **Tauri Windows spike**: NSIS `.exe`, install on a clean Windows
       machine/VM, walk the SmartScreen "More info → Run anyway" flow, app
       launches and navigates
-- [ ] **GitHub Releases dry run**: upload both artifacts to a release, download
+      _(Confirmed 2026-07-11: installed past SmartScreen, launched, all five
+      screens navigate.)_
+- [x] **GitHub Releases dry run**: upload both artifacts to a release, download
       and install each from the release link on the target device
-- [ ] **Gemini direct-call check** (10 min, piggybacked here): one
+      _(Confirmed 2026-07-11: `v0.2.0-spike` prerelease holds both `.exe` and
+      `.apk`; both downloaded from the release link and installed on device.)_
+- [x] **Gemini direct-call check** (10 min, piggybacked here): one
       `generateContent` call with an image from the deployed browser app.
       Decides relay-drop for Phase 4
-- [ ] Write down the exact build commands for each shell in `docs/RELEASING.md`
+      _(2026-07-11: `gemini-3.5-flash` returned **HTTP 200** with candidates
+      from inside the Tauri WebView2 shell and the Capacitor shell. WebView2 is
+      Chromium and enforces CORS like a browser, so this supersedes the
+      2026-07-08 "Gemini CORS-blocked" note. **Relay not needed** — re-confirm
+      once on the deployed browser PWA before deleting the relay option
+      entirely.)_
+- [x] Write down the exact build commands for each shell in `docs/RELEASING.md`
 
 **Done when:** both installers built from the same web bundle, installed from
 a GitHub Release link on real devices, and the Gemini answer is known.
@@ -104,8 +118,14 @@ The first real feature, because everything downstream needs a working key.
 Detailed AI handoff plan: [PHASE4_PLAN.md](PHASE4_PLAN.md).
 
 - [ ] Key storage on-device (per provider, never leaves the device)
-- [ ] Provider adapters (OpenAI-compatible, thin): Groq, Gemini, OpenRouter
-      `:free`, GitHub Models, Mistral — behind one interface
+- [ ] Provider adapters (OpenAI-compatible, thin): **Google Gemini + NVIDIA
+      NIM only** — behind one interface. (Owner decision 2026-07-11: only these
+      two carry many multimodal models on generous free tiers; Groq /
+      OpenRouter `:free` / GitHub Models / Mistral are a downgrade and clutter,
+      dropped. Gemini is the workhorse; NVIDIA is the backup — the 2026-07-04
+      bench in CODOX_CONTEXT §11 showed free NVIDIA models weak on the hard
+      corpus. Verify NVIDIA's free-tier terms in Phase-4 research before
+      relying on it.)
 - [ ] Chain walker: ordered providers, hot-swap on quota/429/failure
       mid-job; startup reachability probe per provider
 - [ ] Setup screen per the mockup: paste key → live test call → green check
@@ -114,7 +134,9 @@ Detailed AI handoff plan: [PHASE4_PLAN.md](PHASE4_PLAN.md).
       exhausted are three distinct, user-visible states
 - [ ] One-line first-run notice (pages are sent to the provider under your
       key) — minimal per owner decision
-- [ ] Relay: only if the Phase-2 Gemini check failed — otherwise skip forever
+- [x] Relay: **skipped** — Phase-2 Gemini direct-call check passed in the
+      shells (2026-07-11). One open re-confirm: the deployed browser PWA path,
+      before the relay option is deleted for good.
 
 **Done when:** a real key validates in the UI, and a test image call
 round-trips through the chain with a forced failover (wrong key on provider 1
