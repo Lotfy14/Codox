@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Codox — One-Screen Layout</title>
+<style>
+  :root {
+    --cream-0: #f4e9e0;
+    --cream-1: #fbf4ef;
+    --frame:   #fffaf7;
+    --white:   #ffffff;
+    --ink:     #2a1b1f;
+    --muted:   #8c797e;
+    --line:    #efe2e0;
+    --burg:    #800020;
+    --burg-hi: #6a001b;
+    --burg-soft: #f6e9ec;
+    --amber:   #f59e0b;
+    --amber-soft: #fdf3e0;
+    --emerald: #10b981;
+    --emerald-soft: #e7f6f0;
+    --r-frame: 32px;
+    --r-card:  22px;
+    --r-input: 12px;
+    --font: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+
+  .stage {
+    font-family: var(--font);
+    color: var(--ink);
+    background:
+      radial-gradient(120% 90% at 12% 0%, #fdf6f0 0%, var(--cream-1) 45%, var(--cream-0) 100%);
+    min-height: 100vh;
+    padding: clamp(16px, 3vw, 40px);
+    line-height: 1.45;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  .caption {
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin: 0 0 16px;
+  }
+
+  /* ---------- The framed one screen ---------- */
+  .frame {
+    background: var(--frame);
+    border: 1px solid #f3e7e2;
+    border-radius: var(--r-frame);
+    box-shadow: 0 40px 80px -40px rgba(80,20,30,0.28), 0 8px 24px -16px rgba(80,20,30,0.20);
+    padding: 16px;
+    display: grid;
+    grid-template-columns: 232px minmax(0, 1fr) 96px;
+    gap: 16px;
+  }
+
+  .card {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: var(--r-card);
+    box-shadow: 0 1px 2px rgba(80,20,30,0.04);
+  }
+
+  /* ---------- Left sidebar ---------- */
+  .side { padding: 20px 16px; display: flex; flex-direction: column; gap: 22px; }
+  .brand { display: flex; align-items: center; gap: 11px; padding: 0 4px; }
+  .brand svg { width: 38px; height: 38px; border-radius: 11px; flex: none; }
+  .brand b { font-size: 18px; font-weight: 800; letter-spacing: -0.01em; }
+
+  .nav { display: flex; flex-direction: column; gap: 4px; }
+  .navlabel {
+    font-size: 10.5px; font-weight: 800; letter-spacing: 0.10em; text-transform: uppercase;
+    color: var(--muted); padding: 0 8px; margin-bottom: 4px;
+  }
+  .navitem {
+    display: flex; align-items: center; gap: 11px;
+    padding: 10px 12px; border-radius: 12px; font-size: 14.5px; font-weight: 600;
+    color: #6f5e62; cursor: pointer; border: 1px solid transparent;
+  }
+  .navitem svg { width: 18px; height: 18px; flex: none; }
+  .navitem.active {
+    background: var(--burg-soft); color: var(--burg); border-color: #f0d8dd; font-weight: 700;
+  }
+  .side-foot { margin-top: auto; display: grid; gap: 8px; padding: 0 4px; }
+  .meter-label { font-size: 11px; color: var(--muted); display: flex; justify-content: space-between; }
+  .meter { height: 7px; border-radius: 99px; background: #f1e6e4; overflow: hidden; }
+  .meter i { display: block; height: 100%; width: 34%; background: var(--burg); border-radius: 99px; }
+
+  /* ---------- Center work column ---------- */
+  .work { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .work-head { padding: 4px 4px 2px; }
+  .work-head h1 { margin: 0 0 3px; font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+  .work-head p { margin: 0; color: var(--muted); font-size: 14px; }
+
+  .drop {
+    display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px;
+    border: 2px dashed #e7c9cf; border-radius: var(--r-card);
+    background: linear-gradient(180deg, #fffdfc, #fff7f8);
+    padding: 30px 22px;
+  }
+  .drop-ic {
+    width: 46px; height: 46px; border-radius: 13px; flex: none; display: grid; place-items: center;
+    background: var(--burg-soft); color: var(--burg);
+  }
+  .drop-ic svg { width: 22px; height: 22px; }
+  .drop b { font-size: 15px; font-weight: 700; }
+  .drop small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+
+  .panel { padding: 16px 18px; }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .panel-head b { font-size: 14px; font-weight: 700; }
+  .panel-head span { font-size: 12px; color: var(--muted); }
+
+  .frow {
+    display: grid; grid-template-columns: auto minmax(0,1fr) auto auto; align-items: center; gap: 12px;
+    padding: 11px 12px; border-radius: 14px; background: #fbf7f6; border: 1px solid #f4ebe9;
+  }
+  .frow + .frow { margin-top: 8px; }
+  .fdoc {
+    width: 34px; height: 34px; border-radius: 9px; flex: none; display: grid; place-items: center;
+    background: var(--burg-soft); color: var(--burg); font-size: 10px; font-weight: 800;
+  }
+  .fname { font-weight: 650; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fsize { color: var(--muted); font-size: 12px; }
+  .pill-select {
+    display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: #5f4e52; font-weight: 600;
+    border: 1px solid #ead9dd; border-radius: 99px; padding: 6px 11px; background: #fff;
+  }
+  .pill-select svg { width: 13px; height: 13px; color: var(--muted); }
+  .xbtn { width: 30px; height: 30px; border-radius: 99px; display: grid; place-items: center; color: var(--muted); border: 0; background: transparent; }
+
+  .opts { display: grid; gap: 14px; margin-top: 2px; }
+  .field { display: grid; gap: 6px; }
+  .field label { font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #7a686c; }
+  .control {
+    display: flex; align-items: center; justify-content: space-between;
+    border: 1px solid #ead9dd; border-radius: var(--r-input); padding: 11px 13px; font-size: 14px; background: #fff;
+  }
+  .control svg { width: 15px; height: 15px; color: var(--muted); }
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; }
+  .toggle-row .t-txt b { font-size: 14px; font-weight: 650; display: block; }
+  .toggle-row .t-txt small { color: var(--muted); font-size: 12.5px; }
+  .switch { width: 44px; height: 26px; border-radius: 99px; background: var(--burg); position: relative; flex: none; }
+  .switch i { position: absolute; top: 3px; left: 21px; width: 20px; height: 20px; border-radius: 99px; background: #fff; }
+
+  .start-row { display: flex; align-items: center; gap: 14px; margin-top: 4px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; border: 0; cursor: pointer;
+    font-family: var(--font); font-weight: 700; font-size: 14px;
+    background: var(--burg); color: #fff; padding: 11px 20px; border-radius: 12px;
+  }
+  .btn.ghost { background: var(--burg-soft); color: var(--burg); }
+  .btn svg { width: 16px; height: 16px; }
+  .start-note { color: var(--muted); font-size: 12.5px; }
+
+  /* the inline "it all happens here" marker */
+  .inplace {
+    border: 1.5px dashed #d9c3c8; border-radius: var(--r-card); padding: 14px 16px;
+    background: repeating-linear-gradient(135deg, #fdf6f3 0 10px, #fbf1ee 10px 20px);
+    display: flex; align-items: center; gap: 12px; color: #7a5c62; font-size: 13px;
+  }
+  .inplace svg { width: 18px; height: 18px; flex: none; color: var(--burg); }
+  .inplace b { color: var(--burg); font-weight: 700; }
+
+  /* ---------- Right utility rail ---------- */
+  .rail { display: flex; flex-direction: column; align-items: center; gap: 12px; padding-top: 6px; }
+  .avatar {
+    width: 44px; height: 44px; border-radius: 99px; background: linear-gradient(150deg,#f7d9c9,#e9b9c6);
+    border: 2px solid #fff; box-shadow: 0 2px 8px rgba(80,20,30,0.14); margin-bottom: 4px;
+  }
+  .railbtn {
+    width: 60px; display: flex; flex-direction: column; align-items: center; gap: 5px;
+    background: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: 10px 4px;
+    font-size: 11px; font-weight: 700; color: #6f5e62; cursor: pointer;
+  }
+  .railbtn svg { width: 19px; height: 19px; color: var(--burg); }
+  .rail-foot { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 10px; padding-bottom: 4px; }
+  .theme-toggle {
+    display: inline-flex; background: #f2e7e4; border-radius: 99px; padding: 3px;
+  }
+  .theme-toggle span { width: 26px; height: 24px; border-radius: 99px; display: grid; place-items: center; color: var(--muted); }
+  .theme-toggle span.on { background: #fff; color: var(--burg); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .theme-toggle svg { width: 13px; height: 13px; }
+  .privacy { font-size: 11px; color: var(--muted); writing-mode: initial; }
+
+  /* ---------- Decisions legend ---------- */
+  .legend { max-width: 1180px; margin: 22px auto 0; }
+  .legend h2 { font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); margin: 0 0 12px; }
+  .legend-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .lc { background: rgba(255,255,255,0.7); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; }
+  .lc .tag {
+    display: inline-block; font-size: 10.5px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;
+    padding: 3px 9px; border-radius: 99px; margin-bottom: 8px;
+  }
+  .tag.keep { background: var(--emerald-soft); color: #06795a; }
+  .tag.change { background: var(--amber-soft); color: #a56605; }
+  .tag.ask { background: var(--burg-soft); color: var(--burg); }
+  .lc p { margin: 0; font-size: 13px; color: #5f4e52; }
+  .lc p b { color: var(--ink); }
+
+  @media (max-width: 760px) {
+    .frame { grid-template-columns: 1fr; }
+    .side, .rail { flex-direction: row; flex-wrap: wrap; }
+    .rail { justify-content: flex-start; }
+    .side-foot, .rail-foot { margin-top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="wrap">
+    <p class="caption">Codox &middot; proposed one-screen layout &middot; structure only, colors are the existing tokens</p>
+
+    <div class="frame">
+      <!-- LEFT: navbar -->
+      <aside class="card side">
+        <div class="brand">
+          <svg viewBox="0 0 512 512" role="img" aria-label="Codox logo">
+            <defs>
+              <linearGradient id="g-night" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#1b2559"/>
+                <stop offset="1" stop-color="#0a0f2e"/>
+              </linearGradient>
+              <linearGradient id="g-beam" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stop-color="#22d3ee"/>
+                <stop offset="0.5" stop-color="#a78bfa"/>
+                <stop offset="1" stop-color="#f472b6"/>
+              </linearGradient>
+              <filter id="f-glow" x="-60%" y="-60%" width="220%" height="220%">
+                <feGaussianBlur stdDeviation="14"/>
+              </filter>
+            </defs>
+            <rect width="512" height="512" fill="url(#g-night)"/>
+            <rect x="156" y="76" width="200" height="264" rx="18" fill="#ffffff"/>
+            <rect x="184" y="112" width="110" height="16" rx="8" fill="#c7cdf0"/>
+            <rect x="184" y="144" width="144" height="16" rx="8" fill="#c7cdf0"/>
+            <rect x="184" y="176" width="96" height="16" rx="8" fill="#c7cdf0"/>
+            <rect x="184" y="264" width="42" height="18" rx="9" fill="#22d3ee"/>
+            <rect x="236" y="264" width="42" height="18" rx="9" fill="#a78bfa"/>
+            <rect x="288" y="264" width="42" height="18" rx="9" fill="#f472b6"/>
+            <rect x="116" y="212" width="280" height="40" rx="20" fill="url(#g-beam)" filter="url(#f-glow)" opacity="0.7"/>
+            <rect x="116" y="212" width="280" height="40" rx="20" fill="url(#g-beam)"/>
+            <rect x="164" y="384" width="52" height="52" rx="13" fill="#22d3ee"/>
+            <rect x="230" y="384" width="52" height="52" rx="13" fill="#a78bfa"/>
+            <rect x="296" y="384" width="52" height="52" rx="13" fill="#f472b6"/>
+            <path d="M 420 108 l 7 18 l 18 7 l -18 7 l -7 18 l -7 -18 l -18 -7 l 18 -7 z" fill="#22d3ee"/>
+            <path d="M 96 340 l 6 15 l 15 6 l -15 6 l -6 15 l -6 -15 l -15 -6 l 15 -6 z" fill="#f472b6"/>
+          </svg>
+          <b>Codox</b>
+        </div>
+
+        <nav class="nav">
+          <div class="navlabel">Workspace</div>
+          <div class="navitem active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h10l6 6v10a0 0 0 0 1 0 0H4z"/><path d="M14 4v6h6"/><path d="M9 15l2 2 4-4"/></svg>
+            <span>Convert</span>
+          </div>
+          <div class="navitem">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>
+            <span>History</span>
+          </div>
+        </nav>
+
+        <div class="side-foot">
+          <div class="meter-label"><span>On-device storage</span><span>34%</span></div>
+          <div class="meter"><i></i></div>
+        </div>
+      </aside>
+
+      <!-- CENTER: the whole job, one screen -->
+      <main class="work">
+        <div class="work-head">
+          <h1>Convert</h1>
+          <p>Drop exam PDFs and Codox turns them into a Triviadox question set &mdash; all on this screen.</p>
+        </div>
+
+        <div class="drop">
+          <div class="drop-ic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+          </div>
+          <div>
+            <b>Drop PDFs here</b>
+            <small>batch of PDFs supported</small>
+          </div>
+        </div>
+
+        <section class="card panel">
+          <div class="panel-head"><b>2 PDFs ready</b><span>Answers apply to the whole batch, override per file</span></div>
+
+          <div class="frow">
+            <div class="fdoc">PDF</div>
+            <div><div class="fname">bio_exam.pdf</div><div class="fsize">14 pages &middot; 3.1 MB</div></div>
+            <span class="pill-select">Answers: inside <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+            <button class="xbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+          </div>
+          <div class="frow">
+            <div class="fdoc">PDF</div>
+            <div><div class="fname">maths_mock.pdf</div><div class="fsize">9 pages &middot; 2.2 MB</div></div>
+            <span class="pill-select">Answers: key file <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+            <button class="xbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+          </div>
+        </section>
+
+        <section class="card panel">
+          <div class="opts">
+            <div class="field">
+              <label>Where are the answers?</label>
+              <div class="control">Inside the PDFs
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </div>
+            </div>
+            <div class="toggle-row">
+              <div class="t-txt"><b>Keep original PDF</b><small>Lets you re-run later, uses more storage</small></div>
+              <div class="switch"><i></i></div>
+            </div>
+          </div>
+
+          <div class="start-row">
+            <button class="btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-14 9z"/></svg>
+              Start converting
+            </button>
+            <span class="start-note">23 pages &middot; ~2 min</span>
+          </div>
+        </section>
+
+        <div class="inplace">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M19 5l-3 3M8 16l-3 3"/></svg>
+          <span>Progress, flagged questions to review, and export all appear <b>right here</b> &mdash; no new tabs, no takeover screen.</span>
+        </div>
+      </main>
+
+      <!-- RIGHT: few utility buttons -->
+      <aside class="rail">
+        <div class="avatar"></div>
+        <button class="railbtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></svg>
+          API
+        </button>
+        <button class="railbtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1 .8-1 1.7"/><path d="M12 17h.01"/></svg>
+          Help
+        </button>
+
+        <div class="rail-foot">
+          <div class="theme-toggle">
+            <span class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg></span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></span>
+          </div>
+          <span class="privacy">Privacy</span>
+        </div>
+      </aside>
+    </div>
+
+    <!-- What this changes vs. the current build -->
+    <div class="legend">
+      <h2>What changes, and the calls I need you to confirm</h2>
+      <div class="legend-grid">
+        <div class="lc">
+          <span class="tag change">Collapsed</span>
+          <p><b>Convert's 4 stages &rarr; one screen.</b> Drop, files, options, progress, review and export reveal in place as you go. No home&rarr;files&rarr;running&rarr;done wizard.</p>
+        </div>
+        <div class="lc">
+          <span class="tag change">Moved to right</span>
+          <p><b>Keys tab &rarr; "API" button.</b> Opens a panel over this screen to paste your provider key. You never leave Convert.</p>
+        </div>
+        <div class="lc">
+          <span class="tag change">Moved to right</span>
+          <p><b>Help tab &rarr; "Help" button.</b> Opens a panel, same as API. Both match the "few buttons on the right" you described.</p>
+        </div>
+        <div class="lc">
+          <span class="tag ask">Confirm</span>
+          <p><b>Review of flagged questions.</b> Inline on this screen (confirmed 2026-07-11): the center column scrolls through flagged rows in place.</p>
+        </div>
+        <div class="lc">
+          <span class="tag ask">Confirm</span>
+          <p><b>History.</b> Kept as one small left-nav item for past runs. Drop it, or fold "last runs" into this screen instead?</p>
+        </div>
+        <div class="lc">
+          <span class="tag keep">Unchanged</span>
+          <p><b>Left navbar + framed cream + right rail.</b> Brand anchors the sidebar; no pricing/marketing surfaces, per your COST-ZERO product.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
