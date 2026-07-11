@@ -1,0 +1,193 @@
+/* Real app shell + Phase 4 screens. Tokens only — no screen-local palette. */
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.app-brand img {
+  display: block;
+}
+
+.app-brand strong {
+  display: block;
+  color: var(--color-text-strong);
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-heading);
+  line-height: var(--line-height-tight);
+}
+
+.app-brand small {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.app-header-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.app-dev-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.app-tab-screen {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.app-tab-screen h1 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-family: var(--font-family-heading);
+  font-weight: var(--font-weight-heading);
+  font-size: clamp(var(--font-size-2xl), 4vw, var(--font-size-3xl));
+  line-height: var(--line-height-heading);
+}
+
+.app-tab-screen h2 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-family: var(--font-family-heading);
+  font-weight: var(--font-weight-heading);
+  font-size: var(--font-size-xl);
+  line-height: var(--line-height-heading);
+}
+
+.app-tab-screen p {
+  max-width: 43rem;
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.app-placeholder {
+  display: grid;
+  gap: var(--space-3);
+}
+
+/* ---------- Key section (API panel + first run) ---------- */
+
+.key-section {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.key-section__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.key-inline-note {
+  max-width: 43rem;
+  margin: 0;
+  border: 1px solid var(--color-neutral-border);
+  border-radius: var(--radius-input);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-neutral-surface);
+  color: var(--color-text-strong);
+  font-size: var(--font-size-sm);
+}
+
+.key-inline-note--quota-paused {
+  border-color: var(--color-warning-border);
+  background: var(--color-warning-surface);
+  color: var(--color-warning-foreground);
+}
+
+.key-inline-note--unreachable {
+  border-color: var(--color-unreachable-border);
+  background: var(--color-unreachable-surface);
+  color: var(--color-unreachable-foreground);
+}
+
+.key-ownership-note {
+  max-width: 43rem;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* ---------- First run ---------- */
+
+.first-run {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: var(--space-6) var(--space-4);
+}
+
+.first-run > * {
+  width: min(100%, 34rem);
+}
+
+.first-run__header {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+  text-align: center;
+}
+
+.first-run__header h1 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-family: var(--font-family-heading);
+  font-weight: var(--font-weight-heading);
+  font-size: var(--font-size-2xl);
+  line-height: var(--line-height-heading);
+}
+
+.first-run__header p {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.first-run__step {
+  display: grid;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.first-run__step > p {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.first-run__eyebrow {
+  margin: 0;
+  color: var(--color-primary-foreground);
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-label);
+  letter-spacing: var(--letter-spacing-label);
+  text-transform: uppercase;
+}
+
+.first-run__privacy {
+  margin: 0;
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-input);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-foreground);
+  font-weight: var(--font-weight-medium);
+}
+
+.first-run__finish {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  border-top: 1px solid var(--color-outline);
+  padding-top: var(--space-5);
+}

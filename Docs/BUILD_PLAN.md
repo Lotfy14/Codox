@@ -122,22 +122,31 @@ must survive; the surface is free.
 The first real feature, because everything downstream needs a working key.
 Detailed AI handoff plan: [PHASE4_PLAN.md](PHASE4_PLAN.md).
 
-- [ ] Store exactly one user-supplied Gemini API key on-device
-- [ ] **Per-user quota isolation:** Codox has no shared, bundled, developer, or
+- [x] Store exactly one user-supplied Gemini API key on-device
+      (2026-07-11: Dexie v3 singleton `credentials` record, fixed id
+      `'gemini'`; replace overwrites, remove deletes, no second record
+      representable)
+- [x] **Per-user quota isolation:** Codox has no shared, bundled, developer, or
       fallback API key. Every Gemini request from an installation uses only
       the key entered on that installation, so one user can never consume
-      another user's Gemini quota.
-- [ ] Thin Google Gemini adapter behind the engine-facing provider interface;
+      another user's Gemini quota. (The controller reads only the singleton
+      repository; `src/providers/controller.test.ts` fails if an alternate
+      key source is introduced.)
+- [x] Thin Google Gemini adapter behind the engine-facing provider interface;
       no NVIDIA NIM or other provider implementation for now
-- [ ] Gemini request controller: startup reachability probe, deterministic
+      (`src/providers/gemini.ts`, hand-written fetch per Step-1 research)
+- [x] Gemini request controller: startup reachability probe, deterministic
       error taxonomy, and pause/resume on quota or connectivity loss; no
-      cross-provider failover
-- [ ] Setup screen per the mockup: paste key → live test call → green check
+      cross-provider failover (`src/providers/controller.ts`)
+- [x] Setup screen per the mockup: paste key → live test call → green check
       or plain-English failure; replace/remove the key, but do not add more
-- [ ] Error taxonomy wired: bad key vs. provider unreachable vs. quota
-      exhausted are three distinct, user-visible states
-- [ ] One-line first-run notice (pages are sent to the provider under your
-      key) — minimal per owner decision
+      (first-run walkthrough + Keys panel; flows driven in a headless
+      browser against live Gemini, see PHASE4_PLAN.md Step-6 evidence)
+- [x] Error taxonomy wired: bad key vs. provider unreachable vs. quota
+      exhausted are three distinct, user-visible states (verified visually:
+      danger / blue-neutral / amber with the ERROR_LANGUAGE.md words)
+- [x] One-line first-run notice (pages are sent to the provider under your
+      key) — minimal per owner decision (the exact canonical sentence)
 - [x] Relay: **skipped** — Phase-2 Gemini direct-call check passed in the
       shells (2026-07-11). One open re-confirm: the deployed browser PWA path,
       before the relay option is deleted for good.
@@ -146,6 +155,14 @@ Detailed AI handoff plan: [PHASE4_PLAN.md](PHASE4_PLAN.md).
 round-trips using that exact key, and inspection confirms there is no code path
 that can substitute a shared, bundled, developer, fallback, or second user's
 key.
+
+> **Gate status (2026-07-11):** every automated part is verified (see
+> PHASE4_PLAN.md Step-6 evidence): live wrong-key/unreachable states against
+> the real Gemini endpoint, no-fallback behavior, provenance tests, and the
+> dev-only test-image-call surface in Keys. The one step only the owner can
+> do — paste a **real** key, see it validate green, and press "Send test
+> image call" (dev build, Keys tab) — remains. Also still open from Phase 2:
+> one `generateContent` re-confirm from the deployed browser-PWA origin.
 
 ## Phase 5 — PDF pipeline (~4–5 days)
 

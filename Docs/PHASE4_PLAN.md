@@ -109,6 +109,39 @@ packages over hand-writing:
 probe, quota signals, verified date) is committed into this file, and the
 build/adopt decisions are written down.
 
+### Step-1 results — Gemini facts table (verified 2026-07-11)
+
+Researched via two Sonnet web-research subagents against current official
+docs, plus direct live measurements against
+`generativelanguage.googleapis.com` from this machine on 2026-07-11.
+
+| Fact | Value | Source |
+|---|---|---|
+| Endpoint | `POST https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent` — `v1beta` is still current; no stable `v1` for this method | ai.google.dev/api/generate-content |
+| Free vision model | `gemini-3.5-flash` (free "Standard" tier, vision-capable; also free: `gemini-3.1-flash-lite`, `gemini-2.5-flash`, `gemini-2.5-flash-lite`). `gemini-2.0-flash` was shut down 2026-06-01 — never use it | ai.google.dev/gemini-api/docs/pricing |
+| Auth | `x-goog-api-key` header — documented, works, and is CORS-allowed (measured: preflight returns `Access-Control-Allow-Headers: content-type,x-goog-api-key`). Never the `?key=` query param (keeps keys out of URLs/logs) | ai.google.dev/gemini-api/docs/api-key + live preflight |
+| CORS | Allowed for any browser origin: the endpoint reflects the request `Origin` back in `Access-Control-Allow-Origin` (measured live for a Pages-style origin, `http://tauri.localhost`, `tauri://localhost`, and `https://localhost`). Known exception: Google's newer "Interactions API" adds an `Api-Revision` header the preflight rejects — do not use it; plain `generateContent` is unaffected | live OPTIONS measurements; github.com/googleapis/js-genai#1723 |
+| Shell transports | Tauri 2 (WebView2) and Capacitor Android WebView are Chromium and enforce CORS exactly like Chrome; with Gemini reflecting origins, one fetch adapter works identically in browser PWA, Tauri, and Capacitor. No relay, no platform fork. Caveat: if a CSP is ever added to Tauri config, `connect-src` must allow `generativelanguage.googleapis.com` | v2.tauri.app/reference/config, chromium android_webview CORS docs |
+| Cheap probe | `GET /v1beta/models` — metadata-only, no generation quota; validates the key (bad key → immediate 400) | ai.google.dev/api/models + live measurement |
+| Bad key shape | HTTP **400** `INVALID_ARGUMENT` with ErrorInfo `reason: "API_KEY_INVALID"` (measured live — not 401). Revoked and leaked keys return the same shape; they are indistinguishable from typos and all map to wrong-key | live measurement; ai.google.dev/gemini-api/docs/troubleshooting |
+| Quota signalling | HTTP 429 `RESOURCE_EXHAUSTED` with `QuotaFailure` violations and `RetryInfo.retryDelay` (e.g. `"55s"`). Daily vs burst is distinguished by `quotaId` substring: `…PerDay…` (e.g. `GenerateRequestsPerDayPerProjectPerModel-FreeTier`) → quota-exhausted; `…PerMinute…` → rate-limited | ai.google.dev/gemini-api/docs/troubleshooting; real 429 bodies (gemini-cli issues) |
+| Free-tier limits | Exact RPM/RPD numbers are account-gated (AI Studio login) and third-party trackers disagree by 4–6×. Never hardcode limits — drive pacing from live 429 `retryDelay` signals | ai.google.dev/gemini-api/docs/rate-limits (gated) |
+| Free tier exists | Yes — $0 "Standard" rows on the pricing page for all models above (COST-ZERO holds). Note for owner: the pricing page states free-tier content **is** used to improve Google's products; the owner-approved one-line notice does not currently mention training | ai.google.dev/gemini-api/docs/pricing |
+
+**Build/adopt decisions (2026-07-11):**
+
+- **Hand-write the fetch adapter; do not adopt `@google/genai`.** The SDK is
+  Apache-2.0 and maintained, but ~65 KB gzipped, drags an MCP peer
+  dependency, and its `ApiError` collapses errors to `status` + a
+  stringified body — we would re-parse JSON out of an undocumented message
+  format to build the error taxonomy that is the heart of this phase. A
+  typed fetch adapter is ~150 lines with native `AbortSignal`.
+- **No retry/backoff package** — the controller's pause/resume is a switch
+  statement over the taxonomy plus one timer and one `online` listener.
+- **Test tooling adopted:** `vitest` (MIT) + `fake-indexeddb` (Apache-2.0),
+  dev-only, for the taxonomy pure-function tests and the key-provenance
+  tests required by Step 4.
+
 ## 4. Step 2 — Key & settings storage (Dexie)
 
 - Extend `src/state/` with a singleton Gemini credential record (Dexie schema
@@ -241,6 +274,37 @@ Convert; the API panel shows live Gemini status with the approved words;
 **Done when:** the BUILD_PLAN Phase 4 gate sentence is demonstrably true and
 the evidence (what was run, what was seen) is written into the PR/commit
 description or this file.
+
+### Step-6 evidence (2026-07-11)
+
+What was run: `npm run build` (tsc + vite, clean), `npm run lint` (clean),
+`npm test` (29 tests: taxonomy mapper offline over the measured Gemini error
+shapes; singleton credential persist/replace/remove; controller provenance,
+no-fallback, pause/resume incl. the `online` event; a source-scan test that
+fails on any alternate key source in `src/providers/`). Then the real app
+was driven in headless Edge (playwright-core) against `npm run dev` and the
+**real** Gemini endpoint:
+
+- Fresh profile → first-run walkthrough appears, with the exact one-line
+  privacy notice; empty field → "Paste a key first."
+- Garbage key → live Gemini HTTP 400 `API_KEY_INVALID` → the approved
+  wrong-key sentence in danger tones + "Wrong key" chip.
+- Network off → the approved can't-reach sentence in blue-neutral +
+  "Can't reach" chip — visibly distinct from wrong key, side by side.
+- "Got it — open Codox" stays disabled without a validated key; Skip lands
+  on Convert; reload goes straight to Convert (walkthrough shows once).
+- Keys panel shows the saved-key state and live status after reload
+  (startup probe); Remove key returns the panel to the empty state.
+- Dev-only "Send test image call" (Keys tab) goes through
+  `runGeminiRequest` → stored singleton key → adapter; with the garbage key
+  it stopped as `wrong-key` after exactly one request and no fallback.
+- The key string never appeared in console output during any of the above.
+
+Quota tones (amber, calm) are exercised by unit tests over the documented
+429 shapes; a real 429 was not reproducible on demand. **Remaining for the
+owner:** paste a real Gemini key (validates green) and press "Send test
+image call" in a dev build — that closes the gate sentence with a real
+round-trip billed to that key.
 
 ## 9. Constraints & gotchas
 
