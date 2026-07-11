@@ -15,6 +15,14 @@ const DesignGalleryScreen = import.meta.env.DEV
     )
   : null
 
+const MockupAppScreen = import.meta.env.DEV
+  ? lazy(() =>
+      import('./mockups/MockupApp').then(({ MockupApp }) => ({
+        default: MockupApp,
+      })),
+    )
+  : null
+
 const screenSteps: Array<{ step: AppStep; label: string }> = [
   { step: 'setup', label: 'Setup' },
   { step: 'upload', label: 'Upload' },
@@ -48,6 +56,20 @@ function App() {
       galleryAvailable &&
       new URLSearchParams(window.location.search).get('gallery') === '1',
   )
+  // Phase-3 clickable mockups: a second dev-only review surface, full-screen.
+  const [mockupsOpen, setMockupsOpen] = useState(
+    () =>
+      galleryAvailable &&
+      new URLSearchParams(window.location.search).get('mockups') === '1',
+  )
+
+  if (mockupsOpen && MockupAppScreen) {
+    return (
+      <Suspense fallback={<p>Loading mockups...</p>}>
+        <MockupAppScreen onExit={() => setMockupsOpen(false)} />
+      </Suspense>
+    )
+  }
 
   return (
     <div className="app-shell">
@@ -84,6 +106,18 @@ function App() {
             type="button"
           >
             Gallery
+          </button>
+        ) : null}
+        {galleryAvailable ? (
+          <button
+            className="screen-nav-button"
+            onClick={() => {
+              setGalleryOpen(false)
+              setMockupsOpen(true)
+            }}
+            type="button"
+          >
+            Mockups
           </button>
         ) : null}
       </nav>

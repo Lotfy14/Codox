@@ -996,6 +996,13 @@
     grid-template-columns: auto minmax(0, 1fr) auto;
   }
 
+  /* Keep the remove control at the row's top-right; grid auto-placement
+     would otherwise strand it in a new bottom-left cell. */
+  .ds-file-row__remove {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
   .ds-file-row__answer-source {
     grid-column: 1 / -1;
     grid-row: auto;

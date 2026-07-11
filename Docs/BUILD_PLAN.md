@@ -78,7 +78,9 @@ must survive; the surface is free.
 
 - [x] Pick a component approach (headless primitives — Radix/React Aria — plus
       a small design system: colors, type, spacing)
-- [ ] Clickable mockups of all five screens (desktop + phone widths):
+- [x] Clickable mockups of all five screens (desktop + phone widths) —
+      dev-only prototype at `/?mockups=1` (`src/mockups/`), composed from the
+      Phase-3A component library on fake data:
       - Setup: **one** key first, "add more keys" deferred; live validation
       - Upload: drop zone + the one declaration question (answers inside /
         separate file / none); second drop zone appears conditionally
@@ -88,9 +90,10 @@ must survive; the surface is free.
         (next flag / pick answer / confirm without touching the mouse)
       - Export: prominent manual export with no auto-download; share sheet on
         mobile, zip download on desktop
-- [ ] Error-language pass: every failure a tutor can hit, written in plain
+- [x] Error-language pass: every failure a tutor can hit, written in plain
       English ("provider unreachable, trying the next one" ≠ "your key is
-      wrong")
+      wrong") — see `design-system/ERROR_LANGUAGE.md`; all strings visible
+      in the mockups (Help tab shows the full catalog)
 - [ ] Owner reviews mockups and signs off
 
 **Done when:** owner has clicked through the five screens and approved them.
@@ -98,6 +101,7 @@ must survive; the surface is free.
 ## Phase 4 — Setup screen + provider layer (~3–4 days)
 
 The first real feature, because everything downstream needs a working key.
+Detailed AI handoff plan: [PHASE4_PLAN.md](PHASE4_PLAN.md).
 
 - [ ] Key storage on-device (per provider, never leaves the device)
 - [ ] Provider adapters (OpenAI-compatible, thin): Groq, Gemini, OpenRouter
