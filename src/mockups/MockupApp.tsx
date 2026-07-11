@@ -1,9 +1,18 @@
-import { useEffect, useState } from 'react'
-import { AppShell, Badge, Button, TabNav } from '../design/components'
+import { useEffect, useRef, useState } from 'react'
+import {
+  Badge,
+  Button,
+  Dialog,
+  GlassPanel,
+  StorageMeter,
+  TabNav,
+  ThemeSwitcher,
+} from '../design/components'
 import type {
   AppTab,
   FileAnswerSource,
   ProviderOrderItem,
+  TabNavItem,
 } from '../design/components'
 import { ConvertMock } from './ConvertMock'
 import type { ConvertStage, RunMode } from './ConvertMock'
@@ -12,14 +21,24 @@ import { HelpMock } from './HelpMock'
 import { HistoryMock } from './HistoryMock'
 import { KeysMock } from './KeysMock'
 import { ReviewMock } from './ReviewMock'
-import { uploadCopy } from './copy'
-import { initialProviders, reviewFlags, sampleFiles } from './mockData'
+import { firstRunCopy, keyCopy, uploadCopy } from './copy'
+import {
+  initialProviders,
+  reviewFlags,
+  sampleFiles,
+  storageUsage,
+} from './mockData'
 import type { MockFile } from './mockData'
 import './mockups.css'
 
 export interface MockupAppProps {
   onExit: () => void
 }
+
+const workspaceTabs: readonly TabNavItem[] = [
+  { id: 'convert', label: 'Convert' },
+  { id: 'history', label: 'History' },
+]
 
 function toMockFile(file: File, index: number): MockFile {
   return {
@@ -31,8 +50,10 @@ function toMockFile(file: File, index: number): MockFile {
 }
 
 /**
- * Phase 3 clickable mockups: the five screens composed into the
- * owner-approved dashboard model, running on fake data and local state only.
+ * Phase 3 clickable mockups in the one-screen layout: a left workspace
+ * sidebar, one center column where the whole Convert job happens in place
+ * (drop → options → progress → review → export, no takeover screens), and a
+ * right utility rail whose API-keys and Help panels overlay this screen.
  * Development-only; nothing here persists or calls a provider.
  */
 export function MockupApp({ onExit }: MockupAppProps) {
@@ -41,6 +62,8 @@ export function MockupApp({ onExit }: MockupAppProps) {
   const [providers, setProviders] = useState<readonly ProviderOrderItem[]>(
     initialProviders,
   )
+  const [keysOpen, setKeysOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   const [stage, setStage] = useState<ConvertStage>('home')
   const [files, setFiles] = useState<readonly MockFile[]>([])
@@ -56,6 +79,17 @@ export function MockupApp({ onExit }: MockupAppProps) {
   const [reviewOpen, setReviewOpen] = useState(false)
   const [reviewMinimized, setReviewMinimized] = useState(false)
   const [exported, setExported] = useState(false)
+
+  // Closing the inline review returns focus to the work column, mirroring
+  // the focus hand-off the old takeover shell provided.
+  const workElement = useRef<HTMLElement | null>(null)
+  const previousReviewOpen = useRef(reviewOpen)
+  useEffect(() => {
+    if (previousReviewOpen.current && !reviewOpen) {
+      workElement.current?.focus()
+    }
+    previousReviewOpen.current = reviewOpen
+  }, [reviewOpen])
 
   const totalPages = files.reduce((sum, file) => sum + file.pages, 0)
   const flagsLeft =
@@ -114,6 +148,11 @@ export function MockupApp({ onExit }: MockupAppProps) {
     setActiveTab('convert')
   }
 
+  const minimizeReview = () => {
+    setReviewOpen(false)
+    setReviewMinimized(true)
+  }
+
   if (firstRun) {
     return (
       <div className="mockup-root">
@@ -129,115 +168,164 @@ export function MockupApp({ onExit }: MockupAppProps) {
 
   return (
     <div className="mockup-root">
-      <AppShell
-        header={
-          <div className="mockup-header">
-            <span className="mockup-brand">
-              <img alt="" height="40" src="/logo.svg" width="40" />
-              <span>
-                <strong>Codox</strong>
-                <small>Exam PDFs → Triviadox</small>
-              </span>
+      <div className="mock-shell">
+        <GlassPanel
+          as="aside"
+          aria-label="Workspace"
+          className="mock-shell__side"
+          padding="compact"
+        >
+          <span className="mockup-brand">
+            <img alt="" height="40" src="/logo.svg" width="40" />
+            <span>
+              <strong>Codox</strong>
+              <small>Exam PDFs → Triviadox</small>
             </span>
-            <span className="mockup-header__side">
-              <Badge tone="primary">Mockup</Badge>
-              <Button onPress={onExit} variant="quiet">
-                Exit mockups
-              </Button>
-            </span>
+          </span>
+          <TabNav
+            activeTab={activeTab}
+            ariaLabel="Workspace"
+            onTabChange={(tab) => {
+              if (reviewOpen) minimizeReview()
+              setActiveTab(tab)
+            }}
+            tabs={workspaceTabs}
+          />
+          <StorageMeter
+            className="mock-shell__side-foot"
+            label="On-device storage"
+            total={storageUsage.total}
+            used={storageUsage.used}
+          />
+        </GlassPanel>
+
+        <main
+          className="mock-shell__work"
+          ref={(element) => {
+            workElement.current = element
+          }}
+          tabIndex={-1}
+        >
+          {reviewOpen ? (
+            <div className="mock-screen">
+              <div className="mock-shell__review-tools">
+                <Button autoFocus onPress={minimizeReview} variant="quiet">
+                  Minimize review
+                </Button>
+              </div>
+              <ReviewMock
+                exported={exported}
+                fileName="bio_exam.pdf"
+                onExport={() => setExported(true)}
+                onFinish={() => {
+                  setReviewOpen(false)
+                  setReviewMinimized(false)
+                  setActiveTab('convert')
+                }}
+                onResolve={(flagId, optionIndex) =>
+                  setResolutions((current) => ({
+                    ...current,
+                    [flagId]: optionIndex,
+                  }))
+                }
+                resolutions={resolutions}
+              />
+            </div>
+          ) : activeTab === 'history' ? (
+            <HistoryMock onOpenReview={openReview} />
+          ) : (
+            <ConvertMock
+              batchSource={batchSource}
+              exported={exported}
+              files={files}
+              firstProviderName={providers[0]?.name ?? 'Groq'}
+              flagsLeft={flagsLeft}
+              keepOriginal={keepOriginal}
+              keyFileAdded={keyFileAdded}
+              onAddSampleFiles={() => {
+                setFiles(sampleFiles.map((file) => ({ ...file })))
+                setUploadNote(null)
+                setStage('files')
+              }}
+              onBatchSourceChange={setBatchSource}
+              onExport={() => setExported(true)}
+              onFileSourceChange={(id, source) =>
+                setFiles((current) =>
+                  current.map((file) =>
+                    file.id === id ? { ...file, answerSource: source } : file,
+                  ),
+                )
+              }
+              onFilesDropped={addFiles}
+              onKeepOriginalChange={setKeepOriginal}
+              onKeyFileAdded={() => setKeyFileAdded(true)}
+              onOpenReview={openReview}
+              onRemoveFile={(id) =>
+                setFiles((current) => {
+                  const remaining = current.filter((file) => file.id !== id)
+                  if (remaining.length === 0) setStage('home')
+                  return remaining
+                })
+              }
+              onReset={resetConvert}
+              onRunModeChange={setRunMode}
+              onStart={() => {
+                setStage('running')
+                setPagesDone(0)
+                setRunMode('normal')
+                setResolutions({})
+                setExported(false)
+              }}
+              pagesDone={pagesDone}
+              reviewMinimized={reviewMinimized}
+              runMode={runMode}
+              secondProviderName={providers[1]?.name ?? 'OpenRouter'}
+              stage={stage}
+              uploadNote={uploadNote}
+            />
+          )}
+        </main>
+
+        <aside aria-label="Utilities" className="mock-shell__rail">
+          <Button onPress={() => setKeysOpen(true)} variant="secondary">
+            API keys
+          </Button>
+          <Button onPress={() => setHelpOpen(true)} variant="secondary">
+            Help
+          </Button>
+          <div className="mock-shell__rail-foot">
+            <ThemeSwitcher className="mock-theme-vertical" />
+            <Badge tone="primary">Mockup</Badge>
+            <Button onPress={onExit} variant="quiet">
+              Exit mockups
+            </Button>
           </div>
-        }
-        isReviewTakeover={reviewOpen}
-        navigation={<TabNav activeTab={activeTab} onTabChange={setActiveTab} />}
-        onMinimizeReview={() => {
-          setReviewOpen(false)
-          setReviewMinimized(true)
-        }}
+        </aside>
+      </div>
+
+      <Dialog
+        description={keyCopy.failoverExplainer}
+        isOpen={keysOpen}
+        onOpenChange={setKeysOpen}
+        title="API keys"
       >
-        {reviewOpen ? (
-          <ReviewMock
-            exported={exported}
-            fileName="bio_exam.pdf"
-            onExport={() => setExported(true)}
-            onFinish={() => {
-              setReviewOpen(false)
-              setReviewMinimized(false)
-              setActiveTab('convert')
-            }}
-            onResolve={(flagId, optionIndex) =>
-              setResolutions((current) => ({
-                ...current,
-                [flagId]: optionIndex,
-              }))
-            }
-            resolutions={resolutions}
-          />
-        ) : activeTab === 'convert' ? (
-          <ConvertMock
-            batchSource={batchSource}
-            exported={exported}
-            files={files}
-            firstProviderName={providers[0]?.name ?? 'Groq'}
-            flagsLeft={flagsLeft}
-            keepOriginal={keepOriginal}
-            keyFileAdded={keyFileAdded}
-            onAddSampleFiles={() => {
-              setFiles(sampleFiles.map((file) => ({ ...file })))
-              setUploadNote(null)
-              setStage('files')
-            }}
-            onBatchSourceChange={setBatchSource}
-            onExport={() => setExported(true)}
-            onFileSourceChange={(id, source) =>
-              setFiles((current) =>
-                current.map((file) =>
-                  file.id === id ? { ...file, answerSource: source } : file,
-                ),
-              )
-            }
-            onFilesDropped={addFiles}
-            onKeepOriginalChange={setKeepOriginal}
-            onKeyFileAdded={() => setKeyFileAdded(true)}
-            onOpenReview={openReview}
-            onRemoveFile={(id) =>
-              setFiles((current) => {
-                const remaining = current.filter((file) => file.id !== id)
-                if (remaining.length === 0) setStage('home')
-                return remaining
-              })
-            }
-            onReset={resetConvert}
-            onRunModeChange={setRunMode}
-            onStart={() => {
-              setStage('running')
-              setPagesDone(0)
-              setRunMode('normal')
-              setResolutions({})
-              setExported(false)
-            }}
-            pagesDone={pagesDone}
-            reviewMinimized={reviewMinimized}
-            runMode={runMode}
-            secondProviderName={providers[1]?.name ?? 'OpenRouter'}
-            stage={stage}
-            uploadNote={uploadNote}
-          />
-        ) : activeTab === 'history' ? (
-          <HistoryMock onOpenReview={openReview} />
-        ) : activeTab === 'keys' ? (
-          <KeysMock
-            onProvidersChange={setProviders}
-            providers={providers}
-          />
-        ) : (
-          <HelpMock
-            onRestartWalkthrough={() => {
-              resetConvert()
-              setFirstRun(true)
-            }}
-          />
-        )}
-      </AppShell>
+        <KeysMock onProvidersChange={setProviders} providers={providers} />
+      </Dialog>
+
+      <Dialog
+        description={firstRunCopy.welcome}
+        isOpen={helpOpen}
+        onOpenChange={setHelpOpen}
+        title="Help"
+      >
+        <HelpMock
+          onRestartWalkthrough={() => {
+            setHelpOpen(false)
+            resetConvert()
+            setFirstRun(true)
+          }}
+        />
+      </Dialog>
     </div>
   )
 }

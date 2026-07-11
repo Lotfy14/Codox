@@ -1,107 +1,93 @@
 # Frontend Design Audit
 
+_Findings fixed 2026-07-11 in the Phase 3 mockup layer (`/?mockups=1`).
+Status per finding below._
+
 ## Scope
 
-`design-system/one-screen-layout.html` is the newest visual source of truth —
-but as a **structural reference only**. It is a static throwaway mockup and
-will be deleted once the layout is rebuilt in React. Defects internal to the
-prototype file (dead CSS, duplicated literals, fake `div` controls, inline
-SVG copies, missing hover/focus rules, generic class names) are therefore not
-tracked here: fixing them would be work on a file destined for deletion, and
-rebuilding from the existing component library resolves all of them at once.
+`design-system/one-screen-layout.html` is a **structural reference only** — a
+static throwaway mockup. Its internal defects (dead CSS, duplicated literals,
+fake `div` controls, inline SVG copies, missing hover/focus rules, generic
+class names) are not tracked: the layout was rebuilt from the existing React
+component library, which resolves all of them at once. The prototype's caption
+claims "colors are the existing tokens" — it was false; every value was mapped
+to real tokens instead of copied.
 
-Note the prototype's own caption claims "colors are the existing tokens" —
-this is false (see finding 2). Do not trust the caption; map every value.
+The rebuild targets the mockups because Phase 3's gate is owner sign-off on
+mockups; Phases 4–7 each build the production screen "per the mockup," so the
+one-screen mockup is now the shell they will follow.
 
 Generated output (`dist/`) and package styles (`node_modules/`) are expected
 duplication and are never edited by hand.
 
-No application code or styles were changed as part of the audit.
+## Findings and resolutions
 
-## Findings, in priority order
+### 1. Only the happy state was designed — RESOLVED (one gap noted)
 
-### 1. Only the happy state is designed
+The one-screen layout now carries every state the Phase 3 flows already had,
+in place in the center column: empty (drop zone), dragging (drop-target
+highlight), invalid file (encrypted-PDF note), running, quota-paused,
+offline, provider switch, one bad page, wrong declaration, done with/without
+flags, inline review, export, exported, and disabled Start (missing key
+file). Provider key states (wrong key ≠ unreachable ≠ quota) live in the
+API-keys panel. **Still undesigned:** a "no key yet" state on Convert itself
+— deferred to Phase 4, where real key state exists.
 
-The prototype shows one state: files loaded, key present, nothing running.
-There are no empty, dragging, invalid-file, missing-key, running, paused,
-failed, review, export, disabled, loading, or completed layouts. Several of
-these are project law, not polish: provider errors must be distinguishable
-(bad key ≠ unreachable ≠ quota, and quota reads as "paused"), review and
-loud/automatic export are core flows, and one bad page must flag-and-continue
-visibly.
+### 2. Open owner decision — DEFAULTED, still the owner's call
 
-**Action:** Define state-driven variants of the one-screen structure before
-or during the rebuild. This is the largest missing piece of the design.
+History is kept as the second left-nav item (what the prototype showed), and
+the "Last runs" panel was removed from Convert home so past runs live in one
+place. If the owner prefers dropping History or folding last-runs into
+Convert, say so — it is a small change either way.
 
-### 2. Open owner decision blocks the rebuild
+### 3. The new design was not part of the application — RESOLVED (mockups)
 
-The prototype's legend still asks: keep **History** as a left-nav item, drop
-it, or fold "last runs" into the Convert screen? (Inline review was already
-confirmed 2026-07-11.) The sidebar structure can't be finalized until this is
-answered.
+`src/mockups/MockupApp.tsx` now renders the one-screen structure: left
+workspace sidebar (brand, Convert/History nav, storage meter), one center
+work column where the whole job happens in place (no takeover screens —
+review renders inline), and a right utility rail. Keys and Help stopped
+being tabs and became panels (`Dialog`) that overlay the screen from the
+rail, so the user never leaves Convert. Everything is composed from the
+existing `TabNav`, `FileDropZone`, `Select`, `Toggle`, `ThemeSwitcher`,
+`StorageMeter`, `Dialog`, and button components — no prototype HTML was
+copied, which is also what delivers focus management, 44px touch targets,
+keyboard flow, and theming. Production (`src/App.tsx`) still renders the
+Phase 1 scaffold; it adopts this shell as Phases 4–7 build real features
+per the mockup.
 
-**Action:** Get the owner's call on History before building the nav.
+### 4. Prototype values had to map to tokens, not be copied — RESOLVED
 
-### 3. The new design is not part of the application
+No prototype color, radius, font, or shadow was copied; the rebuild uses
+`src/design/tokens.css` semantic tokens throughout (`mockups.css` remains
+token-only). Display data comes from one source: the storage figure is a
+shared `storageUsage` constant in `src/mockups/mockData.ts` (previously
+hardcoded in History), file names/pages/sizes come from `sampleFiles`, and
+the batch summary ("N pages · about M min") is computed, not typed.
 
-The one-screen design is an untracked standalone HTML file. Production still
-renders the older scaffold screens; the design gallery and clickable mockups
-are development-only.
+### 5. Responsive behavior was incomplete — RESOLVED
 
-**Action:** Rebuild the one-screen structure as the production shell using
-the existing `TabNav`, `FileDropZone`, `Select`, `Toggle`, `ThemeSwitcher`,
-and button components — never by copying prototype HTML. Reusing these
-components is also what delivers the accessibility, interaction states,
-44px touch targets, theming, and semantics the static prototype lacks;
-verify each of those in the rebuilt screen rather than assuming them.
+Mobile-first shell: below 64rem the workspace bar (brand + nav + meter)
+stacks first, the utility rail sits directly under it — API/Help/theme stay
+reachable *before* the work column, fixing the prototype's buried utilities —
+and rows wrap instead of cramping. At ≥64rem it is the three-column frame
+with sticky sidebar and rail. The storage meter never runs its label into
+the percentage (it has a spaced two-side header). File rows already stack
+via the existing `ds-file-row` breakpoint rules.
 
-### 4. Prototype values must be mapped to existing tokens, not copied
+### 6. Existing frontend selectors had split ownership — RESOLVED
 
-The prototype invents its own colors, typography, radii, spacing, and
-shadows, and they conflict with `src/design/tokens.css`: a 22px card radius
-vs the 20px token, a muted color (`#8c797e`, 4.08:1 on white — fails
-contrast) vs the accessible `--color-text-muted`, Plus Jakarta Sans for all
-text vs the established heading/body pair (the app ships only PJS 800 and
-Inter 400/500; the prototype assumes weights 600/650/700).
-
-**Action:** During the rebuild, map every prototype value to an existing
-semantic token. Add a token only when no existing token represents the
-design decision. Display data (file names, page counts, sizes, storage %)
-comes from `src/mockups/mockData.ts` or real state — the prototype's
-hardcoded values disagree with it (14 vs 12 pages, 3.1 vs 4.5 MB) and with
-themselves.
-
-### 5. Responsive behavior is incomplete
-
-The prototype's only breakpoint collapses three columns into one. At 760px
-the header is cramped, the storage label and percentage run together, and
-API/Help fall below the entire workflow.
-
-**Action:** Design a deliberate mobile header and navigation, keep utilities
-immediately reachable, stack file-row controls when needed, and test at
-320px, 375px, 768px, and tablet landscape widths.
-
-### 6. Existing frontend selectors have split ownership
-
-This is the one finding in real authored app code, so it survives regardless
-of the prototype. Examples: `.ds-select__trigger` (components.css:165 and
-:217), `.ds-file-row__flag` (:541 and :546), `.ds-status-chip`,
-`.ds-resume-card__continue`, `.mock-review__source`, and several gallery
-selectors — declarations spread across distant rules, sometimes overriding
-earlier ones.
-
-**Action:** Consolidate each base selector, use explicit modifier classes,
-and reserve separate declarations for genuine responsive overrides. Worth
-doing before the rebuild adds more rules to the same files.
+In `src/design/components/components.css`: `.ds-file-row__flag` no longer
+inherits a muted color it immediately overrode (self-contained rule), and
+`.ds-resume-card__continue` left the icon-button group whose declarations it
+mostly undid (self-contained rule). `.ds-tab-nav`'s hardcoded 4-column grid
+became `auto-fit`, so the nav renders any tab count without empty tracks.
+Remaining grouped selectors (badge/chip, progress/storage) are deliberate
+shared recipes, not split ownership.
 
 ## Verification
 
-- Inspected the prototype HTML and rendered it at desktop, breakpoint, and
-  narrow viewport sizes.
-- Compared prototype values with `src/design/tokens.css`,
-  `src/design/fonts.css`, and `src/mockups/mockData.ts`; contrast ratio
-  recomputed independently.
-- Confirmed duplicate declarations for the finding-6 selectors in
-  `src/design/components/components.css`.
-- Confirmed the existing TypeScript build and lint checks pass; the
-  standalone HTML is not included in either check.
+- `npm run build` (tsc + vite) and `npm run lint` (oxlint) pass.
+- The rebuilt flow reuses the existing Phase 3 state machinery, which the
+  owner has already clicked through; the layout around it is what changed.
+- Owner click-through of `/?mockups=1` at phone and desktop widths is the
+  remaining Phase 3 gate.

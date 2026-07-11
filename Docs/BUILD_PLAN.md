@@ -108,6 +108,11 @@ must survive; the surface is free.
       English ("provider unreachable, trying the next one" ≠ "your key is
       wrong") — see `design-system/ERROR_LANGUAGE.md`; all strings visible
       in the mockups (Help tab shows the full catalog)
+- [x] One-screen relayout (2026-07-11): mockups restructured to the owner's
+      one-screen design — left workspace nav (Convert/History + storage),
+      the whole job in one center column with review inline (no takeover),
+      Keys/Help as overlay panels on a right utility rail. See
+      `design-system/DESIGN_AUDIT.md` for what changed and why.
 - [ ] Owner reviews mockups and signs off
 
 **Done when:** owner has clicked through the five screens and approved them.

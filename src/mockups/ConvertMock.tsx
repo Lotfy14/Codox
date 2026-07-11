@@ -14,7 +14,6 @@ import {
 import type { FileAnswerSource, SelectOption } from '../design/components'
 import { sillySentences } from '../design/silly-sentences'
 import { exportCopy, progressCopy, reviewCopy, uploadCopy } from './copy'
-import { recentRuns } from './mockData'
 import type { MockFile } from './mockData'
 
 export type ConvertStage = 'home' | 'files' | 'running' | 'done'
@@ -183,6 +182,11 @@ export function ConvertMock(props: ConvertMockProps) {
               />
             </div>
             <div className="mock-start-row">
+              {/* ponytail: flat ~5 s/page estimate; refine when Phase 6 measures real pace */}
+              <span className="mock-muted mock-start-note">
+                {totalPages} page{totalPages === 1 ? '' : 's'} · about{' '}
+                {Math.max(1, Math.round((totalPages * 5) / 60))} min
+              </span>
               <Button isDisabled={keyFileMissing} onPress={props.onStart}>
                 Start converting
               </Button>
@@ -221,34 +225,6 @@ function HomeStage(props: ConvertMockProps) {
             {props.uploadNote}
           </p>
         ) : null}
-      </GlassPanel>
-
-      <GlassPanel as="section" aria-labelledby="mock-last-runs-heading" padding="compact">
-        <div className="mock-list-header">
-          <h2 className="mock-panel-heading" id="mock-last-runs-heading">
-            Last runs
-          </h2>
-        </div>
-        <div className="mock-row-list" role="list">
-          {recentRuns.map((run) => (
-            <div className="mock-run-row" key={run.id} role="listitem">
-              <div className="mock-run-row__text">
-                <strong>{run.name}</strong>
-                <span className="mock-run-row__meta">
-                  {run.date} · {run.questions} questions
-                </span>
-              </div>
-              <div className="mock-run-row__badges">
-                {run.flagsLeft > 0 ? (
-                  <Badge tone="warning">{run.flagsLeft} flags left</Badge>
-                ) : null}
-                <Badge tone={run.exported ? 'success' : 'neutral'}>
-                  {run.exported ? exportCopy.exported : exportCopy.notExportedYet}
-                </Badge>
-              </div>
-            </div>
-          ))}
-        </div>
       </GlassPanel>
     </div>
   )

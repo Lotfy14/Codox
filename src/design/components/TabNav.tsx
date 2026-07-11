@@ -12,6 +12,7 @@ export interface TabNavProps {
   ariaLabel?: string
   className?: string
   onTabChange: (tab: AppTab) => void
+  tabs?: readonly TabNavItem[]
 }
 
 const appTabs: readonly TabNavItem[] = [
@@ -26,13 +27,14 @@ export function TabNav({
   ariaLabel = 'Main navigation',
   className,
   onTabChange,
+  tabs = appTabs,
 }: TabNavProps) {
   return (
     <nav
       aria-label={ariaLabel}
       className={['ds-tab-nav', className].filter(Boolean).join(' ')}
     >
-      {appTabs.map((item) => (
+      {tabs.map((item) => (
         <AriaButton
           aria-current={activeTab === item.id ? 'page' : undefined}
           className="ds-tab-nav__item"

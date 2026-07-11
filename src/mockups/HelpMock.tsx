@@ -1,4 +1,4 @@
-import { Button, GlassPanel, ThemeSwitcher } from '../design/components'
+import { Button } from '../design/components'
 import {
   exportCopy,
   firstRunCopy,
@@ -75,58 +75,43 @@ export interface HelpMockProps {
   onRestartWalkthrough: () => void
 }
 
-/** The Help tab: appearance, the privacy line, and every message in one place. */
+/** Help panel content: the privacy line and every message in one place. */
 export function HelpMock({ onRestartWalkthrough }: HelpMockProps) {
   return (
-    <section aria-labelledby="mock-help-heading" className="mock-screen">
-      <header className="mock-screen__header">
-        <h1 id="mock-help-heading">Help</h1>
-        <p>{firstRunCopy.welcome}</p>
-      </header>
+    <div className="mock-stack">
+      <section aria-labelledby="mock-help-privacy">
+        <h3 className="mock-panel-heading" id="mock-help-privacy">
+          Your key and your pages
+        </h3>
+        <p className="mock-muted">{firstRunCopy.privacyNotice}</p>
+        <h3 className="mock-panel-heading">Why export matters</h3>
+        <p className="mock-muted">{exportCopy.whyExportMatters}</p>
+        <div className="mock-done-actions">
+          <Button onPress={onRestartWalkthrough} variant="secondary">
+            Restart the walkthrough
+          </Button>
+        </div>
+      </section>
 
-      <div className="mock-stack">
-        <GlassPanel as="section" aria-label="Appearance" padding="default">
-          <ThemeSwitcher />
-        </GlassPanel>
-
-        <GlassPanel as="section" aria-labelledby="mock-help-privacy" padding="default">
-          <h2 className="mock-panel-heading" id="mock-help-privacy">
-            Your key and your pages
-          </h2>
-          <p className="mock-muted">{firstRunCopy.privacyNotice}</p>
-          <h2 className="mock-panel-heading">Why export matters</h2>
-          <p className="mock-muted">{exportCopy.whyExportMatters}</p>
-          <div className="mock-done-actions">
-            <Button onPress={onRestartWalkthrough} variant="secondary">
-              Restart the walkthrough
-            </Button>
+      <section aria-labelledby="mock-help-messages">
+        <h3 className="mock-panel-heading" id="mock-help-messages">
+          Every message Codox can show
+        </h3>
+        <p className="mock-muted">
+          The Phase 3 error-language pass, in one place for review. If any
+          line sounds confusing, that is a bug — say which.
+        </p>
+        {messageGroups.map((group) => (
+          <div className="mock-message-group" key={group.heading}>
+            <h4>{group.heading}</h4>
+            <ul>
+              {group.messages.map((message) => (
+                <li key={message}>{message}</li>
+              ))}
+            </ul>
           </div>
-        </GlassPanel>
-
-        <GlassPanel
-          as="section"
-          aria-labelledby="mock-help-messages"
-          padding="default"
-        >
-          <h2 className="mock-panel-heading" id="mock-help-messages">
-            Every message Codox can show
-          </h2>
-          <p className="mock-muted">
-            The Phase 3 error-language pass, in one place for review. If any
-            line sounds confusing, that is a bug — say which.
-          </p>
-          {messageGroups.map((group) => (
-            <div className="mock-message-group" key={group.heading}>
-              <h3>{group.heading}</h3>
-              <ul>
-                {group.messages.map((message) => (
-                  <li key={message}>{message}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </GlassPanel>
-      </div>
-    </section>
+        ))}
+      </section>
+    </div>
   )
 }

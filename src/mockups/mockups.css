@@ -11,14 +11,6 @@
   top: var(--space-4);
 }
 
-.mockup-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  flex-wrap: wrap;
-}
-
 .mockup-brand {
   display: flex;
   align-items: center;
@@ -41,12 +33,122 @@
   font-size: var(--font-size-xs);
 }
 
-.mockup-header__side {
+/* ---------- One-screen shell: sidebar · work column · utility rail ---------- */
+
+/* Mobile-first: everything stacks, with the utility rail directly under the
+   workspace bar so API/Help/theme stay reachable before the work column. */
+.mock-shell {
+  display: grid;
+  grid-template-areas:
+    'side'
+    'rail'
+    'work';
+  gap: var(--layout-gap-mobile);
+  align-items: start;
+  width: min(100%, 84rem);
+  margin: 0 auto;
+  padding: var(--space-4);
+}
+
+.mock-shell__side {
+  grid-area: side;
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.mock-shell__side .ds-tab-nav {
+  flex: 1 1 14rem;
+  width: auto;
+}
+
+.mock-shell__side-foot {
+  flex: 1 1 100%;
+}
+
+.mock-shell__work {
+  grid-area: work;
+  min-width: 0;
+  outline: none;
+}
+
+.mock-shell__rail {
+  grid-area: rail;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
-  /* Stays right-aligned when the header wraps at phone widths. */
+}
+
+.mock-shell__rail-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
   margin-left: auto;
+}
+
+.mock-shell__review-tools {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (min-width: 64rem) {
+  .mock-shell {
+    grid-template-areas: 'side work rail';
+    grid-template-columns: 15rem minmax(0, 1fr) auto;
+    gap: var(--layout-gap-desktop);
+    padding: var(--space-6);
+  }
+
+  .mock-shell__side {
+    position: sticky;
+    top: var(--space-6);
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    align-items: start;
+    min-height: calc(100vh - 2 * var(--space-6));
+  }
+
+  .mock-shell__side .ds-tab-nav {
+    width: 100%;
+  }
+
+  .mock-shell__side-foot {
+    align-self: end;
+  }
+
+  .mock-shell__rail {
+    position: sticky;
+    top: var(--space-6);
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    justify-items: stretch;
+    min-height: calc(100vh - 2 * var(--space-6));
+  }
+
+  .mock-shell__rail-foot {
+    display: grid;
+    justify-items: center;
+    align-self: end;
+    gap: var(--space-3);
+    margin-left: 0;
+  }
+
+  .mock-theme-vertical {
+    display: grid;
+    justify-items: center;
+    gap: var(--space-2);
+  }
+
+  .mock-theme-vertical .ds-theme-switcher__options {
+    flex-direction: column;
+  }
+
+  .mock-theme-vertical .ds-theme-switcher__resolved {
+    text-align: center;
+  }
 }
 
 /* ---------- Shared screen scaffolding ---------- */
@@ -328,8 +430,16 @@
 
 .mock-start-row {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: var(--space-4);
+  flex-wrap: wrap;
   margin-top: var(--space-6);
+}
+
+.mock-start-note {
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---------- Progress stage ---------- */
@@ -442,7 +552,7 @@
   margin-top: var(--space-5);
 }
 
-.mock-message-group h3 {
+.mock-message-group h4 {
   margin: 0 0 var(--space-2);
   font-family: var(--font-family-heading);
   font-weight: var(--font-weight-heading);

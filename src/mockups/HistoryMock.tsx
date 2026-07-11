@@ -10,7 +10,7 @@ import {
 } from '../design/components'
 import type { SelectOption } from '../design/components'
 import { exportCopy, historyCopy } from './copy'
-import { recentRuns } from './mockData'
+import { recentRuns, storageUsage } from './mockData'
 import type { MockRun } from './mockData'
 
 type RetentionRule = 'auto-clean-days' | 'keep-forever' | 'keep-last-n'
@@ -71,7 +71,7 @@ export function HistoryMock({ onOpenReview }: HistoryMockProps) {
                 />
               ) : null}
             </div>
-            <StorageMeter total={524_288_000} used={126_353_408} />
+            <StorageMeter total={storageUsage.total} used={storageUsage.used} />
           </div>
         </GlassPanel>
 

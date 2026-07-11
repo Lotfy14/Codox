@@ -44,6 +44,12 @@ export interface MockFlag {
   suggestedIndex?: number
 }
 
+/** One on-device storage picture, shared by every surface that shows it. */
+export const storageUsage = {
+  total: 524_288_000,
+  used: 126_353_408,
+} as const
+
 export const sampleFiles: readonly MockFile[] = [
   { id: 'bio', name: 'bio_exam.pdf', pages: 12, size: 4_718_592 },
   { id: 'maths', name: 'maths_mock.pdf', pages: 9, size: 2_359_296 },
