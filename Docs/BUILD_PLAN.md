@@ -43,10 +43,10 @@ builds on an unproven assumption. Each phase ends with a "Done when" gate.
       Setup → Upload → Progress → Review → Export
 - [x] App-wide state store skeleton (job state shape defined, persisted to
       IndexedDB via Dexie — even if empty for now)
-- [ ] Deploy to Cloudflare Pages; confirm the PWA installs on an iPhone
+- [x] Deploy to Cloudflare Pages; confirm the PWA installs on an iPhone
       (Add to Home Screen) and on Android Chrome
       _(Cloudflare auto-deploy live; Android shell confirmed 2026-07-11.
-      iPhone Add-to-Home-Screen still unconfirmed — leave unchecked until tested.)_
+      iPhone Add-to-Home-Screen confirmed by owner 2026-07-11.)_
 
 **Done when:** a public URL serves an installable empty app with five
 navigable screens.
@@ -113,7 +113,7 @@ must survive; the surface is free.
       the whole job in one center column with review inline (no takeover),
       Keys/Help as overlay panels on a right utility rail. See
       `design-system/DESIGN_AUDIT.md` for what changed and why.
-- [ ] Owner reviews mockups and signs off
+- [x] Owner reviews mockups and signs off _(2026-07-11)_
 
 **Done when:** owner has clicked through the five screens and approved them.
 
@@ -148,21 +148,21 @@ Detailed AI handoff plan: [PHASE4_PLAN.md](PHASE4_PLAN.md).
 - [x] One-line first-run notice (pages are sent to the provider under your
       key) — minimal per owner decision (the exact canonical sentence)
 - [x] Relay: **skipped** — Phase-2 Gemini direct-call check passed in the
-      shells (2026-07-11). One open re-confirm: the deployed browser PWA path,
-      before the relay option is deleted for good.
+      shells (2026-07-11), and the owner re-confirmed the direct call from the
+      deployed browser-PWA origin (2026-07-11). Relay option is dead.
 
 **Done when:** a user's real Gemini key validates in the UI, a test image call
 round-trips using that exact key, and inspection confirms there is no code path
 that can substitute a shared, bundled, developer, fallback, or second user's
 key.
 
-> **Gate status (2026-07-11):** every automated part is verified (see
+> **Gate status (2026-07-11): PASSED.** Every automated part is verified (see
 > PHASE4_PLAN.md Step-6 evidence): live wrong-key/unreachable states against
 > the real Gemini endpoint, no-fallback behavior, provenance tests, and the
-> dev-only test-image-call surface in Keys. The one step only the owner can
-> do — paste a **real** key, see it validate green, and press "Send test
-> image call" (dev build, Keys tab) — remains. Also still open from Phase 2:
-> one `generateContent` re-confirm from the deployed browser-PWA origin.
+> dev-only test-image-call surface in Keys. Owner confirmed the manual step —
+> real key validates green and "Send test image call" round-trips — and the
+> `generateContent` re-confirm from the deployed browser-PWA origin also
+> passed (2026-07-11). Phase 4 is closed.
 
 ## Phase 5 — PDF pipeline (~4–5 days)
 

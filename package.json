@@ -16,9 +16,11 @@
     "@capacitor/share": "^8.0.1",
     "@fontsource/inter": "^5.2.8",
     "@fontsource/plus-jakarta-sans": "^5.2.8",
+    "@hyzyla/pdfium": "^2.1.13",
     "dexie": "^4.4.4",
     "dexie-react-hooks": "^4.4.0",
     "fflate": "^0.8.3",
+    "pdfjs-dist": "^6.1.200",
     "react": "^19.2.7",
     "react-aria-components": "^1.19.0",
     "react-dom": "^19.2.7"
