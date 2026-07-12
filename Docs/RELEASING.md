@@ -2,6 +2,15 @@
 
 This file records the Phase 2 shell-spike release paths.
 
+## Automated builds (every push to main)
+
+`.github/workflows/auto-release.yml` runs on every push to `main`: it runs
+the test suite, builds the Tauri NSIS installer and a debug APK, and
+publishes them as prerelease `v0.0.<run-number>`. These are test builds —
+the signed release APK below and the `v1.0` release remain owner steps.
+`.github/workflows/windows-spike.yml` is the manually-dispatched variant of
+the Windows build.
+
 ## Web
 
 Cloudflare Pages deploys the web app automatically when the owner pushes to
@@ -30,7 +39,13 @@ cd android && ./gradlew assembleRelease
 Prerequisites:
 
 - Android Studio Otter 2025.2.1 or newer, or another JDK 21 setup available to
-  Gradle.
+  Gradle. The wrapper's Gradle rejects newer JDKs (JDK 25 fails with
+  "Unsupported class file major version 69") — point `JAVA_HOME` at a JDK 21,
+  e.g. Android Studio's bundled one:
+  `JAVA_HOME=C:\Program Files\Android\Android Studio\jbr`.
+- An Android SDK visible to Gradle: set `ANDROID_HOME`
+  (e.g. `%LOCALAPPDATA%\Android\Sdk`) or write `sdk.dir` into the
+  gitignored `android/local.properties`.
 - `android/keystore.properties`, which is gitignored, when building a signed
   release APK.
 - A release keystore stored outside the repo and backed up by the owner.

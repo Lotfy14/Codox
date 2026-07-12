@@ -69,6 +69,8 @@ export interface RunState {
   promptTokens?: number
   candidatesTokens?: number
   totalTokens?: number
+  /** Set when the run's bundle last left the device (export-early law). */
+  exportedAt?: number
   createdAt: number
   updatedAt: number
 }
@@ -88,6 +90,7 @@ export type RunArtifactKind =
   | 'merged-rows'
   | 'csv'
   | 'audit-report'
+  | 'review-resolutions'
 
 export interface RunArtifact {
   id: string

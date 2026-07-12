@@ -278,34 +278,91 @@ remaining boxes are both live-key owner steps._
 
 Where the product quality lives.
 
-- [ ] Review screen per mockup: flagged rows with source crops beside them,
+- [x] Review screen per mockup: flagged rows with source crops beside them,
       set/correct answers, virtualized list, complete keyboard flow
-- [ ] Review works fully offline on an already-converted bundle
-- [ ] Export: fflate streaming zip; `navigator.share({files})` on
+      _(2026-07-12: `ReviewStage.tsx` + `review-data.ts`, ported from the
+      owner-approved ReviewMock — the focused one-flag-at-a-time flow IS
+      the approved design, and it keeps exactly one flag's DOM and one
+      page image alive at a time (the virtualized-list line's bounded-DOM
+      intent; no list library needed). Source crop = stored page JPEG cut
+      by the planner's own regions (`cropJpeg`), W toggles whole page.
+      Keyboard: 1–9 pick · Enter confirm · ←/→ move · V flip. A confirmed
+      pick is stored separately (`review-resolutions` artifact) and applied
+      deterministically at export — an invalid pick is ignored, so
+      NEVER-GUESS holds by construction (`review-data.test.ts`).)_
+- [x] Review works fully offline on an already-converted bundle
+      _(2026-07-12: everything reads IndexedDB; drive-verified with the
+      browser context forced offline — banner shows, flags resolve.)_
+- [x] Export: fflate streaming zip; `navigator.share({files})` on
       mobile (files-only payload — iOS quirk), download on desktop;
       Capacitor share plugin inside the `.apk`
-- [ ] **Export-early**: keep the primary manual export action prominent when
+      _(2026-07-12: `src/export/bundle.ts` (pure, unit-tested) +
+      `exporter.ts`. zipSync — bundles are CSV + a few ~35 KB crops;
+      fflate's async zip is the noted upgrade path if bundles ever grow.
+      Share sheet only on coarse-pointer devices and only as a files-only
+      payload; Capacitor Filesystem+Share branch for the shell; a failed
+      share falls back to download, a cancelled one is not "exported".)_
+- [x] **Export-early**: keep the primary manual export action prominent when
       review completes; no auto-download or eviction nags beyond the quiet
       "not exported yet" badge
-- [ ] Bundle correctness: unzip → folder moves anywhere → image paths still
+      _(2026-07-12: the all-resolved panel's primary action is Export;
+      the done stage keeps Export primary (or "Export as-is" beside Review
+      when flags remain) with the quiet badge. Success stamps
+      `exportedAt`; the button then reads "Export again" — it never
+      disables, later review edits can always leave the device.)_
+- [x] Bundle correctness: unzip → folder moves anywhere → image paths still
       resolve; batch of 3 PDFs → 3 namespaced bundles
+      _(2026-07-12: drive-verified — one zip, three
+      `Triviadox_output/<name>/` folders, each `questions.csv` (UTF-8 BOM)
+      beside its own `images/`; resolved rows carry the confirmed answer
+      with the flag cleared, untouched rows stay blank + flagged. Paths in
+      `image_urls` are bundle-relative, so a moved folder keeps working.
+      Name collisions namespace `name`, `name-2`, … case-insensitively.)_
 - [ ] Run the hard gold inputs end-to-end (scanned IM ×2, derm
       photo-of-screen) → grade in CodoxSandbox; fix until the mark-reading
       and grouping gates pass
+      _(Owner step — needs the real key and the gold PDFs. The whole path
+      it exercises is drive-verified: `scripts/drive-phase7.mjs` →
+      `PHASE7 DRIVE: ALL GREEN`, real engine/Dexie/review/zip, network
+      faked. Screenshots in `scripts/out/phase7-*.png`.)_
 
 **Done when:** all four gold PDFs pass their gates in CodoxSandbox and a
 non-technical person can review + export on a phone unaided.
 
+> Status 2026-07-12: every buildable box is done and drive-verified
+> (203 unit tests + `drive-phase7.mjs` end-to-end). The gold-input runs
+> and the phone hand-off test are the owner's; nothing else blocks them.
+
 ## Phase 8 — Hardening & release (~3–4 days)
 
-- [ ] Degraded-input behavior: one bad page flags and continues; wrong
+- [x] Degraded-input behavior: one bad page flags and continues; wrong
       declaration degrades safely; provider outage mid-job pauses and resumes
+      _(2026-07-12: all three verified — bad page in `executor.test.ts`
+      ("one bad page flags the run and continues"); wrong declaration and
+      a mid-job 429 → calm pause → auto-resume → mid-run reload in
+      `drive-phase6.mjs`; both drives re-run green against the final
+      Phase-7 code.)_
 - [ ] Rebuild both shells from the final web build; install-test each again
-- [ ] Landing page: download buttons (Windows/Android → GitHub Release),
+      _(2026-07-12: web build + `cap sync` + `gradlew assembleRelease`
+      rebuilt the Android shell from the final bundle (unsigned — the
+      release keystore stays in owner custody; note: build with
+      JDK 21, e.g. Android Studio's `jbr` — the wrapper's Gradle rejects
+      JDK 25). Windows `.exe` builds on the GitHub Actions workflow after
+      push (no local Rust, per RELEASING.md). **Install-testing on real
+      devices is the owner's step.**)_
+- [x] Landing page: download buttons (Windows/Android → GitHub Release),
       iPhone 2-step Add-to-Home-Screen visual guide, note for school-managed
       Windows laptops ("use the browser version")
+      _(2026-07-12: `public/get/index.html` — served at `/get` on the
+      deployed origin, so "Open Codox" is origin-relative. Download buttons
+      point at `releases/latest`; SmartScreen walk-through, sideload note,
+      two-step Safari guide with inline icons, managed-laptop note.)_
 - [ ] `v1.0` GitHub Release: `.exe`, `.apk`, changelog
+      _(Owner step — gated on the Phase 6/7 gold gates (127/127 + the hard
+      inputs) and on signed artifacts: the keystore and the Actions-built
+      `.exe` are in owner custody. Publish per RELEASING.md.)_
 - [ ] Hand the links to the first real users; watch the first sessions
+      _(Owner step.)_
 
 **Done when:** a real user on their own device converts a real PDF, reviews
 it, exports it, and imports it into Triviadox — without help.

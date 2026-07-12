@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   Badge,
   Button,
@@ -13,13 +13,14 @@ import {
 } from '../design/components'
 import type { SelectOption, StatusChipStatus } from '../design/components'
 import { sillySentences } from '../design/silly-sentences'
-import { progressMessages, uploadMessages } from '../copy/messages'
 import {
-  batchProgress,
-  isBatchRunning,
-  runProgress,
-  totalFlags,
-} from '../engine/progress'
+  exportMessages,
+  progressMessages,
+  reviewMessages,
+  uploadMessages,
+} from '../copy/messages'
+import { batchProgress, isBatchRunning, runProgress } from '../engine/progress'
+import { exportableRuns, exportRuns } from '../export/exporter'
 import {
   addStoredPdf,
   clearJobPdfs,
@@ -34,6 +35,8 @@ import { estimatedMinutes, needsAnswerKeyFile } from './convert-logic'
 import { useConversion } from './useConversion'
 import { downloadRunCsv } from './devCsv'
 import { deleteRun } from '../state/runs'
+import { useUnresolvedCounts } from './review-data'
+import { ReviewStage } from './ReviewStage'
 import type { ControllerStatus } from '../providers/controller'
 
 type ConversionStatus = ControllerStatus
@@ -60,6 +63,9 @@ export function Convert() {
   const conversion = useConversion(CURRENT_JOB_ID)
   const [notes, setNotes] = useState<readonly string[]>([])
   const [busy, setBusy] = useState(false)
+  const [reviewRunId, setReviewRunId] = useState<string | null>(null)
+  const [exportBusy, setExportBusy] = useState(false)
+  const sectionRef = useRef<HTMLElement | null>(null)
 
   if (job === undefined || pdfs === undefined) return null
 
@@ -74,6 +80,22 @@ export function Convert() {
   const runs = conversion.runs ?? []
   const hasRuns = runs.length > 0
   const running = isBatchRunning(runs) || conversion.isDriving
+
+  const handleExport = async () => {
+    if (exportBusy) return
+    setExportBusy(true)
+    try {
+      await exportRuns(runs)
+    } finally {
+      setExportBusy(false)
+    }
+  }
+
+  const closeReview = () => {
+    setReviewRunId(null)
+    // Focus returns to the work column, mirroring the mockup's hand-off.
+    window.setTimeout(() => sectionRef.current?.focus(), 0)
+  }
 
   const intake = async (files: File[], kind: 'exam' | 'answer-key') => {
     setBusy(true)
@@ -131,17 +153,38 @@ export function Convert() {
   )
 
   if (hasRuns) {
+    const reviewRun = runs.find((run) => run.id === reviewRunId)
+    const exportable = exportableRuns(runs)
+    const exported =
+      exportable.length > 0 &&
+      exportable.every((run) => run.exportedAt !== undefined)
     return (
-      <section aria-labelledby="convert-heading" className="app-tab-screen">
+      <section
+        aria-labelledby="convert-heading"
+        className="app-tab-screen"
+        ref={sectionRef}
+        tabIndex={-1}
+      >
         <h1 id="convert-heading">Convert</h1>
         {running ? (
           <RunningStage
             providerStatus={conversion.providerStatus}
             runs={runs}
           />
+        ) : reviewRun !== undefined ? (
+          <ReviewStage
+            exported={exported}
+            onClose={closeReview}
+            onExport={() => void handleExport()}
+            run={reviewRun}
+          />
         ) : (
           <DoneStage
+            exportBusy={exportBusy}
+            exported={exported}
             onConvertAnother={() => void clearJobRuns(runs)}
+            onExport={() => void handleExport()}
+            onOpenReview={setReviewRunId}
             runs={runs}
           />
         )}
@@ -371,32 +414,55 @@ function RunningStage({
 }
 
 /**
- * The done stage. Review and Export are honest placeholders until Phase 7;
- * the dev CSV download exists so a finished run can be graded in
- * CodoxSandbox before those screens exist.
+ * The done stage: the finished-run summary, the Review entry point, and
+ * the real Export. Export-early law: the manual export action stays
+ * primary and prominent; the only nag is the quiet "Not exported yet"
+ * badge.
  */
 function DoneStage({
+  exportBusy,
+  exported,
   onConvertAnother,
+  onExport,
+  onOpenReview,
   runs,
 }: {
+  exportBusy: boolean
+  exported: boolean
   onConvertAnother: () => void
+  onExport: () => void
+  onOpenReview: (runId: string) => void
   runs: readonly RunState[]
 }) {
-  const flags = totalFlags(runs)
   const stopped = runs.filter((run) => run.status === 'stopped')
   const unsafe = runs.filter((run) => run.notSafeToImport === true)
   const done = runs.filter((run) => run.status === 'done')
+  const counts = useUnresolvedCounts(done.map((run) => run.id))
+  const remaining =
+    counts === undefined
+      ? undefined
+      : Object.values(counts).reduce((sum, count) => sum + count, 0)
+  const firstFlagged =
+    counts === undefined
+      ? undefined
+      : done.find((run) => (counts[run.id] ?? 0) > 0)
+  const hadFlags = done.some((run) => (run.flaggedRows ?? 0) > 0)
+
+  if (remaining === undefined) return null
+
+  const heading =
+    done.length === 0
+      ? 'This run stopped.'
+      : remaining > 0
+        ? progressMessages.finishedWithFlags(remaining)
+        : hadFlags
+          ? reviewMessages.allResolved
+          : progressMessages.finishedClean
 
   return (
     <div className="convert-stack">
       <GlassPanel aria-label="Conversion finished" as="section" padding="spacious">
-        <h2>
-          {done.length === 0
-            ? 'This run stopped.'
-            : flags === 0
-              ? progressMessages.finishedClean
-              : progressMessages.finishedWithFlags(flags)}
-        </h2>
+        <h2>{heading}</h2>
 
         {stopped.map((run) => (
           <p
@@ -418,21 +484,54 @@ function DoneStage({
           </p>
         ) : null}
 
+        {remaining > 0 ? (
+          <p className="convert-muted">
+            {reviewMessages.flagsRemainOnExport(remaining)}
+          </p>
+        ) : null}
+
+        {exported ? (
+          <p
+            className="convert-inline-note convert-inline-note--working"
+            role="status"
+          >
+            {exportMessages.exportDone}
+          </p>
+        ) : null}
+
         <div className="convert-done-actions">
-          <Button isDisabled onPress={() => undefined}>
-            Review flags
-          </Button>
-          <Button isDisabled onPress={() => undefined} variant="secondary">
-            Export bundle
-          </Button>
+          {remaining > 0 && firstFlagged !== undefined ? (
+            <>
+              <Button onPress={() => onOpenReview(firstFlagged.id)}>
+                Review {remaining} flag{remaining === 1 ? '' : 's'}
+                {done.length > 1 ? ` · ${firstFlagged.fileName}` : ''}
+              </Button>
+              <Button
+                isDisabled={exportBusy || done.length === 0}
+                onPress={onExport}
+                variant="secondary"
+              >
+                {exported ? 'Export again' : 'Export as-is'}
+              </Button>
+            </>
+          ) : (
+            <Button
+              isDisabled={exportBusy || done.length === 0}
+              onPress={onExport}
+            >
+              {exported ? 'Export again' : 'Export bundle'}
+            </Button>
+          )}
           <Button onPress={onConvertAnother} variant="quiet">
             Convert another
           </Button>
-          <Badge tone="neutral">Not exported yet</Badge>
+          <Badge tone={exported ? 'success' : 'neutral'}>
+            {exported ? exportMessages.exported : exportMessages.notExportedYet}
+          </Badge>
         </div>
         <p className="convert-muted convert-phase-note">
-          Review and Export arrive in the next update. Your rows are saved on
-          this device.
+          On a phone this opens the share sheet; on desktop it downloads a
+          zip. {exportMessages.whyExportMatters}
         </p>
 
         {import.meta.env.DEV ? (
