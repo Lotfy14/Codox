@@ -32,22 +32,19 @@ export function FirstRun({ onDone }: FirstRunProps) {
         </header>
 
         <div className="first-run__step">
-          <p className="first-run__eyebrow">Step 1 of 2 · Your Gemini key</p>
-          <p>{firstRunMessages.geminiKeyNote}</p>
           <GeminiKeySection />
         </div>
 
         <div className="first-run__step">
-          <p className="first-run__eyebrow">Step 2 of 2 · One thing to know</p>
           <p className="first-run__privacy">{firstRunMessages.privacyNotice}</p>
         </div>
 
         <div className="first-run__finish">
           <Button isDisabled={!keyValidated} onPress={() => void finish()}>
-            Got it — open Codox
+            Open Codox
           </Button>
           <Button onPress={() => void finish()} variant="quiet">
-            Skip walkthrough
+            Skip for now
           </Button>
         </div>
       </GlassPanel>

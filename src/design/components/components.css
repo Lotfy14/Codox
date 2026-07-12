@@ -1091,21 +1091,6 @@
   margin-bottom: var(--space-6);
 }
 
-.first-run__step > p {
-  margin: 0;
-  color: var(--color-text-muted);
-}
-
-.first-run__eyebrow {
-  margin: 0;
-  color: var(--color-primary-foreground);
-  font-family: var(--font-family-heading);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-label);
-  letter-spacing: var(--letter-spacing-label);
-  text-transform: uppercase;
-}
-
 .first-run__privacy {
   margin: 0;
   border: 1px solid var(--color-primary-border);

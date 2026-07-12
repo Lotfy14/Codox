@@ -180,8 +180,6 @@ export const historyMessages = {
 export const firstRunMessages = {
   welcome:
     'Codox turns exam PDFs into ready-to-import Triviadox question sets. It runs on this device — you bring your own Gemini API key.',
-  geminiKeyNote:
-    "Codox uses only this Gemini key. Every request counts against your own Gemini quota, never another user's.",
   /** The owner-approved one-line minimal privacy notice. */
   privacyNotice:
     'Exam pages go straight from this device to Gemini, under your key. Your key never leaves this device.',
