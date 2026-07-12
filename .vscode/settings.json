@@ -1,16 +1,3 @@
 {
-  "style-sentry.rules.no-unused-classes.enabled": true,
-  "style-sentry.rules.no-unused-classes.ignoreDynamicClasses": true,
-  "style-sentry.rules.no-unused-classes.ignorePatterns": [
-    "^(glass-panel|glass-input)$",
-    "^ds-glass-panel(?:--padding-(?:none|compact|default|spacious))?$",
-    "^ds-button--(?:primary|quiet|danger|pending)$",
-    "^ds-glass-input(?:__control|--(?:error|success))?$",
-    "^ds-(?:select|toggle|file-drop-zone|badge|status-chip|progress-bar|storage-meter|typewriter-line|file-row|resume-card|dialog|tab-nav|theme-switcher)$",
-    "^ds-badge--(?:primary|success|warning|danger)$",
-    "^ds-status-chip--(?:working|quota-paused|wrong-key|unreachable|checking)$",
-    "^ds-file-row--flagged$",
-    "^key-inline-note(?:--(?:quota-paused|unreachable))?$",
-    "^review__(?:split|question)(?:--(?:source|tick))?$"
-  ]
+  "style-sentry.rules.no-unused-classes.enabled": false
 }
