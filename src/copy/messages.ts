@@ -57,21 +57,87 @@ export const uploadMessages = {
     'This tells Codox how to read each PDF. If a file is different, change it on that row.',
   needsKeyFile:
     'You said the answers are in a separate file — drop that answer key below before starting.',
+  chooseFiles: 'Choose files',
+  answerSourceLabel: 'Answers',
+  flagLabel: 'Needs attention',
+  removeFile: (fileName: string) => `Remove ${fileName}`,
+  batchDefault: 'Use batch default',
+  insideThisPdf: 'Inside this PDF',
+  separateKeyFile: 'Separate key file',
+  noAnswersProvided: 'No answers provided',
+  insidePdfs: 'Inside the PDFs',
+  inSeparateKeyFile: 'In a separate answer key file',
+  noAnswers: 'There are no answers',
 } as const
 
 export const appMessages = {
+  brandName: 'Codox',
+  brandTagline: 'Exam PDFs → Triviadox',
+  navLabel: 'Workspace',
+  navConvert: 'Convert',
+  navHistory: 'History',
+  railApi: 'API',
+  railHelp: 'Help',
+  railPrivacy: 'Privacy',
+  storageLabel: 'On-device storage',
+  apiDialogTitle: 'Gemini API key',
+  helpDialogTitle: 'Help',
+  privacyDialogTitle: 'Privacy',
+  dialogDismiss: 'Close dialog',
+  loadingPdfCheck: 'Loading PDF check…',
   themeGroupLabel: 'Appearance',
   themeLight: 'Light theme',
   themeDark: 'Dark theme',
 } as const
 
 export const convertMessages = {
+  title: 'Convert',
+  subtitle:
+    'Drop exam PDFs and Codox turns them into a Triviadox question set — all on this screen.',
   dropTitle: 'Drop PDFs here',
   dropHint: 'batch of PDFs supported',
   dropMoreTitle: 'Drop more PDFs here',
   dropMoreHint: 'Add more PDFs to this batch',
   keyDropTitle: 'Drop the answer key here',
   keyDropHint: 'PDF answer key',
+  startPanelLabel: 'Start a conversion',
+  batchPanelLabel: 'Batch files',
+  optionsPanelLabel: 'Before you start',
+  progressPanelLabel: 'Conversion progress',
+  finishedPanelLabel: 'Conversion finished',
+  readingPdf: 'Reading PDF…',
+  filesReady: (count: number) => `${count} PDF${count === 1 ? '' : 's'} ready`,
+  batchOverrideHint:
+    'Change any file below if its answers differ from the batch default.',
+  clearAll: 'Clear all',
+  answerKeyAdded: (fileName: string) => `${fileName} added`,
+  remove: 'Remove',
+  keepOriginalLabel: 'Keep original PDF',
+  keepOriginalHint:
+    'Keeps the PDF stored in Codox so this run can be converted again later. Uses more space.',
+  pagesMinutes: (pages: number, minutes: number) =>
+    `${pages} page${pages === 1 ? '' : 's'} · about ${minutes} min`,
+  startButton: 'Start converting',
+  convertingFiles: (count: number) =>
+    `Converting ${count} PDF${count === 1 ? '' : 's'}`,
+  allPages: 'All pages',
+  stoppedHeading: 'This run stopped.',
+  stoppedRun: (fileName: string, reason: string) =>
+    `${fileName} stopped: ${reason}. Its pages and everything read so far are saved.`,
+  unsafeRuns: (count: number) =>
+    `${count === 1 ? 'One file came' : `${count} files came`} back with checks that did not pass, so ${count === 1 ? 'it is' : 'they are'} marked for your review before import. Codox never guesses.`,
+  reviewFlags: (count: number, fileName?: string) =>
+    `Review ${count} flag${count === 1 ? '' : 's'}${fileName ? ` · ${fileName}` : ''}`,
+  exportAgain: 'Export again',
+  exportAsIs: 'Export as-is',
+  exportBundle: 'Export bundle',
+  convertAnother: 'Convert another',
+  exportDeviceNote:
+    'On a phone this opens the share sheet; on desktop it downloads a zip.',
+  devGrade: 'Dev: grade this run in CodoxSandbox',
+  devDownloadCsv: (fileName: string) => `Download ${fileName} CSV`,
+  devRunStats: (requests: number, tokens: number, auditUnavailable: boolean) =>
+    `${requests} requests · ${tokens} tokens${auditUnavailable ? ' · audit unavailable' : ''}`,
 } as const
 
 export const reviewMessages = {
@@ -102,6 +168,9 @@ export const exportMessages = {
 } as const
 
 export const historyMessages = {
+  emptyTitle: 'No runs yet',
+  emptyBody:
+    'Completed conversions will appear here. Start on Convert when you are ready.',
   reRunNeedsOriginal:
     'Re-running needs the original PDF, which was not kept for this run. Drop the PDF on Convert to run it again.',
   deleteTitle: (runName: string) => `Delete ${runName}?`,

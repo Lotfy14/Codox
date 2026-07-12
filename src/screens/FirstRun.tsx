@@ -23,7 +23,7 @@ export function FirstRun({ onDone }: FirstRunProps) {
   }
 
   return (
-    <div className="first-run">
+    <div className="ds-stage first-run">
       <GlassPanel aria-labelledby="first-run-heading" as="section" padding="spacious">
         <header className="first-run__header">
           <img alt="" height="56" src="/logo.svg" width="56" />

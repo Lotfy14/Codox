@@ -1,40 +1,32 @@
 import { Button as AriaButton } from 'react-aria-components/Button'
+import type { ReactNode } from 'react'
 
-export type AppTab = 'convert' | 'history' | 'keys' | 'help'
+export type AppTab = 'convert' | 'history'
 
-export interface TabNavItem {
-  id: AppTab
+export interface TabNavItem<T extends string> {
+  id: T
+  icon?: ReactNode
   label: string
 }
 
-export interface TabNavProps {
-  activeTab: AppTab
-  ariaLabel?: string
+export interface TabNavProps<T extends string> {
+  activeTab: T
+  ariaLabel: string
   className?: string
-  onTabChange: (tab: AppTab) => void
-  tabs?: readonly TabNavItem[]
+  items: readonly TabNavItem<T>[]
+  onTabChange: (tab: T) => void
 }
 
-const appTabs: readonly TabNavItem[] = [
-  { id: 'convert', label: 'Convert' },
-  { id: 'history', label: 'History' },
-  { id: 'keys', label: 'Keys' },
-  { id: 'help', label: 'Help' },
-]
-
-export function TabNav({
+export function TabNav<T extends string>({
   activeTab,
-  ariaLabel = 'Main navigation',
+  ariaLabel,
   className,
+  items,
   onTabChange,
-  tabs = appTabs,
-}: TabNavProps) {
+}: TabNavProps<T>) {
   return (
-    <nav
-      aria-label={ariaLabel}
-      className={['ds-tab-nav', className].filter(Boolean).join(' ')}
-    >
-      {tabs.map((item) => (
+    <nav aria-label={ariaLabel} className={['ds-tab-nav', className].filter(Boolean).join(' ')}>
+      {items.map((item) => (
         <AriaButton
           aria-current={activeTab === item.id ? 'page' : undefined}
           className="ds-tab-nav__item"
@@ -42,6 +34,9 @@ export function TabNav({
           onPress={() => onTabChange(item.id)}
         >
           <span aria-hidden="true" className="ds-tab-nav__indicator" />
+          {item.icon !== undefined ? (
+            <span aria-hidden="true" className="ds-tab-nav__icon">{item.icon}</span>
+          ) : null}
           <span>{item.label}</span>
         </AriaButton>
       ))}

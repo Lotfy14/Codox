@@ -1,4 +1,3 @@
-export * from './AppShell'
 export * from './Badge'
 export * from './Button'
 export * from './Dialog'

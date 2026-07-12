@@ -6,16 +6,10 @@ import { GeminiKeySection } from './GeminiKeySection'
 /** The real API-key panel: exactly one Google Gemini key, nothing to add. */
 export function KeysPanel() {
   return (
-    <section aria-labelledby="keys-heading" className="app-tab-screen">
-      <h1 id="keys-heading">Keys</h1>
-      <GlassPanel as="div" padding="default">
-        <div className="app-placeholder">
-          <h2>Google Gemini</h2>
-          <GeminiKeySection allowRemove />
-        </div>
-      </GlassPanel>
+    <div className="key-section">
+      <GeminiKeySection allowRemove />
       {import.meta.env.DEV ? <DevTestCall /> : null}
-    </section>
+    </div>
   )
 }
 
@@ -63,7 +57,7 @@ function DevTestCall() {
 
   return (
     <GlassPanel as="div" padding="default">
-      <div className="app-placeholder">
+        <div className="ds-empty-state">
         <h2>Dev: test image call</h2>
         <p>
           Sends one tiny image through the request controller under the

@@ -3,7 +3,7 @@ import type { HTMLAttributes } from 'react';
 export interface StorageMeterProps
   extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
   formatValue?: (value: number) => string;
-  label?: string;
+  label: string;
   total: number;
   used: number;
 }
@@ -33,7 +33,7 @@ function normalizeStorageValue(value: number) {
 export function StorageMeter({
   className,
   formatValue = formatBytes,
-  label = 'Storage used',
+  label,
   total,
   used,
   ...divProps

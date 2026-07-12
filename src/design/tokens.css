@@ -85,6 +85,8 @@
   --color-frame-border: #f3e7e2;
   --color-surface-elevated: #ffffff;
   --color-card-fill: var(--color-surface-elevated);
+  --color-paper: #fdfdf8;
+  --color-paper-text: #5a6472;
   --color-outline: #efe2e0;
   --color-row: #fbf7f6;
   --color-row-border: #f4ebe9;

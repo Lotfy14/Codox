@@ -14,8 +14,8 @@ import {
 import type { SelectOption, StatusChipStatus } from '../design/components'
 import { sillySentences } from '../design/silly-sentences'
 import {
-  exportMessages,
   convertMessages,
+  exportMessages,
   progressMessages,
   reviewMessages,
   uploadMessages,
@@ -48,10 +48,17 @@ async function clearJobRuns(runs: readonly RunState[]): Promise<void> {
 }
 
 const batchSourceOptions: readonly SelectOption<AnswerSource>[] = [
-  { id: 'inside', label: 'Inside the PDFs' },
-  { id: 'key-file', label: 'In a separate answer key file' },
-  { id: 'none', label: 'There are no answers' },
+  { id: 'inside', label: uploadMessages.insidePdfs },
+  { id: 'key-file', label: uploadMessages.inSeparateKeyFile },
+  { id: 'none', label: uploadMessages.noAnswers },
 ]
+
+const fileAnswerSourceLabels = {
+  'batch-default': uploadMessages.batchDefault,
+  inside: uploadMessages.insideThisPdf,
+  'key-file': uploadMessages.separateKeyFile,
+  none: uploadMessages.noAnswersProvided,
+} as const
 
 /**
  * The real Convert tab: home, files, running, and done stages. Progress is
@@ -134,16 +141,20 @@ export function Convert() {
     }
   }
 
+  const rejectFiles = (files: File[]) => {
+    setNotes(files.map((file) => uploadMessages.notPdf(file.name)))
+  }
+
   const inlineNotes = (
     <>
       {busy ? (
-        <p className="convert-muted" role="status">
-          Reading PDF…
+        <p className="ds-muted" role="status">
+          {convertMessages.readingPdf}
         </p>
       ) : null}
       {notes.map((note) => (
         <p
-          className="convert-inline-note convert-inline-note--danger"
+          className="ds-inline-note ds-inline-note--danger"
           key={note}
           role="status"
         >
@@ -162,11 +173,14 @@ export function Convert() {
     return (
       <section
         aria-labelledby="convert-heading"
-        className="app-tab-screen"
+        className="ds-convert"
         ref={sectionRef}
         tabIndex={-1}
       >
-        <h1 id="convert-heading">Convert</h1>
+        <header className="ds-work__head">
+          <h1 id="convert-heading">{convertMessages.title}</h1>
+          <p>{convertMessages.subtitle}</p>
+        </header>
         {running ? (
           <RunningStage
             providerStatus={conversion.providerStatus}
@@ -194,40 +208,48 @@ export function Convert() {
   }
 
   return (
-    <section aria-labelledby="convert-heading" className="app-tab-screen">
-      <h1 id="convert-heading">Convert</h1>
+    <section aria-labelledby="convert-heading" className="ds-convert">
+      <header className="ds-work__head">
+        <h1 id="convert-heading">{convertMessages.title}</h1>
+        <p>{convertMessages.subtitle}</p>
+      </header>
       {exams.length === 0 ? (
-        <div className="convert-stack">
-          <p>Drop exam PDFs and Codox turns them into Triviadox question sets.</p>
-          <GlassPanel aria-label="Start a conversion" as="section" padding="spacious">
+        <div className="ds-stack">
+          <GlassPanel aria-label={convertMessages.startPanelLabel} as="section" padding="spacious">
             <FileDropZone
+              chooseLabel={uploadMessages.chooseFiles}
               description={convertMessages.dropHint}
               isDisabled={busy}
               label={convertMessages.dropTitle}
               onFiles={(files) => void intake(files, 'exam')}
+              onRejected={rejectFiles}
             />
             {inlineNotes}
           </GlassPanel>
         </div>
       ) : (
-        <div className="convert-stack">
-          <GlassPanel aria-label="Batch files" as="section" padding="compact">
-            <div className="convert-list-header">
-              <strong>
-                {exams.length} PDF{exams.length === 1 ? '' : 's'} ready
-              </strong>
+        <div className="ds-stack">
+          <GlassPanel aria-label={convertMessages.batchPanelLabel} as="section" padding="compact">
+            <div className="ds-panel-head">
+              <span>
+                <strong>{convertMessages.filesReady(exams.length)}</strong>
+                <p>{convertMessages.batchOverrideHint}</p>
+              </span>
               <Button
                 onPress={() => void clearJobPdfs(CURRENT_JOB_ID)}
                 variant="quiet"
               >
-                Clear
+                {convertMessages.clearAll}
               </Button>
             </div>
             {inlineNotes}
-            <div className="convert-row-list" role="list">
+            <div className="ds-row-list" role="list">
               {exams.map((file) => (
                 <FileRow
                   answerSource={file.answerSource}
+                  answerSourceLabel={uploadMessages.answerSourceLabel}
+                  answerSourceOptionLabels={fileAnswerSourceLabels}
+                  flagLabel={uploadMessages.flagLabel}
                   isDisabled={busy}
                   key={file.id}
                   name={file.name}
@@ -235,23 +257,26 @@ export function Convert() {
                     void setPdfAnswerSource(file.id, source)
                   }
                   onRemove={() => void removeStoredPdf(file.id)}
+                  removeLabel={uploadMessages.removeFile(file.name)}
                   role="listitem"
                   size={file.size}
                 />
               ))}
             </div>
-            <div className="convert-drop-more">
+            <div className="ds-drop-more">
               <FileDropZone
+                chooseLabel={uploadMessages.chooseFiles}
                 description={convertMessages.dropMoreHint}
                 isDisabled={busy}
                 label={convertMessages.dropMoreTitle}
                 onFiles={(files) => void intake(files, 'exam')}
+                onRejected={rejectFiles}
               />
             </div>
           </GlassPanel>
 
-          <GlassPanel aria-label="Before you start" as="section" padding="default">
-            <div className="convert-field-stack">
+          <GlassPanel aria-label={convertMessages.optionsPanelLabel} as="section" padding="default">
+            <div className="ds-field-stack">
               <Select
                 description={uploadMessages.declarationHelp}
                 label={uploadMessages.declarationQuestion}
@@ -264,52 +289,53 @@ export function Convert() {
                 value={batchSource}
               />
               {needsKeyFile ? (
-                <div className="convert-key-file-slot">
-                  <p className="convert-inline-note convert-inline-note--info">
+                <div className="ds-key-file-slot">
+                  <p className="ds-inline-note ds-inline-note--info">
                     {uploadMessages.needsKeyFile}
                   </p>
                   {answerKey !== undefined ? (
-                    <p className="convert-key-file-added" role="status">
-                      ✓ {answerKey.name} added{' '}
+                    <p className="ds-key-file-added" role="status">
+                      ✓ {convertMessages.answerKeyAdded(answerKey.name)}{' '}
                       <Button
                         onPress={() => void removeStoredPdf(answerKey.id)}
                         variant="quiet"
                       >
-                        Remove
+                        {convertMessages.remove}
                       </Button>
                     </p>
                   ) : (
                     <FileDropZone
                       allowsMultiple={false}
+                      chooseLabel={uploadMessages.chooseFiles}
                       description={convertMessages.keyDropHint}
                       isDisabled={busy}
                       label={convertMessages.keyDropTitle}
                       onFiles={(files) => void intake(files, 'answer-key')}
+                      onRejected={rejectFiles}
                     />
                   )}
                 </div>
               ) : null}
               <Toggle
-                description="Keeps the PDF stored in Codox so this run can be converted again later. Uses more space."
+                description={convertMessages.keepOriginalHint}
                 isSelected={keepOriginal}
-                label="Keep original PDF"
+                label={convertMessages.keepOriginalLabel}
                 onChange={(keep) => void updateJob({ keepOriginal: keep })}
               />
             </div>
-            <div className="convert-start-row">
-              <span className="convert-muted convert-start-note">
-                {totalPages} page{totalPages === 1 ? '' : 's'} · about{' '}
-                {estimatedMinutes(totalPages)} min
+            <div className="ds-start-row">
+              <span className="ds-start-row__note">
+                {convertMessages.pagesMinutes(totalPages, estimatedMinutes(totalPages))}
               </span>
               <Button
                 isDisabled={busy || keyFileMissing}
                 onPress={() => void conversion.start(exams, batchSource)}
               >
-                Start converting
+                {convertMessages.startButton}
               </Button>
             </div>
             {keyFileMissing ? (
-              <p className="convert-muted convert-phase-note">
+              <p className="ds-muted ds-phase-note">
                 {uploadMessages.needsKeyFile}
               </p>
             ) : null}
@@ -360,32 +386,30 @@ function RunningStage({
           : null
 
   return (
-    <div className="convert-stack">
-      <GlassPanel aria-label="Conversion progress" as="section" padding="default">
-        <div className="convert-list-header">
-          <strong>
-            Converting {runs.length} PDF{runs.length === 1 ? '' : 's'}
-          </strong>
+    <div className="ds-stack">
+      <GlassPanel aria-label={convertMessages.progressPanelLabel} as="section" padding="default">
+        <div className="ds-panel-head">
+          <strong>{convertMessages.convertingFiles(runs.length)}</strong>
           <StatusChip status={status} />
         </div>
 
         <ProgressBar
-          label="All pages"
+          label={convertMessages.allPages}
           max={100}
           showFraction={false}
           value={Math.round(batchProgress(runs) * 100)}
         />
 
-        <div className="convert-progress-status" role="status">
+        <div className="ds-progress-status" role="status">
           {healthy ? (
             <TypewriterLine sentences={sillySentences} />
           ) : seriousLine !== null ? (
-            <p className="convert-inline-note convert-inline-note--info">
+            <p className="ds-inline-note ds-inline-note--info">
               {seriousLine}
             </p>
           ) : null}
           {badPageRun !== undefined ? (
-            <p className="convert-inline-note convert-inline-note--info">
+            <p className="ds-inline-note ds-inline-note--info">
               {progressMessages.badPage(
                 (badPageRun.badPages?.[0] ?? 0) + 1,
                 badPageRun.fileName,
@@ -393,15 +417,15 @@ function RunningStage({
             </p>
           ) : null}
           {wrongDeclarationRun !== undefined ? (
-            <p className="convert-inline-note convert-inline-note--info">
+            <p className="ds-inline-note ds-inline-note--info">
               {progressMessages.wrongDeclaration(wrongDeclarationRun.fileName)}
             </p>
           ) : null}
         </div>
 
-        <div className="convert-row-list" role="list">
+        <div className="ds-row-list" role="list">
           {runs.map((run) => (
-            <div className="convert-run-row" key={run.id} role="listitem">
+            <div className="ds-run-row" key={run.id} role="listitem">
               <ProgressBar
                 label={run.fileName}
                 max={100}
@@ -455,7 +479,7 @@ function DoneStage({
 
   const heading =
     done.length === 0
-      ? 'This run stopped.'
+      ? convertMessages.stoppedHeading
       : remaining > 0
         ? progressMessages.finishedWithFlags(remaining)
         : hadFlags
@@ -463,58 +487,56 @@ function DoneStage({
           : progressMessages.finishedClean
 
   return (
-    <div className="convert-stack">
-      <GlassPanel aria-label="Conversion finished" as="section" padding="spacious">
+    <div className="ds-stack">
+      <GlassPanel aria-label={convertMessages.finishedPanelLabel} as="section" padding="spacious">
         <h2>{heading}</h2>
 
         {stopped.map((run) => (
           <p
-            className="convert-inline-note convert-inline-note--danger"
+            className="ds-inline-note ds-inline-note--danger"
             key={run.id}
             role="status"
           >
-            {run.fileName} stopped: {run.stopReason}. Its pages and everything
-            read so far are saved.
+            {convertMessages.stoppedRun(run.fileName, run.stopReason ?? '')}
           </p>
         ))}
 
         {unsafe.length > 0 ? (
-          <p className="convert-inline-note convert-inline-note--info" role="status">
-            {unsafe.length === 1 ? 'One file' : `${unsafe.length} files`} came
-            back with checks that did not pass, so
-            {unsafe.length === 1 ? ' it is' : ' they are'} marked for your
-            review before import. Codox never guesses.
+          <p className="ds-inline-note ds-inline-note--info" role="status">
+            {convertMessages.unsafeRuns(unsafe.length)}
           </p>
         ) : null}
 
         {remaining > 0 ? (
-          <p className="convert-muted">
+          <p className="ds-muted">
             {reviewMessages.flagsRemainOnExport(remaining)}
           </p>
         ) : null}
 
         {exported ? (
           <p
-            className="convert-inline-note convert-inline-note--working"
+            className="ds-inline-note ds-inline-note--working"
             role="status"
           >
             {exportMessages.exportDone}
           </p>
         ) : null}
 
-        <div className="convert-done-actions">
+        <div className="ds-done-actions">
           {remaining > 0 && firstFlagged !== undefined ? (
             <>
               <Button onPress={() => onOpenReview(firstFlagged.id)}>
-                Review {remaining} flag{remaining === 1 ? '' : 's'}
-                {done.length > 1 ? ` · ${firstFlagged.fileName}` : ''}
+                {convertMessages.reviewFlags(
+                  remaining,
+                  done.length > 1 ? firstFlagged.fileName : undefined,
+                )}
               </Button>
               <Button
                 isDisabled={exportBusy || done.length === 0}
                 onPress={onExport}
                 variant="secondary"
               >
-                {exported ? 'Export again' : 'Export as-is'}
+                {exported ? convertMessages.exportAgain : convertMessages.exportAsIs}
               </Button>
             </>
           ) : (
@@ -522,37 +544,38 @@ function DoneStage({
               isDisabled={exportBusy || done.length === 0}
               onPress={onExport}
             >
-              {exported ? 'Export again' : 'Export bundle'}
+              {exported ? convertMessages.exportAgain : convertMessages.exportBundle}
             </Button>
           )}
           <Button onPress={onConvertAnother} variant="quiet">
-            Convert another
+            {convertMessages.convertAnother}
           </Button>
           <Badge tone={exported ? 'success' : 'neutral'}>
             {exported ? exportMessages.exported : exportMessages.notExportedYet}
           </Badge>
         </div>
-        <p className="convert-muted convert-phase-note">
-          On a phone this opens the share sheet; on desktop it downloads a
-          zip. {exportMessages.whyExportMatters}
+        <p className="ds-muted ds-phase-note">
+          {convertMessages.exportDeviceNote} {exportMessages.whyExportMatters}
         </p>
 
         {import.meta.env.DEV ? (
-          <div className="convert-dev-surface">
-            <p className="convert-muted">Dev: grade this run in CodoxSandbox</p>
+          <div className="ds-dev-surface">
+            <p className="ds-muted">{convertMessages.devGrade}</p>
             {done.map((run) => (
-              <div className="convert-dev-row" key={run.id}>
+              <div className="ds-dev-row" key={run.id}>
                 <Button
                   data-testid={`dev-download-csv-${run.id}`}
                   onPress={() => void downloadRunCsv(run)}
                   variant="quiet"
                 >
-                  Download {run.fileName} CSV
+                  {convertMessages.devDownloadCsv(run.fileName)}
                 </Button>
-                <span className="convert-muted">
-                  {run.requestCount ?? 0} requests · {run.totalTokens ?? 0}{' '}
-                  tokens
-                  {run.auditUnavailable === true ? ' · audit unavailable' : ''}
+                <span className="ds-muted">
+                  {convertMessages.devRunStats(
+                    run.requestCount ?? 0,
+                    run.totalTokens ?? 0,
+                    run.auditUnavailable === true,
+                  )}
                 </span>
               </div>
             ))}

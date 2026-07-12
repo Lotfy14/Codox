@@ -6,6 +6,7 @@ import { isFileDropItem } from 'react-aria-components/useDragAndDrop'
 export interface FileDropZoneProps {
   allowsMultiple?: boolean
   className?: string
+  chooseLabel: string
   description: string
   isDisabled?: boolean
   label: string
@@ -20,6 +21,7 @@ function isPdf(file: File): boolean {
 export function FileDropZone({
   allowsMultiple = true,
   className,
+  chooseLabel,
   description,
   isDisabled = false,
   label,
@@ -66,7 +68,7 @@ export function FileDropZone({
           className="ds-button ds-button--secondary"
           isDisabled={isDisabled}
         >
-          Choose files
+          {chooseLabel}
         </AriaButton>
       </FileTrigger>
     </DropZone>

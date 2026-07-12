@@ -20,7 +20,7 @@ export interface DialogProps
   children?: DialogContent;
   className?: string;
   description?: ReactNode;
-  dismissLabel?: string;
+  dismissLabel: string;
   isDismissable?: boolean;
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
@@ -42,7 +42,7 @@ export function Dialog({
   children,
   className,
   description,
-  dismissLabel = 'Close dialog',
+  dismissLabel,
   isDismissable = true,
   isOpen,
   onOpenChange,

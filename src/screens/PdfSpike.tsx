@@ -107,10 +107,12 @@ export function PdfSpike() {
   }
 
   return (
-    <section aria-labelledby="pdf-spike-heading" className="app-tab-screen">
-      <h1 id="pdf-spike-heading">PDF render check</h1>
+    <section aria-labelledby="pdf-spike-heading" className="ds-convert">
+      <header className="ds-work__head">
+        <h1 id="pdf-spike-heading">PDF render check</h1>
+      </header>
       <GlassPanel as="div" padding="default">
-        <p className="convert-muted">
+        <p className="ds-muted">
           Diagnostic surface: renders every page of a PDF one at a time,
           exactly like a real conversion, and reports timing and memory.
           The PDF never leaves this device.
@@ -145,7 +147,7 @@ export function PdfSpike() {
           </p>
         ) : null}
         {failures.map((failure) => (
-          <p className="convert-inline-note convert-inline-note--danger" key={failure.pageIndex}>
+          <p className="ds-inline-note ds-inline-note--danger" key={failure.pageIndex}>
             Page {failure.pageIndex + 1}: {failure.message}
           </p>
         ))}

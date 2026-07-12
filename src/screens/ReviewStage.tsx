@@ -305,7 +305,7 @@ function ReviewFlags({
           </p>
           <h2 id="review-done-heading">{reviewMessages.allResolved}</h2>
           {exported ? (
-            <p className="convert-inline-note convert-inline-note--working" role="status">
+            <p className="ds-inline-note ds-inline-note--working" role="status">
               {exportMessages.exportDone}
             </p>
           ) : null}
@@ -330,7 +330,7 @@ function ReviewFlags({
         <div className="review__header-row">
           <div>
             <h2 id="review-heading">Review · {run.fileName}</h2>
-            <p className="convert-muted">
+            <p className="ds-muted">
               Flag {currentIndex + 1} of {flags.length} · question{' '}
               {flag.questionNumber}
               {flag.pageIndex === null ? '' : `, page ${flag.pageIndex + 1}`}
@@ -347,7 +347,7 @@ function ReviewFlags({
           value={resolvedCount}
         />
         {offline ? (
-          <p className="convert-inline-note convert-inline-note--info" role="status">
+          <p className="ds-inline-note ds-inline-note--info" role="status">
             {reviewMessages.offlineIsFine}
           </p>
         ) : null}
@@ -365,7 +365,7 @@ function ReviewFlags({
           className="review__source"
         >
           {imageUrl === null ? (
-            <p className="convert-muted">
+            <p className="ds-muted">
               No source image is stored for this question.
             </p>
           ) : (
@@ -457,7 +457,7 @@ function ReviewFlags({
               Next (→)
             </Button>
           </div>
-          <p className="convert-muted review__hint">
+          <p className="ds-muted review__hint">
             Keyboard: 1–{flag.row.options.length} pick an answer · Enter
             confirm · ← → move between flags · V flip to the page · W whole
             page. Unsure? Skip it — unresolved answers export blank and

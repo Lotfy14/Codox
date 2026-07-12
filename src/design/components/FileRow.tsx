@@ -9,24 +9,18 @@ type FileAnswerSourceSelection = 'batch-default' | FileAnswerSource;
 export interface FileRowProps
   extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
   answerSource?: FileAnswerSource;
-  answerSourceLabel?: string;
+  answerSourceLabel: string;
+  answerSourceOptionLabels: Record<FileAnswerSourceSelection, string>;
   children?: ReactNode;
-  flagLabel?: string;
+  flagLabel: string;
   flagged?: boolean;
   isDisabled?: boolean;
   name: string;
   onAnswerSourceChange?: (answerSource: FileAnswerSource | undefined) => void;
   onRemove?: () => void;
-  removeLabel?: string;
+  removeLabel: string;
   size: number | string;
 }
-
-const answerSourceOptions: readonly SelectOption<FileAnswerSourceSelection>[] = [
-  { id: 'batch-default', label: 'Use batch default' },
-  { id: 'inside', label: 'Inside this PDF' },
-  { id: 'key-file', label: 'Separate key file' },
-  { id: 'none', label: 'No answers provided' },
-];
 
 const fileSizeFormatter = new Intl.NumberFormat('en', {
   maximumFractionDigits: 1,
@@ -61,10 +55,11 @@ function toAnswerSource(selection: FileAnswerSourceSelection | null) {
 /** A solid PDF row with an accessible per-file answer declaration override. */
 export function FileRow({
   answerSource,
-  answerSourceLabel = 'Answers',
+  answerSourceLabel,
+  answerSourceOptionLabels,
   children,
   className,
-  flagLabel = 'Needs attention',
+  flagLabel,
   flagged = false,
   isDisabled = false,
   name,
@@ -86,6 +81,12 @@ export function FileRow({
     const nextAnswerSource = toAnswerSource(selection);
     onAnswerSourceChange?.(nextAnswerSource);
   };
+  const answerSourceOptions: readonly SelectOption<FileAnswerSourceSelection>[] = [
+    { id: 'batch-default', label: answerSourceOptionLabels['batch-default'] },
+    { id: 'inside', label: answerSourceOptionLabels.inside },
+    { id: 'key-file', label: answerSourceOptionLabels['key-file'] },
+    { id: 'none', label: answerSourceOptionLabels.none },
+  ];
 
   return (
     <div {...divProps} className={classes} data-flagged={flagged || undefined}>
@@ -113,7 +114,7 @@ export function FileRow({
       ) : null}
       {onRemove !== undefined ? (
         <button
-          aria-label={removeLabel ?? `Remove ${name}`}
+          aria-label={removeLabel}
           className="ds-file-row__remove"
           disabled={isDisabled}
           onClick={onRemove}
