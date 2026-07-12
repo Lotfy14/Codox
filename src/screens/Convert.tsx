@@ -15,6 +15,7 @@ import type { SelectOption, StatusChipStatus } from '../design/components'
 import { sillySentences } from '../design/silly-sentences'
 import {
   exportMessages,
+  convertMessages,
   progressMessages,
   reviewMessages,
   uploadMessages,
@@ -200,7 +201,9 @@ export function Convert() {
           <p>Drop exam PDFs and Codox turns them into Triviadox question sets.</p>
           <GlassPanel aria-label="Start a conversion" as="section" padding="spacious">
             <FileDropZone
+              description={convertMessages.dropHint}
               isDisabled={busy}
+              label={convertMessages.dropTitle}
               onFiles={(files) => void intake(files, 'exam')}
             />
             {inlineNotes}
@@ -239,9 +242,9 @@ export function Convert() {
             </div>
             <div className="convert-drop-more">
               <FileDropZone
-                description="Add more PDFs to this batch"
+                description={convertMessages.dropMoreHint}
                 isDisabled={busy}
-                label="Drop more PDFs here"
+                label={convertMessages.dropMoreTitle}
                 onFiles={(files) => void intake(files, 'exam')}
               />
             </div>
@@ -278,9 +281,9 @@ export function Convert() {
                   ) : (
                     <FileDropZone
                       allowsMultiple={false}
-                      description="PDF answer key"
+                      description={convertMessages.keyDropHint}
                       isDisabled={busy}
-                      label="Drop the answer key here"
+                      label={convertMessages.keyDropTitle}
                       onFiles={(files) => void intake(files, 'answer-key')}
                     />
                   )}

@@ -59,6 +59,15 @@ export const uploadMessages = {
     'You said the answers are in a separate file — drop that answer key below before starting.',
 } as const
 
+export const convertMessages = {
+  dropTitle: 'Drop PDFs here',
+  dropHint: 'batch of PDFs supported',
+  dropMoreTitle: 'Drop more PDFs here',
+  dropMoreHint: 'Add more PDFs to this batch',
+  keyDropTitle: 'Drop the answer key here',
+  keyDropHint: 'PDF answer key',
+} as const
+
 export const reviewMessages = {
   whyFlagged: {
     'blank-answer':

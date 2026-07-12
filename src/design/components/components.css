@@ -1,38 +1,21 @@
+/* Cards are solid in the one-screen design; the glass names survive as
+   the shared card recipe so call sites stay untouched. */
 .glass-panel {
-  border: 1px solid var(--glass-panel-border);
-  background: var(--glass-panel-background);
-  box-shadow: var(--glass-shadow);
-  -webkit-backdrop-filter: blur(var(--glass-panel-blur))
-    saturate(var(--glass-panel-saturation));
-  backdrop-filter: blur(var(--glass-panel-blur))
-    saturate(var(--glass-panel-saturation));
+  border: 1px solid var(--color-outline);
+  background: var(--color-card-fill);
+  box-shadow: var(--shadow-card);
 }
 
 .glass-input {
-  border: 1px solid var(--glass-input-border);
-  background: var(--glass-input-background);
-  -webkit-backdrop-filter: blur(var(--glass-input-blur))
-    saturate(var(--glass-input-saturation));
-  backdrop-filter: blur(var(--glass-input-blur))
-    saturate(var(--glass-input-saturation));
+  border: 1px solid var(--color-control-border);
+  background: var(--color-surface-elevated);
 }
 
-/* A nested panel becomes a solid row instead of stacking GPU-heavy blur. */
+/* A nested panel reads as a row inside its parent card. */
 .glass-panel .glass-panel {
+  border-color: var(--color-row-border);
   background: var(--color-row);
   box-shadow: none;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-}
-
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .glass-panel {
-    background: var(--glass-panel-fallback);
-  }
-
-  .glass-input {
-    background: var(--glass-input-fallback);
-  }
 }
 
 .ds-visually-hidden {
@@ -47,7 +30,7 @@
 }
 
 .ds-glass-panel {
-  border-radius: var(--radius-dashboard);
+  border-radius: var(--radius-card);
   color: var(--color-text-strong);
 }
 
@@ -74,7 +57,7 @@
   justify-content: center;
   min-height: var(--touch-target-min);
   border: 1px solid transparent;
-  border-radius: var(--radius-action);
+  border-radius: var(--radius-input);
   padding: var(--space-2) var(--space-5);
   font-family: var(--font-family-body);
   font-weight: var(--font-weight-medium);
@@ -93,7 +76,7 @@
 }
 
 .ds-button--secondary {
-  border-color: var(--color-control-border);
+  border-color: transparent;
   background: var(--color-primary-soft);
   color: var(--color-primary-foreground);
 }
@@ -219,8 +202,8 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  border: 1px solid var(--glass-input-border);
-  background: var(--glass-input-background);
+  border: 1px solid var(--color-control-border);
+  background: var(--color-surface-elevated);
   text-align: start;
 }
 
@@ -228,6 +211,23 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.ds-select--pill .ds-select__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.ds-select--pill .ds-select__trigger {
+  border-radius: var(--radius-full);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-xs);
 }
 
 .ds-select__chevron {
@@ -318,8 +318,8 @@
 
 .ds-toggle__track {
   position: relative;
-  width: 3rem;
-  height: 1.75rem;
+  width: 2.75rem;
+  height: 1.625rem;
   flex: 0 0 auto;
   border: 1px solid var(--color-neutral-border);
   border-radius: var(--radius-full);
@@ -352,8 +352,8 @@
 }
 
 .ds-toggle[data-selected] .ds-toggle__thumb {
-  transform: translateX(1.25rem);
-  background: #ffffff;
+  transform: translateX(1.125rem);
+  background: var(--color-surface-elevated);
 }
 
 .ds-toggle__label {
@@ -438,6 +438,12 @@
   font-weight: var(--font-weight-medium);
 }
 
+.ds-storage-meter__label {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+}
+
 .ds-progress-bar__track {
   position: relative;
   display: grid;
@@ -499,8 +505,8 @@
   align-items: center;
   gap: var(--space-3);
   min-height: var(--touch-target-min);
-  border: 1px solid var(--color-outline);
-  border-radius: var(--radius-card);
+  border: 1px solid var(--color-row-border);
+  border-radius: var(--radius-input);
   padding: var(--space-3);
   background: var(--color-row);
 }
@@ -640,7 +646,7 @@
 
 .ds-storage-meter__track {
   position: relative;
-  height: 0.75rem;
+  height: 0.4375rem;
   overflow: hidden;
   border-radius: var(--radius-full);
   background: var(--color-neutral-surface);
@@ -670,9 +676,9 @@
 }
 
 .ds-dialog {
-  border-radius: var(--radius-dashboard);
+  border-radius: var(--radius-card);
   padding: var(--space-6);
-  box-shadow: var(--shadow-dialog);
+  box-shadow: var(--shadow-frame);
   animation: ds-dialog-enter var(--motion-duration-standard)
     var(--motion-ease-emphasized) both;
 }
@@ -726,8 +732,8 @@
   display: grid;
   place-items: center;
   min-height: var(--touch-target-min);
-  border: 0;
-  border-radius: var(--radius-action);
+  border: 1px solid transparent;
+  border-radius: var(--radius-input);
   padding: var(--space-2);
   background: transparent;
   color: var(--color-text-muted);
@@ -741,21 +747,22 @@
 }
 
 .ds-tab-nav__item[aria-current="page"] {
+  border-color: var(--color-primary-border);
   background: var(--color-primary-soft);
   color: var(--color-primary-foreground);
 }
 
 .ds-tab-nav__indicator {
-  position: absolute;
-  top: 0.35rem;
-  width: 1.25rem;
-  height: 3px;
-  border-radius: var(--radius-full);
-  background: transparent;
+  display: none;
 }
 
-.ds-tab-nav__item[aria-current="page"] .ds-tab-nav__indicator {
-  background: currentColor;
+.ds-tab-nav__label {
+  color: var(--color-text-muted);
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-label);
+  letter-spacing: var(--letter-spacing-label);
+  text-transform: uppercase;
 }
 
 .ds-theme-switcher {
@@ -798,10 +805,10 @@
   align-items: center;
   gap: var(--space-4);
   min-height: 10rem;
-  border: 2px dashed var(--color-control-border);
-  border-radius: var(--radius-dashboard);
+  border: 2px dashed var(--color-drop-border);
+  border-radius: var(--radius-card);
   padding: var(--space-6);
-  background: var(--color-card-fill);
+  background: var(--drop-gradient);
 }
 
 .ds-file-drop-zone[data-drop-target] {
@@ -823,6 +830,152 @@
 .ds-file-drop-zone__copy span {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
+}
+
+.ds-stage {
+  min-height: 100vh;
+  padding: var(--stage-padding);
+  background: var(--stage-gradient);
+}
+
+.ds-frame {
+  display: grid;
+  grid-template-columns: var(--layout-sidebar-width) minmax(0, 1fr) var(--layout-rail-width);
+  gap: var(--frame-gap);
+  width: min(100%, var(--frame-max-width));
+  min-height: calc(100vh - 2 * var(--stage-padding));
+  margin: 0 auto;
+  border: 1px solid var(--color-frame-border);
+  border-radius: var(--radius-frame);
+  padding: var(--frame-padding);
+  background: var(--color-frame);
+  box-shadow: var(--shadow-frame);
+}
+
+.ds-sidebar,
+.ds-work,
+.ds-rail {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.ds-sidebar {
+  gap: var(--space-6);
+}
+
+.ds-sidebar__foot,
+.ds-rail__foot {
+  margin-top: auto;
+}
+
+.ds-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.ds-brand img {
+  display: block;
+}
+
+.ds-brand strong {
+  display: block;
+  color: var(--color-text-strong);
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-heading);
+  line-height: var(--line-height-tight);
+}
+
+.ds-brand small {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.ds-work {
+  gap: var(--space-6);
+}
+
+.ds-work__head {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.ds-work__head h1 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-family: var(--font-family-heading);
+  font-size: clamp(var(--font-size-2xl), 4vw, var(--font-size-3xl));
+  font-weight: var(--font-weight-heading);
+  line-height: var(--line-height-heading);
+}
+
+.ds-work__head p,
+.ds-panel-head p,
+.ds-start-row__note {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.ds-panel-head,
+.ds-start-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.ds-start-row {
+  justify-content: flex-end;
+  margin-top: var(--space-6);
+}
+
+.ds-start-row__note {
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.ds-rail {
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.ds-rail__foot {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+}
+
+.ds-rail__privacy {
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.ds-rail-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--touch-target-min);
+  min-height: var(--touch-target-min);
+  flex-direction: column;
+  gap: var(--space-1);
+  border: 1px solid var(--color-outline);
+  border-radius: var(--radius-chip);
+  padding: var(--space-2);
+  background: var(--color-card-fill);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.ds-rail-button__icon {
+  display: grid;
+  place-items: center;
+  color: var(--color-primary-foreground);
 }
 
 .ds-app-shell {
@@ -898,14 +1051,6 @@
     padding-inline: var(--space-4);
   }
 
-  .ds-tab-nav__indicator {
-    top: 50%;
-    left: 0.4rem;
-    width: 3px;
-    height: 1.25rem;
-    transform: translateY(-50%);
-  }
-
   .ds-app-shell {
     grid-template-columns: auto minmax(0, 1fr);
     grid-template-areas:
@@ -960,4 +1105,10 @@
     align-self: center;
   }
 
+}
+
+@media (max-width: 63.999rem) {
+  .ds-frame {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

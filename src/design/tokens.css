@@ -65,13 +65,6 @@
   --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --motion-ease-emphasized: cubic-bezier(0.2, 0.8, 0.2, 1);
 
-  /* Shared glass recipes (retired by the one-screen port; kept until the
-     last consumer is restyled, then deleted) */
-  --glass-panel-blur: 40px;
-  --glass-panel-saturation: 160%;
-  --glass-input-blur: 12px;
-  --glass-input-saturation: 150%;
-  --glass-shadow: 0 15px 45px -12px rgb(0 0 0 / 15%);
   --shadow-raised: 0 12px 30px -18px rgb(62 15 29 / 35%);
   --shadow-dialog: 0 28px 80px -30px rgb(0 0 0 / 55%);
   --shadow-frame: 0 40px 80px -40px rgb(80 20 30 / 28%),
@@ -140,13 +133,6 @@
   --color-neutral-surface: #f4edef;
   --color-neutral-border: #94717b;
 
-  /* Theme-resolved glass values (retired with the glass recipes) */
-  --glass-panel-background: var(--color-card-fill);
-  --glass-panel-border: var(--color-outline);
-  --glass-input-background: var(--color-surface-elevated);
-  --glass-input-border: var(--color-control-border);
-  --glass-panel-fallback: #ffffff;
-  --glass-input-fallback: #fffafa;
 }
 
 [data-theme="dark"] {
@@ -199,12 +185,6 @@
   --color-neutral-surface: #33242a;
   --color-neutral-border: #7d666d;
 
-  --glass-panel-background: var(--color-card-fill);
-  --glass-panel-border: var(--color-outline);
-  --glass-input-background: var(--color-row);
-  --glass-input-border: var(--color-control-border);
-  --glass-panel-fallback: #2a1b1f;
-  --glass-input-fallback: #332125;
   --shadow-raised: 0 14px 34px -18px rgb(0 0 0 / 70%);
   --shadow-frame: 0 40px 80px -40px rgb(0 0 0 / 60%),
     0 8px 24px -16px rgb(0 0 0 / 45%);

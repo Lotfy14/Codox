@@ -101,7 +101,7 @@ export function FileRow({
       ) : null}
       <Select<FileAnswerSourceSelection>
         aria-label={`${answerSourceLabel} for ${name}`}
-        className="ds-file-row__answer-source"
+        className="ds-file-row__answer-source ds-select--pill"
         isDisabled={isDisabled}
         label={answerSourceLabel}
         onChange={selectAnswerSource}

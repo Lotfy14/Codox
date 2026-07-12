@@ -6,10 +6,11 @@ import { isFileDropItem } from 'react-aria-components/useDragAndDrop'
 export interface FileDropZoneProps {
   allowsMultiple?: boolean
   className?: string
-  description?: string
+  description: string
   isDisabled?: boolean
-  label?: string
+  label: string
   onFiles: (files: File[]) => void
+  onRejected?: (files: File[]) => void
 }
 
 function isPdf(file: File): boolean {
@@ -19,10 +20,11 @@ function isPdf(file: File): boolean {
 export function FileDropZone({
   allowsMultiple = true,
   className,
-  description = 'PDF files only',
+  description,
   isDisabled = false,
-  label = 'Drop exam PDFs here',
+  label,
   onFiles,
+  onRejected,
 }: FileDropZoneProps) {
   return (
     <DropZone
@@ -36,7 +38,9 @@ export function FileDropZone({
 
         void Promise.all(pendingFiles).then((files) => {
           const pdfs = files.filter(isPdf)
+          const rejected = files.filter((file) => !isPdf(file))
           if (pdfs.length > 0) onFiles(allowsMultiple ? pdfs : pdfs.slice(0, 1))
+          if (rejected.length > 0) onRejected?.(rejected)
         })
       }}
     >
@@ -51,8 +55,11 @@ export function FileDropZone({
         acceptedFileTypes={['application/pdf']}
         allowsMultiple={allowsMultiple}
         onSelect={(fileList) => {
-          const files = fileList ? Array.from(fileList).filter(isPdf) : []
-          if (files.length > 0) onFiles(files)
+          const selected = fileList ? Array.from(fileList) : []
+          const files = selected.filter(isPdf)
+          const rejected = selected.filter((file) => !isPdf(file))
+          if (files.length > 0) onFiles(allowsMultiple ? files : files.slice(0, 1))
+          if (rejected.length > 0) onRejected?.(rejected)
         }}
       >
         <AriaButton
