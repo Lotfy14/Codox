@@ -361,8 +361,7 @@
 }
 
 .ds-badge,
-.ds-status-chip,
-.ds-provider-order__first {
+.ds-status-chip {
   display: inline-flex;
   align-items: center;
   width: fit-content;
@@ -558,9 +557,7 @@
 }
 
 .ds-file-row__remove,
-.ds-dialog__close,
-.ds-provider-order__drag,
-.ds-provider-order__move {
+.ds-dialog__close {
   display: inline-grid;
   place-items: center;
   min-width: var(--touch-target-min);
@@ -572,9 +569,7 @@
 }
 
 .ds-file-row__remove:hover,
-.ds-dialog__close[data-hovered],
-.ds-provider-order__drag[data-hovered],
-.ds-provider-order__move[data-hovered] {
+.ds-dialog__close[data-hovered] {
   background: var(--color-row-hover);
   color: var(--color-text-strong);
 }
@@ -830,66 +825,6 @@
   font-size: var(--font-size-sm);
 }
 
-.ds-provider-order {
-  display: grid;
-  gap: var(--space-2);
-  outline: none;
-}
-
-.ds-provider-order__item {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--space-3);
-  border: 1px solid var(--color-outline);
-  border-radius: var(--radius-card);
-  padding: var(--space-3);
-  background: var(--color-row);
-  outline: none;
-  transition: opacity var(--motion-duration-fast) var(--motion-ease-standard);
-}
-
-.ds-provider-order__item[data-focus-visible-within],
-.ds-provider-order__item[data-drop-target] {
-  border-color: var(--color-focus-ring);
-  box-shadow: 0 0 0 var(--focus-ring-width) var(--color-focus-halo);
-}
-
-.ds-provider-order__item[data-dragging] {
-  opacity: 0.5;
-}
-
-.ds-provider-order__content {
-  display: grid;
-  min-width: 0;
-  gap: var(--space-1);
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-}
-
-.ds-provider-order__heading {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--color-text-strong);
-}
-
-.ds-provider-order__first {
-  border-color: var(--color-primary-border);
-  background: var(--color-primary-soft);
-  color: var(--color-primary-foreground);
-}
-
-.ds-provider-order__moves {
-  display: flex;
-  gap: var(--space-1);
-}
-
-.ds-provider-order__move[data-disabled] {
-  opacity: 0.35;
-}
-
 .ds-app-shell {
   display: grid;
   grid-template-areas:
@@ -1025,11 +960,4 @@
     align-self: center;
   }
 
-  .ds-provider-order__item {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-
-  .ds-provider-order__moves {
-    grid-column: 2;
-  }
 }

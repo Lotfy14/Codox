@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { AppShell, Button, TabNav } from './design/components'
+import { AppShell, TabNav } from './design/components'
 import type { AppTab } from './design/components'
 import { geminiController } from './providers/controller'
 import { useFirstRunCompleted } from './state/settings'
@@ -16,34 +16,6 @@ const PdfSpikeScreen = lazy(() =>
     default: PdfSpike,
   })),
 )
-
-const DesignGalleryScreen = import.meta.env.DEV
-  ? lazy(() =>
-      import('./screens/DesignGallery').then(({ DesignGallery }) => ({
-        default: DesignGallery,
-      })),
-    )
-  : null
-
-const MockupAppScreen = import.meta.env.DEV
-  ? lazy(() =>
-      import('./mockups/MockupApp').then(({ MockupApp }) => ({
-        default: MockupApp,
-      })),
-    )
-  : null
-
-// Phase-2 evidence surface — must stay reachable in dev.
-const SpikeScreen = import.meta.env.DEV
-  ? lazy(() =>
-      import('./screens/Phase2SpikeChecks').then(({ Phase2SpikeChecks }) => ({
-        default: Phase2SpikeChecks,
-      })),
-    )
-  : null
-
-/** Dev-only review surfaces; not part of the product navigation. */
-type DevView = 'gallery' | 'spike' | null
 
 function renderTab(tab: AppTab) {
   switch (tab) {
@@ -62,19 +34,6 @@ function App() {
   const firstRunCompleted = useFirstRunCompleted()
   const [activeTab, setActiveTab] = useState<AppTab>('convert')
 
-  const devAvailable = import.meta.env.DEV
-  const [devView, setDevView] = useState<DevView>(() => {
-    if (!devAvailable) return null
-    const params = new URLSearchParams(window.location.search)
-    if (params.get('gallery') === '1') return 'gallery'
-    if (params.get('spike') === '1') return 'spike'
-    return null
-  })
-  const [mockupsOpen, setMockupsOpen] = useState(
-    () =>
-      devAvailable &&
-      new URLSearchParams(window.location.search).get('mockups') === '1',
-  )
   const [pdfSpikeOpen] = useState(
     () => new URLSearchParams(window.location.search).get('pdfspike') === '1',
   )
@@ -89,14 +48,6 @@ function App() {
     return (
       <Suspense fallback={<p>Loading PDF check...</p>}>
         <PdfSpikeScreen />
-      </Suspense>
-    )
-  }
-
-  if (mockupsOpen && MockupAppScreen) {
-    return (
-      <Suspense fallback={<p>Loading mockups...</p>}>
-        <MockupAppScreen onExit={() => setMockupsOpen(false)} />
       </Suspense>
     )
   }
@@ -119,52 +70,11 @@ function App() {
               <small>Exam PDFs → Triviadox</small>
             </span>
           </span>
-          {devAvailable ? (
-            <div className="app-dev-nav">
-              <Button
-                onPress={() =>
-                  setDevView((view) => (view === 'gallery' ? null : 'gallery'))
-                }
-                variant="quiet"
-              >
-                Gallery
-              </Button>
-              <Button
-                onPress={() =>
-                  setDevView((view) => (view === 'spike' ? null : 'spike'))
-                }
-                variant="quiet"
-              >
-                Spike
-              </Button>
-              <Button onPress={() => setMockupsOpen(true)} variant="quiet">
-                Mockups
-              </Button>
-            </div>
-          ) : null}
         </div>
       }
-      navigation={
-        <TabNav
-          activeTab={activeTab}
-          onTabChange={(tab) => {
-            setDevView(null)
-            setActiveTab(tab)
-          }}
-        />
-      }
+      navigation={<TabNav activeTab={activeTab} onTabChange={setActiveTab} />}
     >
-      {devView === 'gallery' && DesignGalleryScreen ? (
-        <Suspense fallback={<p>Loading design gallery...</p>}>
-          <DesignGalleryScreen />
-        </Suspense>
-      ) : devView === 'spike' && SpikeScreen ? (
-        <Suspense fallback={<p>Loading spike checks...</p>}>
-          <SpikeScreen />
-        </Suspense>
-      ) : (
-        renderTab(activeTab)
-      )}
+      {renderTab(activeTab)}
     </AppShell>
   )
 }
