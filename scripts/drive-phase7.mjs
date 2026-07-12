@@ -244,6 +244,9 @@ async function resolveCurrentFlag(digit) {
   await page
     .locator('.review-option[aria-checked="true"]')
     .waitFor({ timeout: 5_000 })
+  await page.waitForFunction(
+    () => document.activeElement?.textContent?.includes('Confirm answer'),
+  )
   await page.keyboard.press('Enter')
 }
 
@@ -282,8 +285,8 @@ try {
   await page.getByRole('option', { name: 'There are no answers' }).click()
   await page.locator('button', { hasText: 'Start converting' }).click()
 
-  await page.waitForSelector('.convert-dev-surface', { timeout: 180_000 })
-  const doneHeading = await page.textContent('.convert-stack h2')
+  await page.waitForSelector('.ds-dev-surface', { timeout: 180_000 })
+  const doneHeading = await page.textContent('.ds-stack h2')
   assert.match(
     doneHeading,
     new RegExp(`${TOTAL_FLAGS} answers need your eyes`),
@@ -334,8 +337,8 @@ try {
 
   // ---------- 4. Resolutions survive a reload ----------
   await page.reload()
-  await page.waitForSelector('.convert-dev-surface', { timeout: 30_000 })
-  const afterReload = await page.textContent('.convert-stack h2')
+  await page.waitForSelector('.ds-dev-surface', { timeout: 30_000 })
+  const afterReload = await page.textContent('.ds-stack h2')
   assert.match(
     afterReload,
     new RegExp(`${TOTAL_FLAGS - 2} answers need your eyes`),
@@ -366,7 +369,7 @@ try {
     fullPage: true,
   })
   await page.locator('button', { hasText: 'Back to results' }).click()
-  await page.waitForSelector('.convert-done-actions')
+  await page.waitForSelector('.ds-done-actions')
   const nextFile = await page
     .locator('button', { hasText: /^Review \d+ flags/ })
     .textContent()
