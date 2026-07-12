@@ -26,7 +26,7 @@ export function FirstRun({ onDone }: FirstRunProps) {
     <div className="ds-stage first-run">
       <GlassPanel aria-labelledby="first-run-heading" as="section" padding="spacious">
         <header className="first-run__header">
-          <img alt="" height="56" src="/logo.svg" width="56" />
+          <img alt="" className="first-run__logo" height="56" src="/brand-logo.png" width="56" />
           <h1 id="first-run-heading">Welcome to Codox</h1>
           <p>{firstRunMessages.welcome}</p>
         </header>

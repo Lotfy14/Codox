@@ -72,7 +72,6 @@ export const uploadMessages = {
 
 export const appMessages = {
   brandName: 'Codox',
-  brandTagline: 'Exam PDFs → Triviadox',
   navLabel: 'Workspace',
   navConvert: 'Convert',
   navHistory: 'History',

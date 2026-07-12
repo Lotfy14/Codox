@@ -37,8 +37,16 @@ const mobileItems: readonly TabNavItem<MobileNavItem>[] = [
 
 function RailIcon({ kind }: { kind: 'api' | 'help' }) {
   return kind === 'api' ? (
+    // The key icon from the approved one-screen design.
     <svg fill="none" height="20" viewBox="0 0 24 24" width="20">
-      <path d="M8 12h8M12 8v8M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+      <path
+        d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+      <circle cx="16.5" cy="7.5" fill="currentColor" r="0.5" />
     </svg>
   ) : (
     <svg fill="none" height="20" viewBox="0 0 24 24" width="20">
@@ -84,11 +92,8 @@ function App() {
       <div className="ds-frame">
         <aside className="ds-sidebar">
           <span className="ds-brand">
-            <img alt="" height="40" src="/logo.svg" width="40" />
-            <span>
-              <strong>{appMessages.brandName}</strong>
-              <small>{appMessages.brandTagline}</small>
-            </span>
+            <img alt="" height="40" src="/brand-logo.png" width="40" />
+            <strong>{appMessages.brandName}</strong>
           </span>
           <span className="ds-tab-nav__label">{appMessages.navLabel}</span>
           <TabNav

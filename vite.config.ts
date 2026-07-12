@@ -7,7 +7,10 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'prompt',
+      // autoUpdate: a new deploy replaces the cached app-shell on next
+      // launch. 'prompt' with a console-only handler left users pinned to
+      // stale UI forever (bit the owner on 2026-07-12).
+      registerType: 'autoUpdate',
       workbox: {
         // pdfium.wasm (~4 MB) must precache or the offline PWA cannot
         // render PDFs; workbox's default limit is 2 MB.
@@ -18,6 +21,7 @@ export default defineConfig({
         'favicon.ico',
         'apple-touch-icon-180x180.png',
         'logo.svg',
+        'brand-logo.png',
       ],
       manifest: {
         name: 'Codox',

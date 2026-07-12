@@ -834,18 +834,15 @@
   background: var(--stage-gradient);
 }
 
+/* The stage gradient IS the app surface — no framed card around the
+   layout, so the window never reads as a window inside a window. The
+   grid fills the window: brand on the left edge, rail on the right. */
 .ds-frame {
   display: grid;
   grid-template-columns: var(--layout-sidebar-width) minmax(0, 1fr) var(--layout-rail-width);
   gap: var(--frame-gap);
-  width: min(100%, var(--frame-max-width));
+  width: 100%;
   min-height: calc(100vh - 2 * var(--stage-padding));
-  margin: 0 auto;
-  border: 1px solid var(--color-frame-border);
-  border-radius: var(--radius-frame);
-  padding: var(--frame-padding);
-  background: var(--color-frame);
-  box-shadow: var(--shadow-frame);
 }
 
 .ds-sidebar,
@@ -873,6 +870,7 @@
 
 .ds-brand img {
   display: block;
+  border-radius: var(--radius-input);
 }
 
 .ds-brand strong {
@@ -884,14 +882,11 @@
   line-height: var(--line-height-tight);
 }
 
-.ds-brand small {
-  display: block;
-  color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
-}
-
+/* Short content rests near the vertical center instead of pinning to the
+   top; tall content (running/review stages) grows and flows naturally. */
 .ds-work {
   gap: var(--space-6);
+  justify-content: center;
 }
 
 .ds-convert {
