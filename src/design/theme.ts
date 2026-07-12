@@ -1,17 +1,17 @@
 import { useSyncExternalStore } from 'react'
 
-export type ThemePreference = 'system' | 'light' | 'dark'
-export type ResolvedTheme = Exclude<ThemePreference, 'system'>
+export type ThemePreference = 'light' | 'dark'
+export type ResolvedTheme = ThemePreference
 
 export const THEME_STORAGE_KEY = 'codox-theme-preference'
 
 interface ThemeSnapshot {
-  preference: ThemePreference
+  preference: ThemePreference | null
   resolvedTheme: ResolvedTheme
 }
 
 const serverSnapshot: ThemeSnapshot = {
-  preference: 'system',
+  preference: null,
   resolvedTheme: 'light',
 }
 
@@ -19,19 +19,21 @@ const listeners = new Set<() => void>()
 let listening = false
 
 function isThemePreference(value: unknown): value is ThemePreference {
-  return value === 'system' || value === 'light' || value === 'dark'
+  return value === 'light' || value === 'dark'
 }
 
-function readStoredPreference(): ThemePreference {
-  if (typeof window === 'undefined') {
-    return 'system'
-  }
+function readStoredPreference(): ThemePreference | null {
+  if (typeof window === 'undefined') return null
 
   try {
     const stored = window.localStorage.getItem(THEME_STORAGE_KEY)
-    return isThemePreference(stored) ? stored : 'system'
+    if (stored === 'system') {
+      window.localStorage.removeItem(THEME_STORAGE_KEY)
+      return null
+    }
+    return isThemePreference(stored) ? stored : null
   } catch {
-    return 'system'
+    return null
   }
 }
 
@@ -44,28 +46,20 @@ function systemPrefersDark(): boolean {
 }
 
 export function resolveTheme(
-  preference: ThemePreference,
+  preference: ThemePreference | null,
   prefersDark = systemPrefersDark(),
 ): ResolvedTheme {
-  if (preference === 'system') {
-    return prefersDark ? 'dark' : 'light'
-  }
-
-  return preference
+  return preference ?? (prefersDark ? 'dark' : 'light')
 }
 
 function applyResolvedTheme(theme: ResolvedTheme): void {
-  if (typeof document === 'undefined') {
-    return
-  }
+  if (typeof document === 'undefined') return
 
   document.documentElement.dataset.theme = theme
   document.documentElement.style.colorScheme = theme
-
-  const themeColor = document.querySelector<HTMLMetaElement>(
-    'meta[name="theme-color"]',
-  )
-  themeColor?.setAttribute('content', theme === 'dark' ? '#191013' : '#f4e9e0')
+  document
+    .querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+    ?.setAttribute('content', theme === 'dark' ? '#191013' : '#f4e9e0')
 }
 
 let snapshot: ThemeSnapshot = (() => {
@@ -80,37 +74,34 @@ function publish(nextPreference = snapshot.preference): void {
     preference: nextPreference,
     resolvedTheme: resolveTheme(nextPreference),
   }
-
   const changed =
     nextSnapshot.preference !== snapshot.preference ||
     nextSnapshot.resolvedTheme !== snapshot.resolvedTheme
 
   snapshot = nextSnapshot
   applyResolvedTheme(snapshot.resolvedTheme)
-
-  if (changed) {
-    listeners.forEach((listener) => listener())
-  }
+  if (changed) listeners.forEach((listener) => listener())
 }
 
 function handleSystemThemeChange(): void {
-  if (snapshot.preference === 'system') {
-    publish()
-  }
+  if (snapshot.preference === null) publish()
 }
 
 function handleStorage(event: StorageEvent): void {
-  if (event.key !== THEME_STORAGE_KEY && event.key !== null) {
-    return
-  }
+  if (event.key !== THEME_STORAGE_KEY && event.key !== null) return
 
-  publish(isThemePreference(event.newValue) ? event.newValue : 'system')
+  if (event.newValue === 'system') {
+    try {
+      window.localStorage.removeItem(THEME_STORAGE_KEY)
+    } catch {
+      // Storage can be blocked; the legacy preference is still ignored.
+    }
+  }
+  publish(isThemePreference(event.newValue) ? event.newValue : null)
 }
 
 function startListening(): void {
-  if (listening || typeof window === 'undefined') {
-    return
-  }
+  if (listening || typeof window === 'undefined') return
 
   listening = true
   window.addEventListener('storage', handleStorage)
@@ -122,10 +113,7 @@ function startListening(): void {
 function subscribe(listener: () => void): () => void {
   startListening()
   listeners.add(listener)
-
-  return () => {
-    listeners.delete(listener)
-  }
+  return () => listeners.delete(listener)
 }
 
 function getSnapshot(): ThemeSnapshot {
@@ -133,31 +121,19 @@ function getSnapshot(): ThemeSnapshot {
 }
 
 export function setThemePreference(preference: ThemePreference): void {
-  if (!isThemePreference(preference)) {
-    return
-  }
+  if (!isThemePreference(preference)) return
 
   try {
-    if (preference === 'system') {
-      window.localStorage.removeItem(THEME_STORAGE_KEY)
-    } else {
-      window.localStorage.setItem(THEME_STORAGE_KEY, preference)
-    }
+    window.localStorage.setItem(THEME_STORAGE_KEY, preference)
   } catch {
     // The preference still applies for this session when storage is blocked.
   }
-
   publish(preference)
 }
 
 export function useTheme() {
   const current = useSyncExternalStore(subscribe, getSnapshot, () => serverSnapshot)
-
-  return {
-    ...current,
-    setPreference: setThemePreference,
-  }
+  return { ...current, setPreference: setThemePreference }
 }
 
-// Keep system and cross-tab changes live even on screens without a switcher.
 startListening()

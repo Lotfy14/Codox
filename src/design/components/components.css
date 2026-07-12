@@ -766,38 +766,34 @@
 }
 
 .ds-theme-switcher {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
+  display: inline-flex;
 }
 
 .ds-theme-switcher__options {
   display: inline-flex;
   gap: var(--space-1);
-  border: 1px solid var(--color-control-border);
+  border: 1px solid var(--color-outline);
   border-radius: var(--radius-full);
   padding: var(--space-1);
-  background: var(--color-row);
+  background: var(--color-primary-soft);
 }
 
 .ds-theme-switcher__option {
+  display: grid;
+  place-items: center;
+  min-width: var(--touch-target-min);
   min-height: var(--touch-target-min);
   border: 0;
   border-radius: var(--radius-full);
-  padding: var(--space-1) var(--space-3);
+  padding: var(--space-1);
   background: transparent;
   color: var(--color-text-muted);
 }
 
 .ds-theme-switcher__option[aria-pressed="true"] {
-  background: var(--color-primary);
-  color: var(--color-text-on-primary);
-}
-
-.ds-theme-switcher__resolved {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
+  background: var(--color-card-fill);
+  color: var(--color-primary-foreground);
+  box-shadow: var(--shadow-card);
 }
 
 .ds-file-drop-zone {

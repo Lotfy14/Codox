@@ -59,6 +59,12 @@ export const uploadMessages = {
     'You said the answers are in a separate file — drop that answer key below before starting.',
 } as const
 
+export const appMessages = {
+  themeGroupLabel: 'Appearance',
+  themeLight: 'Light theme',
+  themeDark: 'Dark theme',
+} as const
+
 export const convertMessages = {
   dropTitle: 'Drop PDFs here',
   dropHint: 'batch of PDFs supported',
