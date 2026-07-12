@@ -1,9 +1,9 @@
 # Codox — Error language (Phase 3 pass)
 
 _Written 2026-07-11. Every message a tutor can see, in plain English, for
-owner review. The live strings ship in [`src/mockups/copy.ts`](../src/mockups/copy.ts)
-and are all visible inside the clickable mockups (`npm run dev`, then open
-`/?mockups=1`) — the Help tab shows this whole list in-app._
+owner review. The live strings ship in
+[`src/copy/messages.ts`](../src/copy/messages.ts) and the running app is the
+design and copy review surface._
 
 **Owner: read each line once. If any message sounds confusing, say which.**
 

@@ -18,22 +18,14 @@ with no shared, bundled, developer, fallback, or second-user key path.**_
    user-supplied Gemini key per installation, no quota sharing or fallback
    key, the measured CORS facts, and why "unreachable" must never be
    misdiagnosed as "wrong key" (BLIND-SPOTS #9).
-3. `design-system/DESIGN_SYSTEM.md` — the component contract. Phase 4 screens
-   compose these components; the "Rules screens must follow" section is
-   binding, especially rule 6 (wrong key = danger, unreachable = blue-neutral,
-   quota = amber, working = success — never collapsed).
+3. `src/design/tokens.css` + `src/design/components/components.css` — the live
+   component contract used by the running app.
 4. `design-system/ERROR_LANGUAGE.md` — the owner-reviewed words for every
-   state and the canonical provider wording. `src/mockups/copy.ts` still
-   contains historical multi-provider prototype copy; update it from the
-   canonical document when promoting mockup code, never the other way around.
-5. `src/mockups/` — **the visual UI reference, not the provider model.** Reuse
-   the first-run and API-panel layout where it fits, but remove provider lists,
-   provider ordering, add-provider controls, and failover copy. The real UI
-   replaces simulation (`simulateKeyCheck.ts`) with Gemini calls.
-6. Current code: `src/App.tsx` (placeholder five-step nav that Phase 4
-   replaces with the real shell), `src/state/db.ts` + `src/state/types.ts`
-   (Dexie patterns), `src/screens/Phase2SpikeChecks.tsx` (must keep working —
-   it is the Phase-2 evidence surface).
+   state and the canonical provider wording; live copy is in
+   `src/copy/messages.ts`.
+5. The running app is the visual reference. The old standalone mockups and
+   Phase-2 UI spike were retired after their evidence was banked.
+6. Current code: `src/App.tsx`, `src/state/db.ts` + `src/state/types.ts`.
 
 ## 1. Locked decisions — do not re-litigate
 
@@ -62,7 +54,7 @@ with no shared, bundled, developer, fallback, or second-user key path.**_
 
 ## 2. RESOLVED: the Gemini/relay decision
 
-**Resolved 2026-07-11.** The Phase-2 spike ran a real `generateContent` call
+**Resolved 2026-07-11.** The now-retired Phase-2 diagnostic ran a real `generateContent` call
 with a real key from inside both installed shells (Tauri WebView2 on Windows,
 Capacitor on Android): **`gemini-3.5-flash` returned HTTP 200 with candidates.**
 Direct provider calls work. WebView2 is Chromium and enforces CORS like a
@@ -229,25 +221,21 @@ paused → resumed without user action.
 
 ## 7. Step 5 — Real app shell + API-key panel + first-run
 
-Promote the mockup shapes to the real app:
+Promote the approved shapes to the real app:
 
-- Replace the placeholder five-step nav in `src/App.tsx` with the real
-  `AppShell` + `TabNav` dashboard. Convert/History/Help render honest
-  placeholders ("arrives in Phase 5/6/7") composed from the design system;
-  the API-key panel is fully real. Keep the Dexie `AppStep` job state intact for now
-  (Phase 6 reworks job state); keep `Phase2SpikeChecks` reachable in dev,
-  and keep the dev-only Gallery + Mockups entries working.
+- [x] The placeholder navigation was replaced by the running app shell and
+  the API-key panel was made fully real. The Phase-2 diagnostic, gallery, and
+  standalone prototype entries were retired after their evidence was banked.
 - **API-key panel:** one Google Gemini key field with Replace, Remove, and
   Check key actions. "Check key" runs `validateKey` with a pending state;
   `StatusChip` and inline notes show the approved wrong-key, unreachable,
   quota, and working language. Do not render provider order or Add provider.
-- **First-run walkthrough** = `FirstRunMock` made real: shown when no
+- **First-run walkthrough** uses the approved in-app design: shown when no
   Gemini key has been validated; one Gemini key field + live validation + the
   one-line privacy notice; lands on Convert. "Skip" is allowed (the user can
   enter their Gemini key later through the API panel).
-- Move the canonical copy out of `src/mockups/copy.ts` into a real location
-  (`src/copy/messages.ts`); mockups import from there so the strings cannot
-  drift. `simulateKeyCheck.ts` stays mockup-only.
+- [x] Canonical copy moved to `src/copy/messages.ts`; the retired prototypes
+  and their simulated key checker were deleted.
 - Accessibility bar unchanged: keyboard operable end-to-end, focus visible,
   44px targets, both themes — the components already enforce most of this;
   don't fight them.
@@ -326,4 +314,4 @@ round-trip billed to that key.
   danger tones or the word "error"/"failed", it is a bug per the owner's
   design rulings.
 - **Precedence:** latest direct owner instruction → CLAUDE.md → this plan →
-  DESIGN_SYSTEM.md → mockups.
+  the running app's token and component contracts.

@@ -59,6 +59,10 @@ vite-plugin-pwa, Dexie (IndexedDB), @hyzyla/pdfium (render/crop), pdf.js
 
 - TypeScript, strict mode. One web codebase; Tauri/Capacitor are pure
   wrappers — **no per-platform UI forks or behavior forks.**
+- The running app is the only design artifact; UI approval means owner
+  click-through in the app, never a standalone HTML mockup. Every visual
+  value comes from `tokens.css`, and every shared pattern is one class in
+  `components.css`.
 - Real DOM, keyboard-navigable, accessible UI (the Review screen especially).
   Prefer headless accessible primitives (Radix/React Aria).
 - Mobile memory discipline is law: pages render one at a time

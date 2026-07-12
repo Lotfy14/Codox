@@ -92,9 +92,9 @@ must survive; the surface is free.
 
 - [x] Pick a component approach (headless primitives — Radix/React Aria — plus
       a small design system: colors, type, spacing)
-- [x] Clickable mockups of all five screens (desktop + phone widths) —
-      dev-only prototype at `/?mockups=1` (`src/mockups/`), composed from the
-      Phase-3A component library on fake data:
+- [x] The running app covers the full flow at desktop + phone widths. The
+      retired clickable prototypes were promoted into the shared component
+      library and the real screens:
       - Setup: exactly one user-supplied Gemini key; live validation
       - Upload: drop zone + the one declaration question (answers inside /
         separate file / none); second drop zone appears conditionally
@@ -106,14 +106,16 @@ must survive; the surface is free.
         mobile, zip download on desktop
 - [x] Error-language pass: every failure a tutor can hit, written in plain
       English ("Gemini is unreachable" ≠ "your key is wrong") — see
-      `design-system/ERROR_LANGUAGE.md`; all strings visible
-      in the mockups (Help tab shows the full catalog)
-- [x] One-screen relayout (2026-07-11): mockups restructured to the owner's
+      `design-system/ERROR_LANGUAGE.md`; live strings ship from
+      `src/copy/messages.ts` and are visible in the running app
+- [x] One-screen relayout (2026-07-11): the design was restructured to the owner's
       one-screen design — left workspace nav (Convert/History + storage),
       the whole job in one center column with review inline (no takeover),
       Keys/Help as overlay panels on a right utility rail. See
-      `design-system/DESIGN_AUDIT.md` for what changed and why.
-- [x] Owner reviews mockups and signs off _(2026-07-11)_
+      approved one-screen layout and now runs directly in the app.
+- [x] Owner reviews the one-screen design and signs off _(2026-07-11: owner
+      approved `one-screen-layout.html`; standalone mockups are retired and
+      the running app is now the design artifact)_
 
 **Done when:** owner has clicked through the five screens and approved them.
 
@@ -138,7 +140,7 @@ Detailed AI handoff plan: [PHASE4_PLAN.md](PHASE4_PLAN.md).
 - [x] Gemini request controller: startup reachability probe, deterministic
       error taxonomy, and pause/resume on quota or connectivity loss; no
       cross-provider failover (`src/providers/controller.ts`)
-- [x] Setup screen per the mockup: paste key → live test call → green check
+- [x] Setup screen per the in-app one-screen design: paste key → live test call → green check
       or plain-English failure; replace/remove the key, but do not add more
       (first-run walkthrough + Keys panel; flows driven in a headless
       browser against live Gemini, see PHASE4_PLAN.md Step-6 evidence)
@@ -194,7 +196,7 @@ survives on phones. Detailed AI handoff plan: [PHASE5_PLAN.md](PHASE5_PLAN.md).
       _(2026-07-12: `processPdf` keeps only the per-page JPEG (~35 KB for a
       test page at quality 0.8); raw RGBA released and canvases zeroed
       immediately.)_
-- [x] Upload screen per mockup: multi-PDF drop, declaration question wired
+- [x] Upload screen per the in-app one-screen design: multi-PDF drop, declaration question wired
       into job state
       _(2026-07-12: real Convert tab home+files stages; Dexie v4 `files`
       table stores the PDFs; declaration + per-file overrides + answer-key
@@ -278,7 +280,7 @@ remaining boxes are both live-key owner steps._
 
 Where the product quality lives.
 
-- [x] Review screen per mockup: flagged rows with source crops beside them,
+- [x] Review screen per the in-app one-screen design: flagged rows with source crops beside them,
       set/correct answers, virtualized list, complete keyboard flow
       _(2026-07-12: `ReviewStage.tsx` + `review-data.ts`, ported from the
       owner-approved ReviewMock — the focused one-flag-at-a-time flow IS
