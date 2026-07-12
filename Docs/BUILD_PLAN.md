@@ -214,28 +214,65 @@ Port the Planner-Worker-Audit engine per CODOX_MIGRATION.md. Semantics are
 pinned; only the executor is new. Detailed AI handoff plan:
 [PHASE6_PLAN.md](PHASE6_PLAN.md).
 
-- [ ] Deterministic emit layer first: CSV writer implementing the 9+1-column
+- [x] Deterministic emit layer first: CSV writer implementing the 9+1-column
       contract exactly (IDs, JSON-array cells, relative image paths,
       `needs_review` reasons) — this owns formatting, never the model
-- [ ] Planner call: page classification + plan, per the migrated prompt
-- [ ] Worker calls: per-section extraction, declaration-routed (grid / inline
+      _(2026-07-12: `src/engine/csv.ts`, hand-rolled after the package
+      search — every maintained writer costs an order of magnitude more code
+      for this job. Round-trip tested against quotes, commas, newlines,
+      UTF-8/Arabic.)_
+- [x] Planner call: page classification + plan, per the migrated prompt
+      _(2026-07-12: `calls.ts` + `blueprint.ts` (§1.6 validation, one repair
+      round). The three prompts are extracted programmatically from
+      CODOX_MIGRATION §2 and hash-pinned by `prompts.test.ts` — code and doc
+      cannot drift apart.)_
+- [x] Worker calls: per-section extraction, declaration-routed (grid / inline
       marks / handwritten / none)
-- [ ] Audit gate: the deterministic checks + audit prompt; any doubt →
+      _(2026-07-12: 10-row chunks, reduced blueprint per chunk, exactly one
+      retry on invalid content. Routing is the planner's evidence-based
+      policy — the user's declaration never enters a prompt.)_
+- [x] Audit gate: the deterministic checks + audit prompt; any doubt →
       blank + flag (NEVER-GUESS enforced in code, not just prompts)
-- [ ] Answer-form resolve paths, incl. conflicting-marks → blank + flag, and
+      _(2026-07-12: `validate.ts` + executor step 8. An unavailable audit is
+      never an inferred pass; the CSV still ships, marked
+      not-safe-to-import.)_
+- [x] Answer-form resolve paths, incl. conflicting-marks → blank + flag, and
       wrong-declaration → degrade to everything-flagged
-- [ ] **Pause/resume**: job state checkpointed to IndexedDB after every step;
+      _(2026-07-12: `merge.ts` policy forcing — worker `needs_review` always
+      discarded, a filled answer under a blank policy refused, out-of-range
+      and non-numeric indexes blanked + flagged. Drive-verified: a wrong
+      declaration blanked and flagged all 12 rows.)_
+- [x] **Pause/resume**: job state checkpointed to IndexedDB after every step;
       survives reload, quota pause, connection drop. (Decision point: if
       hand-rolling this is painful, adopt LangGraph.js as the executor with a
       custom IndexedDB checkpointer — semantics unchanged)
-- [ ] Progress screen wired to real job state, quota-aware pacing
+      _(2026-07-12: hand-rolled — **LangGraph was not needed**. Dexie v5
+      `runs` + `runArtifacts`; resume re-enters at the first step whose
+      outputs are missing. Drive-verified: a mid-run reload during a quota
+      pause resumed from the checkpoint and finished.)_
+- [x] Progress screen wired to real job state, quota-aware pacing
+      _(2026-07-12: Convert running/done stages read persisted run state, so
+      a reload redraws the same bars. A quota pause renders calm amber
+      ("Paused — resumes when quota allows"), never as an error.)_
 - [ ] First end-to-end run: clean appendicitis PDF → bundle → send CSV to
       CodoxSandbox for grading. Iterate until **127/127**
+      _(Owner step — needs the real key. Everything it needs exists: run the
+      dev build, enter the key, convert the PDF, download the CSV from the
+      done stage's dev surface. See PHASE6_PLAN.md §6.)_
 - [ ] **Measure and record quota burn** on a real 25-page scan (the doc's
       "one number that could force a redesign") → write it into this file
+      _(Owner step. The number is already counted and persisted per run —
+      the done stage reads `N requests · N tokens`.)_
 
 **Done when:** appendicitis grades 127/127 in CodoxSandbox and the quota-burn
 number is written down.
+
+_Status 2026-07-12: the engine is built and green — 185 unit tests, plus
+`scripts/drive-phase6.mjs`, which drives a full conversion through the real
+engine, controller, PDF pipeline, and Dexie in headless Edge with only the
+network faked (start → planner → crops → worker → 429 quota pause →
+auto-resume → mid-run reload → merge → CSV → audit → done). The two
+remaining boxes are both live-key owner steps._
 
 ## Phase 7 — Review & Export screens (~4–5 days)
 

@@ -35,6 +35,86 @@ export interface StoredPdf {
 }
 
 /**
+ * One engine run: exactly one exam PDF converted end to end. `step` plus
+ * the artifacts present are the checkpoint — resume re-enters the executor
+ * at the first step whose outputs are missing.
+ */
+export interface RunState {
+  id: string
+  jobId: string
+  pdfId: string
+  fileName: string
+  status: 'running' | 'paused' | 'stopped' | 'done'
+  /** §1.3's machine-readable stop reason, when status is 'stopped'. */
+  stopReason?: string
+  /** The step the executor is at / stopped in. */
+  step: string
+  /** Set when validation, crops, or the audit say the CSV is not safe. */
+  notSafeToImport?: boolean
+  /** Set when the audit call itself failed — never an inferred pass. */
+  auditUnavailable?: boolean
+  /** Pages that failed to render; the run continued past them. */
+  badPages?: number[]
+  /** Progress counters — persisted, so a reload redraws the same bars. */
+  pageCount?: number
+  pagesRendered?: number
+  chunkCount?: number
+  chunksDone?: number
+  /** True when the user's declaration contradicted the planner's policy. */
+  wrongDeclaration?: boolean
+  /** Rows whose correct_index is blank + flagged at the end of the run. */
+  flaggedRows?: number
+  /** Quota burn: every Gemini request this run made, and its token totals. */
+  requestCount?: number
+  promptTokens?: number
+  candidatesTokens?: number
+  totalTokens?: number
+  createdAt: number
+  updatedAt: number
+}
+
+/**
+ * Every step's inputs and outputs, on disk before the next step starts
+ * (CODOX_MIGRATION §1.3). Exactly one of `blob` / `json` / `text` is set.
+ */
+export type RunArtifactKind =
+  | 'page-jpeg'
+  | 'page-text'
+  | 'blueprint-raw'
+  | 'blueprint-valid'
+  | 'crop'
+  | 'chunk-request'
+  | 'chunk-response'
+  | 'merged-rows'
+  | 'csv'
+  | 'audit-report'
+
+export interface RunArtifact {
+  id: string
+  runId: string
+  kind: RunArtifactKind
+  /** 0-based page index for page artifacts; crop's source page. */
+  pageIndex?: number
+  chunkIndex?: number
+  /** Relative bundle path for crops, e.g. `images/asset01.jpg`. */
+  path?: string
+  /** Page size in pixels — pinned with the JPEG so boxes stay meaningful. */
+  width?: number
+  height?: number
+  /**
+   * JPEG bytes (pages, crops). Stored as raw bytes rather than a Blob:
+   * structured-cloneable in every IndexedDB implementation, and already
+   * the shape the Phase-7 zip writer wants. A page JPEG is ~35 KB — the
+   * per-page memory discipline is unaffected (one artifact is read at a
+   * time, never the whole document).
+   */
+  bytes?: Uint8Array
+  json?: unknown
+  text?: string
+  createdAt: number
+}
+
+/**
  * Outcome of the most recent live key validation, in the pinned taxonomy's
  * key-relevant subset. Wrong key ≠ unreachable ≠ quota — never collapsed.
  */

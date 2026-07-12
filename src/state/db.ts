@@ -1,5 +1,11 @@
 import Dexie, { type Table } from 'dexie'
-import type { GeminiCredential, JobState, StoredPdf } from './types'
+import type {
+  GeminiCredential,
+  JobState,
+  RunArtifact,
+  RunState,
+  StoredPdf,
+} from './types'
 
 export interface MetadataEntry {
   key: string
@@ -11,6 +17,8 @@ export class CodoxDatabase extends Dexie {
   meta!: Table<MetadataEntry, string>
   credentials!: Table<GeminiCredential, string>
   files!: Table<StoredPdf, string>
+  runs!: Table<RunState, string>
+  runArtifacts!: Table<RunArtifact, string>
 
   constructor() {
     super('codox')
@@ -35,6 +43,18 @@ export class CodoxDatabase extends Dexie {
       meta: 'key',
       credentials: 'id',
       files: 'id, jobId',
+    })
+    // Phase 6: engine runs and their per-step artifacts. The artifact
+    // rows ARE the checkpoint — §1.3's "each step writes its inputs and
+    // outputs to disk before the next step starts" is also exactly what
+    // resume needs. Additive only.
+    this.version(5).stores({
+      jobs: 'id',
+      meta: 'key',
+      credentials: 'id',
+      files: 'id, jobId',
+      runs: 'id, jobId, pdfId',
+      runArtifacts: 'id, runId, [runId+kind], [runId+kind+pageIndex]',
     })
   }
 }

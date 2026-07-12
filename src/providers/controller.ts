@@ -7,6 +7,7 @@ import type { KeyValidationStatus } from '../state/types'
 import type {
   GeminiAdapter,
   KeyCheckResult,
+  ModelListResult,
   ProviderFailure,
   ProviderFailureKind,
   VisionRequest,
@@ -133,6 +134,16 @@ export class GeminiController {
       result.ok ? 'working' : toValidationStatus(result.kind),
     )
     return result
+  }
+
+  /**
+   * The models the stored key can actually call. The engine uses this to
+   * resolve unverified model IDs (§1.2) instead of silently aliasing them.
+   */
+  async listModels(signal?: AbortSignal): Promise<ModelListResult> {
+    const credential = await getGeminiCredential()
+    if (credential === undefined) return MISSING_KEY_FAILURE
+    return this.adapter.listModels(credential.apiKey, signal)
   }
 
   /**

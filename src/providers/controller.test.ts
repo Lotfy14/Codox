@@ -31,6 +31,10 @@ function makeAdapter(overrides: {
       keysSeen.push(key)
       return overrides.validateKey?.(key) ?? { ok: true }
     },
+    async listModels(key) {
+      keysSeen.push(key)
+      return { ok: true, modelIds: ['gemini-3.5-flash'] }
+    },
     async complete(_request, key) {
       keysSeen.push(key)
       completeCalls += 1
@@ -77,6 +81,53 @@ describe('key provenance', () => {
     expect(completeCallCount()).toBe(0)
     expect(keysSeen).toEqual([])
     expect(await controller.refreshStatus()).toBe('no-key')
+  })
+
+  it('generationConfig and finishReason pass through the controller untouched', async () => {
+    await saveGeminiKey('the-only-local-key')
+    let seenRequest: unknown
+    const adapter: GeminiAdapter = {
+      id: 'gemini',
+      name: 'Google Gemini',
+      async probe() {
+        return { ok: true }
+      },
+      async validateKey() {
+        return { ok: true }
+      },
+      async listModels() {
+        return { ok: true, modelIds: ['gemini-3.5-flash'] }
+      },
+      async complete(req) {
+        seenRequest = req
+        return {
+          ok: true,
+          text: '{}',
+          finishReason: 'MAX_TOKENS',
+          usage: { totalTokens: 42 },
+        }
+      },
+    }
+    const controller = new GeminiController(adapter)
+
+    const engineRequest = {
+      prompt: 'planner',
+      images: [],
+      generationConfig: {
+        temperature: 0,
+        maxOutputTokens: 65536,
+        responseMimeType: 'application/json',
+      },
+    }
+    const result = await controller.runGeminiRequest(engineRequest)
+
+    // The controller adds nothing and strips nothing in either direction.
+    expect(seenRequest).toBe(engineRequest)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.finishReason).toBe('MAX_TOKENS')
+      expect(result.usage).toEqual({ totalTokens: 42 })
+    }
   })
 
   it('the provider layer contains no alternate key source', () => {

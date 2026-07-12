@@ -280,10 +280,108 @@ scan run, write the number into BUILD_PLAN Phase 6.
 
 ## 6. Status
 
-Nothing built yet — Steps 1–6 all open. Prerequisites in place from
-Phases 4–5: controller with pause/resume + no-fallback-key provenance
-tests, PDF pipeline (`processPdf`, `cropJpeg`), Dexie v4, canonical
-copy, Convert screen with persisted files + declaration awaiting a real
-Start. Phase-5's only open item (25-page device stress test) does not
-block starting; if it fails and the render DPI/quality changes, re-run
-any engine calibration made against old images.
+**Steps 1–4 done (2026-07-12). Steps 5–6 open — both need the owner's real
+Gemini key.**
+
+### Done
+
+- **Step 1 — provider extension.** `VisionRequest.generationConfig`
+  (passed through verbatim), `VisionSuccess.finishReason` + `usage`
+  (`usageMetadata` token counts, for quota burn), `GeminiAdapter.listModels`
+  (the §1.2 runtime availability check), and `src/providers/base64.ts`
+  (`bytesToBase64` / `blobToBytes`). Adapter discipline unchanged: no
+  retries, no prompt knowledge, key only in the header —
+  `gemini.test.ts` asserts the key never reaches the URL or body, and the
+  controller provenance tests still pass.
+- **Step 2 — the pure core.** `src/engine/`: `prompts.ts` (extracted
+  programmatically from CODOX_MIGRATION §2, never retyped),
+  `types.ts`, `boxes.ts`, `csv.ts`, `blueprint.ts`, `merge.ts`,
+  `normalize.ts`, `validate.ts`, `json.ts`, `calls.ts`, `models.ts`,
+  `progress.ts`.
+- **Step 3 — executor + Dexie v5.** `executor.ts` drives the 8-step
+  machine; `runs` + `runArtifacts` tables are the checkpoint.
+  Hand-rolled — LangGraph was not needed (see decisions below).
+- **Step 4 — Progress UI + drive.** Convert's running/done stages are
+  real (`useConversion.ts`, `progress.ts`); Start creates one run per exam
+  PDF and executes them sequentially. Dev CSV download on the done stage
+  (`devCsv.ts`) exists so a run can be graded in CodoxSandbox before the
+  Phase-7 Export screen. `scripts/drive-phase6.mjs` runs the whole thing
+  in headless Edge with **only the network faked** — real adapter, real
+  controller, real executor, real PDF pipeline, real Dexie.
+
+**Test evidence:** 185 unit tests green (`npm run test`), typecheck and
+lint clean, production build clean. `node scripts/drive-phase6.mjs` →
+`PHASE6 DRIVE: ALL GREEN`, covering: start → planner → deterministic crops
+→ worker (429 → calm amber pause → auto-resume) → **mid-run reload
+resumes from the checkpoint** → merge → CSV → audit → done; the CSV
+downloads and obeys the contract (blank `correct_index` where the worker
+guessed `2`, labels stripped, `.jpg` paths, worker `needs_review`
+discarded); and a **wrong declaration degrades all 12 rows to blank +
+flagged**. Screenshots in `scripts/out/phase6-*.png`.
+
+### Decisions recorded during the build
+
+1. **CSV writer: hand-rolled** (~30 lines, `csv.ts`). The
+   search-before-build subagent found no package worth adopting:
+   `csv-stringify`'s real browser cost is a ~80 KB polyfilled bundle,
+   `papaparse` is ~6.9 KB gzip of parser+streaming+worker machinery for
+   one `unparse` path, `@json2csv` is an object mapper (wrong shape) and
+   heavier, `csv-string` is unmaintained since 2022. All are an order of
+   magnitude more code than the rule requires. Round-trip tested against
+   quotes, commas, newlines, and Arabic/UTF-8.
+2. **Executor: hand-rolled, LangGraph not adopted.** The step machine is
+   a linear 8-step sequence with two one-shot repair counters, not a
+   graph; the checkpoint is just "which artifacts exist." Hand-rolling
+   was not painful, so the BUILD_PLAN's LangGraph escape hatch stays
+   unused.
+3. **Worker model (§1.2, the unverified ID).** Intended:
+   `gemma-4-31b-vision`. Resolution is **live, never aliased** —
+   `resolveWorkerModel` (`models.ts`) checks the key's own `GET /models`
+   listing at run time; if the intended ID is absent it uses
+   `gemini-3.1-flash-lite` and records that reason on the choice. Which
+   model the owner's real key actually offers is a **Step-5 finding** —
+   record the observed listing here after the first live run.
+4. **Asset paths.** The planner prompt's example says
+   `images/asset01.png`; the crops are JPEG. Code owns paths (§1.4):
+   `assetJpegPath` rewrites the extension to `.jpg` on both the asset and
+   the rows that reference it. No `.png` path ever points at JPEG bytes.
+5. **Artifact bytes, not Blobs.** `runArtifacts.bytes` is a `Uint8Array`.
+   Blobs do not survive `fake-indexeddb`'s structured clone, which would
+   have forced the executor tests to fake the persistence layer they
+   exist to test; bytes are also already the shape fflate wants in Phase 7.
+   Page JPEGs are ~35 KB, read one at a time — the memory budget is
+   unaffected.
+6. **Label stripping is conservative** (`normalize.ts`). Labels are
+   stripped only when every option carries the same style AND the labels
+   run sequentially from the conventional start. A sequential A–D set
+   whose remainders are all bare lowercase words (the `E. coli` /
+   `B. cepacia` genus trap) is left verbatim and flagged — ambiguity is
+   never resolved by guessing.
+7. **Provider stops are not §1.3 content stops.** `RunOutcome` carries a
+   distinct `provider-stopped` case (`wrong-key` / `provider-error`), so
+   the UI can keep bad key ≠ unreachable ≠ quota distinct. Quota and
+   offline never reach the engine at all — the controller absorbs them,
+   which is what keeps the one repair round and one chunk retry unspent
+   by transport waits (drive-verified: the 429'd chunk still had its
+   retry available).
+
+### Open — Steps 5 and 6 (owner)
+
+Both need the real key in a dev build (`npm run dev`, key entered on the
+Keys panel, then Convert):
+
+- **Step 5 — live appendicitis run.** Convert the clean appendicitis PDF,
+  download the CSV from the done stage's dev surface, grade it in
+  CodoxSandbox, and iterate on *code* (never prompts) until **127/127**.
+  Record each attempt's failure diff here. Also record the real
+  `GET /models` listing (decision 3).
+- **Step 6 — quota burn.** Run a real 25-page scan and read the number off
+  the done stage (`N requests · N tokens`, persisted on the `runs` row).
+  Write it into BUILD_PLAN Phase 6. Note the counter counts requests that
+  reached the model; a 429-rejected attempt is absorbed by the controller
+  and is not counted (it consumes no token quota).
+
+One UI path is unit-tested but not drive-tested: the
+`progressMessages.badPage` line on the running stage (the drive's
+synthetic PDF renders every page). It is covered by `executor.test.ts`
+("one bad page flags the run and continues").

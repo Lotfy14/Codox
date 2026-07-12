@@ -7,10 +7,12 @@ import {
 import type {
   GeminiAdapter,
   KeyCheckResult,
+  ModelListResult,
   ProbeResult,
   ProviderFailure,
   VisionRequest,
   VisionResult,
+  VisionUsage,
 } from './types'
 
 /**
@@ -86,6 +88,36 @@ function extractText(body: unknown): string {
     .join('')
 }
 
+/** The first candidate's `finishReason`, verbatim, when present. */
+function extractFinishReason(body: unknown): string | undefined {
+  if (typeof body !== 'object' || body === null) return undefined
+  const candidates = (body as { candidates?: unknown }).candidates
+  if (!Array.isArray(candidates) || candidates.length === 0) return undefined
+  const reason = (candidates[0] as { finishReason?: unknown }).finishReason
+  return typeof reason === 'string' ? reason : undefined
+}
+
+/** Token counts from `usageMetadata`, when the response carried them. */
+function extractUsage(body: unknown): VisionUsage | undefined {
+  if (typeof body !== 'object' || body === null) return undefined
+  const meta = (body as { usageMetadata?: unknown }).usageMetadata
+  if (typeof meta !== 'object' || meta === null) return undefined
+  const read = (field: string): number | undefined => {
+    const value = (meta as Record<string, unknown>)[field]
+    return typeof value === 'number' ? value : undefined
+  }
+  const usage: VisionUsage = {
+    promptTokens: read('promptTokenCount'),
+    candidatesTokens: read('candidatesTokenCount'),
+    totalTokens: read('totalTokenCount'),
+  }
+  return usage.promptTokens === undefined &&
+    usage.candidatesTokens === undefined &&
+    usage.totalTokens === undefined
+    ? undefined
+    : usage
+}
+
 export function createGeminiAdapter(
   onLine: () => boolean = () => navigator.onLine,
 ): GeminiAdapter {
@@ -102,6 +134,42 @@ export function createGeminiAdapter(
       signal?: AbortSignal,
     ): Promise<KeyCheckResult> {
       return listModels(key, onLine, signal)
+    },
+
+    async listModels(
+      key: string,
+      signal?: AbortSignal,
+    ): Promise<ModelListResult> {
+      let response: Response
+      try {
+        response = await fetch(`${GEMINI_BASE_URL}/models?pageSize=1000`, {
+          headers: keyHeaders(key),
+          signal,
+        })
+      } catch (error) {
+        return classifyGeminiFetchError(error, onLine())
+      }
+      if (!response.ok) return classifyHttpError(response)
+
+      let body: unknown
+      try {
+        body = await response.json()
+      } catch {
+        return { ok: false, kind: 'provider-error', httpStatus: response.status }
+      }
+      const models = (body as { models?: unknown }).models
+      if (!Array.isArray(models)) {
+        return { ok: false, kind: 'provider-error', httpStatus: response.status }
+      }
+      return {
+        ok: true,
+        modelIds: models.flatMap((model: unknown) => {
+          const name = (model as { name?: unknown }).name
+          return typeof name === 'string'
+            ? [name.replace(/^models\//, '')]
+            : []
+        }),
+      }
     },
 
     async complete(
@@ -134,6 +202,9 @@ export function createGeminiAdapter(
                   ],
                 },
               ],
+              ...(request.generationConfig !== undefined
+                ? { generationConfig: request.generationConfig }
+                : {}),
             }),
             signal,
           },
@@ -150,7 +221,12 @@ export function createGeminiAdapter(
       } catch {
         return { ok: false, kind: 'provider-error', httpStatus: response.status }
       }
-      return { ok: true, text: extractText(body) }
+      return {
+        ok: true,
+        text: extractText(body),
+        finishReason: extractFinishReason(body),
+        usage: extractUsage(body),
+      }
     },
   }
 }
