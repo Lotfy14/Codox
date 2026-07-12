@@ -117,6 +117,7 @@ export const convertMessages = {
   pagesMinutes: (pages: number, minutes: number) =>
     `${pages} page${pages === 1 ? '' : 's'} · about ${minutes} min`,
   startButton: 'Start converting',
+  stopButton: 'Stop converting',
   convertingFiles: (count: number) =>
     `Converting ${count} PDF${count === 1 ? '' : 's'}`,
   allPages: 'All pages',

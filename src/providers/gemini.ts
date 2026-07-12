@@ -35,6 +35,24 @@ function keyHeaders(key: string): HeadersInit {
   return { 'x-goog-api-key': key }
 }
 
+/** Cheap GET endpoints answer in seconds; generation carries page uploads. */
+const LIST_TIMEOUT_MS = 30_000
+const GENERATE_TIMEOUT_MS = 300_000
+
+/**
+ * A fetch with no deadline can stall forever and freeze a run mid-step
+ * (the stuck-at-20% bug). Every request gets one; the timeout abort maps
+ * to `unreachable`, so the controller pauses and retries instead of
+ * hanging.
+ */
+function withTimeout(
+  timeoutMs: number,
+  signal?: AbortSignal,
+): AbortSignal {
+  const timeout = AbortSignal.timeout(timeoutMs)
+  return signal === undefined ? timeout : AbortSignal.any([signal, timeout])
+}
+
 /**
  * `GET /models` costs no generation quota and returns 400 API_KEY_INVALID
  * for a bad key, which makes it both the reachability probe and the live
@@ -49,7 +67,7 @@ async function listModels(
   try {
     response = await fetch(`${GEMINI_BASE_URL}/models?pageSize=1`, {
       headers: keyHeaders(key),
-      signal,
+      signal: withTimeout(LIST_TIMEOUT_MS, signal),
     })
   } catch (error) {
     return classifyGeminiFetchError(error, onLine())
@@ -144,7 +162,7 @@ export function createGeminiAdapter(
       try {
         response = await fetch(`${GEMINI_BASE_URL}/models?pageSize=1000`, {
           headers: keyHeaders(key),
-          signal,
+          signal: withTimeout(LIST_TIMEOUT_MS, signal),
         })
       } catch (error) {
         return classifyGeminiFetchError(error, onLine())
@@ -206,7 +224,7 @@ export function createGeminiAdapter(
                 ? { generationConfig: request.generationConfig }
                 : {}),
             }),
-            signal,
+            signal: withTimeout(GENERATE_TIMEOUT_MS, signal),
           },
         )
       } catch (error) {

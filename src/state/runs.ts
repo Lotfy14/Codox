@@ -129,6 +129,20 @@ export function useJobRuns(jobId: string): RunState[] | undefined {
   )
 }
 
+/**
+ * User-initiated stop: every unfinished run in the job is marked stopped
+ * (artifacts stay — nothing read so far is lost). Finished runs are
+ * untouched, so their CSVs remain exportable.
+ */
+export async function stopJobRuns(jobId: string): Promise<void> {
+  const runs = await db.runs.where('jobId').equals(jobId).toArray()
+  for (const run of runs) {
+    if (run.status === 'running' || run.status === 'paused') {
+      await updateRun(run.id, { status: 'stopped', stopReason: 'cancelled' })
+    }
+  }
+}
+
 /** Runs that were interrupted mid-flight and can be resumed. */
 export async function findResumableRuns(jobId: string): Promise<RunState[]> {
   const runs = await db.runs.where('jobId').equals(jobId).toArray()

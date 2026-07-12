@@ -183,6 +183,7 @@ export function Convert() {
         </header>
         {running ? (
           <RunningStage
+            onStop={() => void conversion.stop()}
             providerStatus={conversion.providerStatus}
             runs={runs}
           />
@@ -365,9 +366,11 @@ function chipStatus(status: ConversionStatus): StatusChipStatus {
  * an error — it is not one; the run resumes by itself.
  */
 function RunningStage({
+  onStop,
   providerStatus,
   runs,
 }: {
+  onStop: () => void
   providerStatus: ConversionStatus
   runs: readonly RunState[]
 }) {
@@ -434,6 +437,12 @@ function RunningStage({
               />
             </div>
           ))}
+        </div>
+
+        <div className="ds-done-actions">
+          <Button onPress={onStop} variant="quiet">
+            {convertMessages.stopButton}
+          </Button>
         </div>
       </GlassPanel>
     </div>

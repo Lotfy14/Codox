@@ -130,6 +130,11 @@ export function classifyGeminiFetchError(
   if (error instanceof DOMException && error.name === 'AbortError') {
     return { ok: false, kind: 'aborted' }
   }
+  // A request-timeout abort (AbortSignal.timeout) is a connectivity fact,
+  // not a user stop: it reads "can't reach Gemini" and stays retryable.
+  if (error instanceof DOMException && error.name === 'TimeoutError') {
+    return { ok: false, kind: 'unreachable', offline: !onLine }
+  }
   // fetch network/CORS failures surface as TypeError in every engine.
   if (error instanceof TypeError) {
     return { ok: false, kind: 'unreachable', offline: !onLine }

@@ -143,6 +143,14 @@ describe('classifyGeminiFetchError', () => {
     expect(failure.kind).toBe('aborted')
   })
 
+  it('maps TimeoutError to unreachable (retryable), never aborted', () => {
+    const failure = classifyGeminiFetchError(
+      new DOMException('signal timed out', 'TimeoutError'),
+      true,
+    )
+    expect(failure.kind).toBe('unreachable')
+  })
+
   it('maps network TypeError to unreachable, flagging offline devices', () => {
     const online = classifyGeminiFetchError(new TypeError('failed'), true)
     expect(online.kind).toBe('unreachable')
