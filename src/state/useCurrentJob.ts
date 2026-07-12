@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from './db'
 import type { AppStep, JobState } from './types'
 
-const CURRENT_JOB_ID = 'current'
+export const CURRENT_JOB_ID = 'current'
 
 async function createCurrentJob(): Promise<void> {
   const newJob: JobState = {
@@ -40,8 +40,16 @@ export function useCurrentJob() {
     await db.jobs.update(CURRENT_JOB_ID, { step })
   }, [])
 
+  const updateJob = useCallback(
+    async (patch: Partial<Omit<JobState, 'id' | 'createdAt'>>) => {
+      await db.jobs.update(CURRENT_JOB_ID, patch)
+    },
+    [],
+  )
+
   return {
     job: job ?? undefined,
     setStep,
+    updateJob,
   }
 }

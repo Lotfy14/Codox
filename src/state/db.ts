@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie'
-import type { GeminiCredential, JobState } from './types'
+import type { GeminiCredential, JobState, StoredPdf } from './types'
 
 export interface MetadataEntry {
   key: string
@@ -10,6 +10,7 @@ export class CodoxDatabase extends Dexie {
   jobs!: Table<JobState, string>
   meta!: Table<MetadataEntry, string>
   credentials!: Table<GeminiCredential, string>
+  files!: Table<StoredPdf, string>
 
   constructor() {
     super('codox')
@@ -26,6 +27,14 @@ export class CodoxDatabase extends Dexie {
       jobs: 'id',
       meta: 'key',
       credentials: 'id',
+    })
+    // Phase 5: the job's stored PDFs (exam files + at most one answer
+    // key). Additive only, as above.
+    this.version(4).stores({
+      jobs: 'id',
+      meta: 'key',
+      credentials: 'id',
+      files: 'id, jobId',
     })
   }
 }

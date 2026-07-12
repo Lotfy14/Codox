@@ -3,14 +3,19 @@ import { AppShell, Button, TabNav } from './design/components'
 import type { AppTab } from './design/components'
 import { geminiController } from './providers/controller'
 import { useFirstRunCompleted } from './state/settings'
+import { Convert } from './screens/Convert'
 import { FirstRun } from './screens/FirstRun'
 import { KeysPanel } from './screens/KeysPanel'
-import {
-  ConvertPlaceholder,
-  HelpPlaceholder,
-  HistoryPlaceholder,
-} from './screens/Placeholders'
+import { HelpPlaceholder, HistoryPlaceholder } from './screens/Placeholders'
 import './screens/app.css'
+
+// Phase-5 diagnostic surface. Deliberately available in production builds:
+// the memory stress test runs on the shipped .apk/PWA (see PHASE5_PLAN.md).
+const PdfSpikeScreen = lazy(() =>
+  import('./screens/PdfSpike').then(({ PdfSpike }) => ({
+    default: PdfSpike,
+  })),
+)
 
 const DesignGalleryScreen = import.meta.env.DEV
   ? lazy(() =>
@@ -43,7 +48,7 @@ type DevView = 'gallery' | 'spike' | null
 function renderTab(tab: AppTab) {
   switch (tab) {
     case 'convert':
-      return <ConvertPlaceholder />
+      return <Convert />
     case 'history':
       return <HistoryPlaceholder />
     case 'keys':
@@ -70,12 +75,23 @@ function App() {
       devAvailable &&
       new URLSearchParams(window.location.search).get('mockups') === '1',
   )
+  const [pdfSpikeOpen] = useState(
+    () => new URLSearchParams(window.location.search).get('pdfspike') === '1',
+  )
 
   // Startup reachability probe: updates the stored Gemini status. Harmless
   // with no key, and it never marks a key wrong without a real auth failure.
   useEffect(() => {
     void geminiController.refreshStatus().catch(() => undefined)
   }, [])
+
+  if (pdfSpikeOpen) {
+    return (
+      <Suspense fallback={<p>Loading PDF check...</p>}>
+        <PdfSpikeScreen />
+      </Suspense>
+    )
+  }
 
   if (mockupsOpen && MockupAppScreen) {
     return (

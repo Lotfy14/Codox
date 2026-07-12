@@ -368,16 +368,37 @@ memory stays flat — that closes Phase 5.
 - Commit in sensible slices (module, state, screen, verification), message
   style per git history.
 
-## 4. Already done (2026-07-11, before this handoff)
+## 4. Status (updated 2026-07-12)
 
-- `npm install @hyzyla/pdfium pdfjs-dist` — in `package.json` at the
-  versions in §2; both APIs inspected against the installed code.
-- `src/pdf/types.ts` written (PageBitmap / CropBox / ProcessedPage /
-  PageFailure with the §1.8 coordinate rule documented).
-- BUILD_PLAN Phases 0–4 fully closed (owner confirmed the Phase-4 manual
-  gate and the browser-PWA Gemini re-confirm; relay permanently dropped).
-- Nothing else — no other Phase-5 code exists yet; Steps 1–9 above are
-  all open.
+**Steps 1–7 and 9 are DONE.** Evidence:
+
+- `src/pdf/` complete: `types.ts`, `pdfium.ts`, `images.ts`,
+  `textLayer.ts`, `pipeline.ts`, `index.ts`. The module is code-split —
+  screens load it via dynamic `import('../pdf')`, keeping pdfium/pdf.js
+  out of the startup bundle.
+- Workbox config applied; `npm run build` precaches `pdfium.wasm` (24
+  entries, ~5.1 MB) with no size warning.
+- State: Dexie v4 `files` table, `StoredPdf`, `batchAnswerSource` /
+  `keepOriginal` on `JobState`, `src/state/files.ts` helpers +
+  `useJobPdfs`; `updateJob` on `useCurrentJob`.
+- Real Convert tab (home + files stages) live in the app;
+  `ConvertPlaceholder` removed. Spike surface at `?pdfspike=1` in all
+  builds.
+- `npm run test` (47 passing, incl. new `images.test.ts`,
+  `convert-logic.test.ts`, `files.test.ts`), `npm run lint`,
+  `npm run build` all green.
+- `scripts/drive-phase5.mjs` (headless Edge, in-repo) ALL GREEN
+  2026-07-12: 3-page pipeline run (JPEG + text layer per page,
+  0 failures), 20-page run across two WASM re-init boundaries
+  (0 failures), Convert intake / not-a-PDF note / declaration →
+  key-file slot / reload persistence. Screenshots in `scripts/out/`
+  (gitignored).
+- BUILD_PLAN Phase-5 checkboxes ticked with evidence notes.
+
+**Open: Step 8 only** — the 25-page real-scan stress test on a mid-range
+Android phone and the oldest available iPhone (`?pdfspike=1` on shipped
+builds). That is the phase gate; a human with the devices must run it and
+record the result in BUILD_PLAN.
 
 ## 5. Traps (learned the hard way elsewhere — avoid)
 

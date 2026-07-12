@@ -8,6 +8,12 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'prompt',
+      workbox: {
+        // pdfium.wasm (~4 MB) must precache or the offline PWA cannot
+        // render PDFs; workbox's default limit is 2 MB.
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,wasm,woff2}'],
+        maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
+      },
       includeAssets: [
         'favicon.ico',
         'apple-touch-icon-180x180.png',

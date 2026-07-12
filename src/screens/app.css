@@ -191,3 +191,132 @@
   border-top: 1px solid var(--color-outline);
   padding-top: var(--space-5);
 }
+
+/* ---------- Convert (Phase 5: home + files stages) ---------- */
+
+.convert-stack {
+  display: grid;
+  gap: var(--layout-gap-mobile);
+}
+
+@media (min-width: 64rem) {
+  .convert-stack {
+    gap: var(--space-6);
+  }
+}
+
+.convert-muted {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.convert-inline-note {
+  margin: 0;
+  border: 1px solid var(--color-neutral-border);
+  border-radius: var(--radius-input);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-neutral-surface);
+  color: var(--color-text-strong);
+  font-size: var(--font-size-sm);
+}
+
+.convert-inline-note--danger {
+  border-color: var(--color-danger-border);
+  background: var(--color-danger-surface);
+  color: var(--color-danger-foreground);
+}
+
+.convert-inline-note--info {
+  border-color: var(--color-primary-border);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-foreground);
+}
+
+.convert-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.convert-row-list {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.convert-drop-more {
+  margin-top: var(--space-4);
+}
+
+.convert-field-stack {
+  display: grid;
+  gap: var(--space-5);
+  max-width: 34rem;
+}
+
+.convert-key-file-slot {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.convert-key-file-added {
+  margin: 0;
+  color: var(--color-success-foreground);
+  font-weight: var(--font-weight-medium);
+}
+
+.convert-start-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-top: var(--space-6);
+}
+
+.convert-start-note {
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.convert-phase-note {
+  margin-top: var(--space-3);
+  text-align: right;
+  font-size: var(--font-size-sm);
+}
+
+/* ---------- PDF spike (diagnostic surface) ---------- */
+
+.pdf-spike-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.pdf-spike-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.pdf-spike-table th,
+.pdf-spike-table td {
+  padding: var(--space-1) var(--space-3);
+  border-bottom: 1px solid var(--color-outline);
+  text-align: right;
+}
+
+.pdf-spike-table th:first-child,
+.pdf-spike-table td:first-child {
+  text-align: left;
+}
+
+.pdf-spike-thumbnail {
+  display: block;
+  max-width: 100%;
+  max-height: 24rem;
+  margin: 0 auto;
+}

@@ -167,29 +167,52 @@ key.
 ## Phase 5 — PDF pipeline (~4–5 days)
 
 All client-side, memory-disciplined. This phase decides whether the app
-survives on phones.
+survives on phones. Detailed AI handoff plan: [PHASE5_PLAN.md](PHASE5_PLAN.md).
 
-- [ ] Integrate @hyzyla/pdfium: open PDF, page count, render one page at a
+- [x] Integrate @hyzyla/pdfium: open PDF, page count, render one page at a
       controllable DPI
-- [ ] **Page-at-a-time discipline**: render → hand off → destroy canvas +
+      _(2026-07-12: `src/pdf/pdfium.ts` — fixed 200-DPI reference scale,
+      `readPdfInfo`, `renderSinglePage`; encrypted/not-a-PDF load errors
+      mapped to typed errors.)_
+- [x] **Page-at-a-time discipline**: render → hand off → destroy canvas +
       free WASM page before touching the next; re-instantiate the WASM module
       every ~5–10 pages as a safety net
-- [ ] pdf.js `getTextContent()` alongside, for PDFs that have a text layer
-- [ ] Figure cropping: `createImageBitmap(sx,sy,sw,sh)` → small canvas →
-      compressed blob; use pdfium sub-region rendering for high-DPI crops
-- [ ] Image budget: compressed JPEG per page for LLM calls; nothing full-res
+      _(2026-07-12: `forEachRenderedPage` re-inits every 8 pages; verified
+      across two re-init boundaries — 20-page run, 0 failures — by
+      `scripts/drive-phase5.mjs` in headless Edge.)_
+- [x] pdf.js `getTextContent()` alongside, for PDFs that have a text layer
+      _(2026-07-12: `src/pdf/textLayer.ts`; text extracted per page in the
+      drive run; unparseable PDFs degrade to empty text, never an error.)_
+- [x] Figure cropping: `createImageBitmap(sx,sy,sw,sh)` → small canvas →
+      compressed blob — crops come from the fixed-scale page image per
+      CODOX_MIGRATION §1.8 (high-DPI re-render is display-only, never for
+      the engine)
+      _(2026-07-12: `cropJpeg` + `clampCropBox` in `src/pdf/images.ts`;
+      clamp-only, never reinterprets boxes; unit-tested.)_
+- [x] Image budget: compressed JPEG per page for LLM calls; nothing full-res
       retained
-- [ ] Upload screen per mockup: multi-PDF drop, declaration question wired
+      _(2026-07-12: `processPdf` keeps only the per-page JPEG (~35 KB for a
+      test page at quality 0.8); raw RGBA released and canvases zeroed
+      immediately.)_
+- [x] Upload screen per mockup: multi-PDF drop, declaration question wired
       into job state
+      _(2026-07-12: real Convert tab home+files stages; Dexie v4 `files`
+      table stores the PDFs; declaration + per-file overrides + answer-key
+      slot + keep-original persist across reload — verified in the drive
+      run. Start stays honestly disabled until Phase 6.)_
 - [ ] Stress test: a real 25-page scan on a mid-range Android phone and the
       oldest available iPhone — no crash, memory stays flat page-to-page
+      _(Instrument ready: open `?pdfspike=1` on the shipped build, load the
+      scan, watch per-page ms / JPEG KB / heap. Owner step — see
+      PHASE5_PLAN.md Step 8.)_
 
 **Done when:** the 25-page stress test passes on both phones.
 
 ## Phase 6 — Engine port (~5–7 days)
 
 Port the Planner-Worker-Audit engine per CODOX_MIGRATION.md. Semantics are
-pinned; only the executor is new.
+pinned; only the executor is new. Detailed AI handoff plan:
+[PHASE6_PLAN.md](PHASE6_PLAN.md).
 
 - [ ] Deterministic emit layer first: CSV writer implementing the 9+1-column
       contract exactly (IDs, JSON-array cells, relative image paths,
