@@ -65,7 +65,7 @@ function applyResolvedTheme(theme: ResolvedTheme): void {
   const themeColor = document.querySelector<HTMLMetaElement>(
     'meta[name="theme-color"]',
   )
-  themeColor?.setAttribute('content', theme === 'dark' ? '#011a36' : '#fff8f7')
+  themeColor?.setAttribute('content', theme === 'dark' ? '#191013' : '#f4e9e0')
 }
 
 let snapshot: ThemeSnapshot = (() => {

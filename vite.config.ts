@@ -25,8 +25,10 @@ export default defineConfig({
         description:
           'Convert exam PDFs into Triviadox-ready CSV bundles entirely client-side.',
         display: 'standalone',
+        // theme_color stays burgundy (brand) per the port plan; the splash
+        // background matches the cream stage.
         theme_color: '#800020',
-        background_color: '#fff8f7',
+        background_color: '#f4e9e0',
         icons: [
           {
             src: 'pwa-192x192.png',

@@ -37,14 +37,23 @@
   --layout-gap-mobile: var(--space-4);
   --layout-gap-desktop: var(--space-8);
 
-  /* Triviadox geometry */
+  /* Geometry — the one-screen trio (frame 32 / card 22 / input 12) */
   --radius-input: 0.75rem;
   --radius-chip: 1rem;
-  --radius-card: 1.25rem;
+  --radius-card: 1.375rem;
   --radius-action: 1.75rem;
   --radius-dashboard: 2rem;
   --radius-dashboard-large: 2.5rem;
+  --radius-frame: var(--radius-dashboard);
   --radius-full: 999px;
+
+  /* One-screen frame structure */
+  --layout-sidebar-width: 14.5rem;
+  --layout-rail-width: 6rem;
+  --frame-padding: 1rem;
+  --frame-gap: 1rem;
+  --frame-max-width: 73.75rem;
+  --stage-padding: clamp(1rem, 3vw, 2.5rem);
 
   /* Interaction and motion */
   --touch-target-min: 2.75rem;
@@ -56,7 +65,8 @@
   --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --motion-ease-emphasized: cubic-bezier(0.2, 0.8, 0.2, 1);
 
-  /* Shared glass recipes */
+  /* Shared glass recipes (retired by the one-screen port; kept until the
+     last consumer is restyled, then deleted) */
   --glass-panel-blur: 40px;
   --glass-panel-saturation: 160%;
   --glass-input-blur: 12px;
@@ -64,37 +74,59 @@
   --glass-shadow: 0 15px 45px -12px rgb(0 0 0 / 15%);
   --shadow-raised: 0 12px 30px -18px rgb(62 15 29 / 35%);
   --shadow-dialog: 0 28px 80px -30px rgb(0 0 0 / 55%);
+  --shadow-frame: 0 40px 80px -40px rgb(80 20 30 / 28%),
+    0 8px 24px -16px rgb(80 20 30 / 20%);
+  --shadow-card: 0 1px 2px rgb(80 20 30 / 4%);
 
-  /* Light theme surfaces */
-  --color-surface: #fff8f7;
+  /* Light theme surfaces — the framed cream stage */
+  --color-surface: #f4e9e0;
+  --color-stage-mid: #fbf4ef;
+  --color-stage-glow: #fdf6f0;
+  --stage-gradient: radial-gradient(
+    120% 90% at 12% 0%,
+    var(--color-stage-glow) 0%,
+    var(--color-stage-mid) 45%,
+    var(--color-surface) 100%
+  );
+  --color-frame: #fffaf7;
+  --color-frame-border: #f3e7e2;
   --color-surface-elevated: #ffffff;
-  --color-card-fill: rgb(255 255 255 / 88%);
-  --color-outline: rgb(128 0 32 / 22%);
-  --color-row: #ffffff;
-  --color-row-hover: #f7edef;
+  --color-card-fill: var(--color-surface-elevated);
+  --color-outline: #efe2e0;
+  --color-row: #fbf7f6;
+  --color-row-border: #f4ebe9;
+  --color-row-hover: #f6eeec;
+  --color-drop-border: #e7c9cf;
+  --color-drop-top: #fffdfc;
+  --color-drop-bottom: #fff7f8;
+  --drop-gradient: linear-gradient(
+    180deg,
+    var(--color-drop-top),
+    var(--color-drop-bottom)
+  );
   --color-scrim: rgb(43 17 24 / 54%);
 
   /* Light theme text and actions */
-  --color-text-strong: #2b1118;
-  --color-text-muted: #6f4e57;
+  --color-text-strong: #2a1b1f;
+  --color-text-muted: #8c797e;
   --color-text-on-primary: #ffffff;
   --color-primary: #800020;
   --color-primary-foreground: #800020;
-  --color-primary-hover: #68001a;
-  --color-primary-soft: #f7e8ec;
-  --color-primary-border: #bb8291;
-  --color-control-border: #9a5a6a;
+  --color-primary-hover: #6a001b;
+  --color-primary-soft: #f6e9ec;
+  --color-primary-border: #f0d8dd;
+  --color-control-border: #ead9dd;
   --color-focus-ring: #800020;
   --color-focus-halo: rgb(128 0 32 / 20%);
 
   /* Raw brand state colors plus accessible semantic pairs */
   --color-warning: #f59e0b;
   --color-warning-foreground: #6f3d00;
-  --color-warning-surface: #fff2d8;
+  --color-warning-surface: #fdf3e0;
   --color-warning-border: #d89218;
   --color-success: #10b981;
   --color-success-foreground: #075e45;
-  --color-success-surface: #e6f7f1;
+  --color-success-surface: #e7f6f0;
   --color-success-border: #48a889;
   --color-danger: #8f1230;
   --color-text-on-danger: #ffffff;
@@ -108,10 +140,10 @@
   --color-neutral-surface: #f4edef;
   --color-neutral-border: #94717b;
 
-  /* Theme-resolved glass values */
+  /* Theme-resolved glass values (retired with the glass recipes) */
   --glass-panel-background: var(--color-card-fill);
   --glass-panel-border: var(--color-outline);
-  --glass-input-background: rgb(255 255 255 / 58%);
+  --glass-input-background: var(--color-surface-elevated);
   --glass-input-border: var(--color-control-border);
   --glass-panel-fallback: #ffffff;
   --glass-input-fallback: #fffafa;
@@ -120,23 +152,32 @@
 [data-theme="dark"] {
   color-scheme: dark;
 
-  --color-surface: #011a36;
-  --color-surface-elevated: #0d1117;
-  --color-card-fill: rgb(13 17 23 / 75%);
-  --color-outline: rgb(255 255 255 / 10%);
-  --color-row: #12283f;
-  --color-row-hover: #18334f;
-  --color-scrim: rgb(0 5 12 / 72%);
+  /* Dark surfaces re-derived from the warm ink family, not midnight blue */
+  --color-surface: #191013;
+  --color-stage-mid: #1e1316;
+  --color-stage-glow: #241619;
+  --color-frame: #211517;
+  --color-frame-border: #2e1d21;
+  --color-surface-elevated: #2a1b1f;
+  --color-card-fill: var(--color-surface-elevated);
+  --color-outline: #3a262b;
+  --color-row: #332125;
+  --color-row-border: #3d282d;
+  --color-row-hover: #402a2f;
+  --color-drop-border: #4a3036;
+  --color-drop-top: #2d1d21;
+  --color-drop-bottom: #291a1e;
+  --color-scrim: rgb(15 5 8 / 72%);
 
-  --color-text-strong: #f8fafc;
-  --color-text-muted: #b8c3d1;
+  --color-text-strong: #f6edef;
+  --color-text-muted: #b7a1a7;
   --color-text-on-primary: #ffffff;
   --color-primary: #af2b3e;
   --color-primary-foreground: #ff9aac;
   --color-primary-hover: #c43d51;
-  --color-primary-soft: #381827;
-  --color-primary-border: #9f4c5d;
-  --color-control-border: #71869d;
+  --color-primary-soft: #3b1c25;
+  --color-primary-border: #6b3542;
+  --color-control-border: #5c3f47;
   --color-focus-ring: #ff9aac;
   --color-focus-halo: rgb(255 154 172 / 24%);
 
@@ -144,25 +185,28 @@
   --color-warning-surface: #352b16;
   --color-warning-border: #a97a20;
   --color-success-foreground: #6ee7b7;
-  --color-success-surface: #062c35;
+  --color-success-surface: #123229;
   --color-success-border: #278d70;
   --color-danger: #fb7185;
-  --color-text-on-danger: #2b1118;
+  --color-text-on-danger: #2a1b1f;
   --color-danger-hover: #f98a9a;
   --color-danger-foreground: #fb7185;
   --color-danger-surface: #3b1726;
   --color-danger-border: #a7475d;
   --color-unreachable-foreground: #c8d5e4;
-  --color-unreachable-surface: #12283f;
-  --color-unreachable-border: #496782;
-  --color-neutral-surface: #17283b;
-  --color-neutral-border: #617991;
+  --color-unreachable-surface: #2b2833;
+  --color-unreachable-border: #5d5a70;
+  --color-neutral-surface: #33242a;
+  --color-neutral-border: #7d666d;
 
   --glass-panel-background: var(--color-card-fill);
   --glass-panel-border: var(--color-outline);
-  --glass-input-background: rgb(255 255 255 / 2%);
+  --glass-input-background: var(--color-row);
   --glass-input-border: var(--color-control-border);
-  --glass-panel-fallback: #0d1117;
-  --glass-input-fallback: #132238;
+  --glass-panel-fallback: #2a1b1f;
+  --glass-input-fallback: #332125;
   --shadow-raised: 0 14px 34px -18px rgb(0 0 0 / 70%);
+  --shadow-frame: 0 40px 80px -40px rgb(0 0 0 / 60%),
+    0 8px 24px -16px rgb(0 0 0 / 45%);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 25%);
 }
