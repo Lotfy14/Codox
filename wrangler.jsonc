@@ -5,10 +5,10 @@
   "observability": {
     "enabled": true
   },
+  // Codox is a fully static, client-side app: wrangler serves the Vite
+  // build output as-is. No Worker code, no server — COST-ZERO.
   "assets": {
+    "directory": "./dist",
     "not_found_handling": "single-page-application"
-  },
-  "compatibility_flags": [
-    "nodejs_compat"
-  ]
+  }
 }
