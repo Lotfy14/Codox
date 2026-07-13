@@ -13,7 +13,7 @@
  */
 
 export const keyMessages = {
-  aiStudioUrl: 'https://aistudio.google.com/welcome',
+  aiStudioUrl: 'https://aistudio.google.com/api-keys',
   aiStudioAccountAction: 'Sign in or create an account',
   aiStudioBeforeLink: ' at ',
   aiStudioLink: 'Google AI Studio',

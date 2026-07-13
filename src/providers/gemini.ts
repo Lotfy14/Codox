@@ -32,11 +32,13 @@ const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
 export const DEFAULT_GEMINI_VISION_MODEL = 'gemini-3.5-flash'
 
 /**
- * Cheap, stable model used only to prove that a key can generate content.
- * Keep this independent from the stronger models used for conversions: a
- * manual key check should spend as little quota as possible.
+ * Cheap model used only to prove that a key can generate content. This is
+ * the engine's worker/audit model, so a passing check means the key can run
+ * a real conversion; a lite-tier model keeps the manual check near-free.
+ * (The previous check model, gemini-2.5-flash-lite, is deprecated and now
+ * rejects newer free-tier keys with a billing error — a false negative.)
  */
-export const GEMINI_KEY_CHECK_MODEL = 'gemini-2.5-flash-lite'
+export const GEMINI_KEY_CHECK_MODEL = 'gemini-3.1-flash-lite'
 
 function keyHeaders(key: string): HeadersInit {
   return { 'x-goog-api-key': key }
