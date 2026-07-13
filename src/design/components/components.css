@@ -1187,6 +1187,12 @@
   text-decoration-thickness: 2px;
 }
 
+.key-setup-note strong,
+.api-coachmark p strong {
+  color: var(--color-text-strong);
+  font-weight: 800;
+}
+
 .key-inline-note {
   max-width: 43rem;
   margin: 0;

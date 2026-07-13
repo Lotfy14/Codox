@@ -132,6 +132,7 @@ export function GeminiKeySection({ allowRemove = false }: GeminiKeySectionProps)
   return (
     <div className="key-section">
       <p className="key-setup-note">
+        <strong>{keyMessages.aiStudioAccountAction}</strong>
         {keyMessages.aiStudioBeforeLink}
         <a
           href={keyMessages.aiStudioUrl}
@@ -140,7 +141,10 @@ export function GeminiKeySection({ allowRemove = false }: GeminiKeySectionProps)
         >
           {keyMessages.aiStudioLink}
         </a>
-        {keyMessages.aiStudioAfterLink}
+        {keyMessages.aiStudioBeforeKey}
+        <strong>{keyMessages.aiStudioKey}</strong>
+        {keyMessages.aiStudioBeforePaste}
+        <strong>{keyMessages.aiStudioPasteAction}</strong>.
       </p>
       <GlassInput
         description={

@@ -14,10 +14,13 @@
 
 export const keyMessages = {
   aiStudioUrl: 'https://aistudio.google.com/welcome',
-  aiStudioBeforeLink: 'Sign in or create an account at ',
+  aiStudioAccountAction: 'Sign in or create an account',
+  aiStudioBeforeLink: ' at ',
   aiStudioLink: 'Google AI Studio',
-  aiStudioAfterLink:
-    ' to generate your free Gemini API key, then paste it here.',
+  aiStudioBeforeKey: ' to generate your ',
+  aiStudioKey: 'free Gemini API key',
+  aiStudioBeforePaste: ', then ',
+  aiStudioPasteAction: 'paste it here',
   /** Shown under an empty key field when the user tries to check it. */
   emptyKey: 'Paste a key first.',
   checking: 'Checking your key…',
@@ -106,7 +109,10 @@ export const appMessages = {
 export const coachmarkMessages = {
   eyebrow: 'First step',
   title: 'Add your Gemini API key',
-  body: 'Codox needs your key before it can convert a PDF.',
+  bodyBeforeKey: 'Codox ',
+  bodyKey: 'needs your key',
+  bodyBeforeAction: ' before it can ',
+  bodyAction: 'convert a PDF',
   action: 'Open API settings',
   dismiss: 'Dismiss API key tip',
 } as const

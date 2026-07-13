@@ -45,8 +45,14 @@ export function ApiCoachmark({ onDismiss, onOpenApi }: ApiCoachmarkProps) {
           {coachmarkMessages.eyebrow}
         </span>
         <h2 id="api-coachmark-title">{coachmarkMessages.title}</h2>
-        <p>{coachmarkMessages.body}</p>
+        <p>
+          {coachmarkMessages.bodyBeforeKey}
+          <strong>{coachmarkMessages.bodyKey}</strong>
+          {coachmarkMessages.bodyBeforeAction}
+          <strong>{coachmarkMessages.bodyAction}</strong>.
+        </p>
         <p className="api-coachmark__studio-link">
+          <strong>{keyMessages.aiStudioAccountAction}</strong>
           {keyMessages.aiStudioBeforeLink}
           <a
             href={keyMessages.aiStudioUrl}
@@ -55,7 +61,10 @@ export function ApiCoachmark({ onDismiss, onOpenApi }: ApiCoachmarkProps) {
           >
             {keyMessages.aiStudioLink}
           </a>
-          {keyMessages.aiStudioAfterLink}
+          {keyMessages.aiStudioBeforeKey}
+          <strong>{keyMessages.aiStudioKey}</strong>
+          {keyMessages.aiStudioBeforePaste}
+          <strong>{keyMessages.aiStudioPasteAction}</strong>.
         </p>
         <Button onPress={onOpenApi}>{coachmarkMessages.action}</Button>
       </section>
