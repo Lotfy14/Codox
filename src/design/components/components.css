@@ -1170,6 +1170,23 @@
   gap: var(--space-4);
 }
 
+.key-setup-note {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.key-setup-note a,
+.api-coachmark__studio-link a {
+  color: var(--color-primary-foreground);
+  font-weight: 700;
+  text-underline-offset: 0.2em;
+}
+
+.key-setup-note a:hover,
+.api-coachmark__studio-link a:hover {
+  text-decoration-thickness: 2px;
+}
+
 .key-inline-note {
   max-width: 43rem;
   margin: 0;

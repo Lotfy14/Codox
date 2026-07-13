@@ -131,6 +131,17 @@ export function GeminiKeySection({ allowRemove = false }: GeminiKeySectionProps)
 
   return (
     <div className="key-section">
+      <p className="key-setup-note">
+        {keyMessages.aiStudioBeforeLink}
+        <a
+          href={keyMessages.aiStudioUrl}
+          rel="noreferrer"
+          target="_blank"
+        >
+          {keyMessages.aiStudioLink}
+        </a>
+        {keyMessages.aiStudioAfterLink}
+      </p>
       <GlassInput
         description={
           hasKey

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Button } from '../design/components'
-import { coachmarkMessages } from '../copy/messages'
+import { coachmarkMessages, keyMessages } from '../copy/messages'
 
 export interface ApiCoachmarkProps {
   onDismiss: () => void
@@ -46,6 +46,17 @@ export function ApiCoachmark({ onDismiss, onOpenApi }: ApiCoachmarkProps) {
         </span>
         <h2 id="api-coachmark-title">{coachmarkMessages.title}</h2>
         <p>{coachmarkMessages.body}</p>
+        <p className="api-coachmark__studio-link">
+          {keyMessages.aiStudioBeforeLink}
+          <a
+            href={keyMessages.aiStudioUrl}
+            rel="noreferrer"
+            target="_blank"
+          >
+            {keyMessages.aiStudioLink}
+          </a>
+          {keyMessages.aiStudioAfterLink}
+        </p>
         <Button onPress={onOpenApi}>{coachmarkMessages.action}</Button>
       </section>
     </div>
