@@ -1,0 +1,320 @@
+import { expect, test, type Page, type Route } from '@playwright/test'
+import { readFile } from 'node:fs/promises'
+import { unzipSync } from 'fflate'
+
+const CSV_SCHEMA = [
+  'id',
+  'group_id',
+  'topic',
+  'subtopic',
+  'year',
+  'question',
+  'options',
+  'correct_index',
+  'image_urls',
+  'needs_review',
+]
+
+const BLUEPRINT = {
+  csv_schema: CSV_SCHEMA,
+  document_profile: {
+    page_count: 2,
+    question_count: 1,
+    group_count: 1,
+    question_pages: [1],
+    answer_policy: {
+      type: 'no_answer_key',
+      answer_key_present: false,
+      marking_style: 'none',
+      worker_rule: 'leave the answer blank for review',
+    },
+  },
+  assets: [],
+  planned_rows: [
+    {
+      id: '1',
+      group_id: 'group1',
+      topic: '',
+      subtopic: '',
+      year: '',
+      question_assembly: {
+        mode: 'plain_question_prompt',
+        final_format: '{question_prompt}',
+      },
+      regions: {
+        case_stem: null,
+        question_prompt: {
+          page: 1,
+          box_2d: [80, 50, 250, 950],
+          anchor: 'question',
+        },
+        options: {
+          page: 1,
+          box_2d: [250, 50, 500, 950],
+          anchor: 'options',
+        },
+        answer_evidence: null,
+      },
+      image_urls: [],
+      correct_index_policy: {
+        type: 'blank_no_answer_key',
+        value: '',
+        needs_review: 'no_answer_key',
+      },
+      worker_task: {
+        case_stem_required: false,
+        read_regions_only: false,
+        must_follow_planner_structure: true,
+      },
+    },
+  ],
+  worker_constraints: {
+    may_add_rows: false,
+    may_remove_rows: false,
+    may_change_grouping: false,
+    may_change_image_assignments: false,
+    may_change_answer_policy: false,
+    may_flag_planner_disagreement: false,
+  },
+}
+
+const WORKER_RESPONSE = {
+  rows: [
+    {
+      id: '1',
+      group_id: 'group1',
+      topic: '',
+      subtopic: '',
+      year: '',
+      question: 'What is two plus two?',
+      options: ['Three', 'Four'],
+      correct_index: '',
+      image_urls: [],
+      needs_review: '',
+    },
+  ],
+}
+
+const AUDIT_RESPONSE = {
+  audit_pass: true,
+  risk_class: 'safe_to_import',
+  failed_rows: [],
+  global_failures: [],
+  answer_policy_violations: [],
+  crop_failures: [],
+  notes: [],
+}
+
+function geminiBody(text: string) {
+  return {
+    candidates: [
+      {
+        content: { parts: [{ text }] },
+        finishReason: 'STOP',
+      },
+    ],
+    usageMetadata: { totalTokenCount: 1 },
+  }
+}
+
+async function fulfillJson(route: Route, body: unknown) {
+  await route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify(body),
+  })
+}
+
+async function mockGemini(page: Page) {
+  let plannerImageCount = 0
+  await page.route(
+    'https://generativelanguage.googleapis.com/**',
+    async (route) => {
+      const request = route.request()
+      if (request.method() === 'GET') {
+        await fulfillJson(route, {
+          models: [
+            { name: 'models/gemini-3.5-flash' },
+            { name: 'models/gemini-3.1-flash-lite' },
+          ],
+        })
+        return
+      }
+
+      const body = request.postDataJSON() as {
+        contents?: Array<{ parts?: Array<{ text?: string; inlineData?: unknown }> }>
+      }
+      const parts = body.contents?.[0]?.parts ?? []
+      const prompt = parts.find((part) => typeof part.text === 'string')?.text ?? ''
+      if (prompt === 'Reply with OK.') {
+        await fulfillJson(route, geminiBody('OK'))
+      } else if (prompt.startsWith('You are the PLANNER')) {
+        plannerImageCount = parts.filter((part) => part.inlineData !== undefined).length
+        await fulfillJson(route, geminiBody(JSON.stringify(BLUEPRINT)))
+      } else if (prompt.startsWith('You are the WORKER')) {
+        await fulfillJson(route, geminiBody(JSON.stringify(WORKER_RESPONSE)))
+      } else if (prompt.startsWith('You are the AUDIT model')) {
+        await fulfillJson(route, geminiBody(JSON.stringify(AUDIT_RESPONSE)))
+      } else {
+        await route.fulfill({ status: 400, body: 'Unexpected Gemini request' })
+      }
+    },
+  )
+  return { plannerImageCount: () => plannerImageCount }
+}
+
+/** A tiny valid one-page PDF assembled in memory, so the real PDF reader runs. */
+function minimalPdf(label: string): Buffer {
+  const content = [
+    'BT',
+    '/F1 18 Tf',
+    '72 720 Td',
+    `(${label}) Tj`,
+    '0 -30 Td',
+    '(A. Three    B. Four) Tj',
+    'ET',
+  ].join('\n')
+  const objects = [
+    '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n',
+    '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n',
+    '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n',
+    '4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n',
+    `5 0 obj\n<< /Length ${Buffer.byteLength(content)} >>\nstream\n${content}\nendstream\nendobj\n`,
+  ]
+  let pdf = '%PDF-1.4\n%1234\n'
+  const offsets = [0]
+  for (const object of objects) {
+    offsets.push(Buffer.byteLength(pdf))
+    pdf += object
+  }
+  const xrefOffset = Buffer.byteLength(pdf)
+  pdf += `xref\n0 ${objects.length + 1}\n`
+  pdf += '0000000000 65535 f \n'
+  pdf += offsets
+    .slice(1)
+    .map((offset) => `${String(offset).padStart(10, '0')} 00000 n \n`)
+    .join('')
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\n`
+  pdf += `startxref\n${xrefOffset}\n%%EOF\n`
+  return Buffer.from(pdf)
+}
+
+async function openApiSettings(page: Page) {
+  const coachmarkAction = page.getByRole('button', { name: 'Open API settings' })
+  if (await coachmarkAction.isVisible()) await coachmarkAction.click()
+  else await page.getByRole('button', { name: 'API', exact: true }).first().click()
+  await expect(page.getByRole('dialog', { name: 'Gemini API key' })).toBeVisible()
+}
+
+test('critical journey: answer-key PDF → review → named export → History restore', async ({
+  page,
+}) => {
+  const gemini = await mockGemini(page)
+  await page.goto('/')
+
+  await openApiSettings(page)
+  await page.getByLabel('Google Gemini API key').fill('e2e-key-never-leaves-browser')
+  await page.getByRole('button', { name: 'Check key' }).click()
+  await expect(page.getByText('Key works. You are ready to convert.').first()).toBeVisible()
+  await page.getByRole('button', { name: 'Close dialog' }).click()
+
+  await page.locator('input[type="file"]').first().setInputFiles({
+    name: 'Critical Exam.pdf',
+    mimeType: 'application/pdf',
+    buffer: minimalPdf('What is two plus two?'),
+  })
+  await expect(page.getByText('Critical Exam.pdf')).toBeVisible()
+
+  const sourceSelect = page.locator('.ds-select').filter({
+    hasText: 'Where are the answers?',
+  })
+  await sourceSelect.getByRole('button').click()
+  await page
+    .getByRole('option', { name: 'In a separate answer key file' })
+    .click()
+  await page.locator('.ds-key-file-slot input[type="file"]').setInputFiles({
+    name: 'Critical Answers.pdf',
+    mimeType: 'application/pdf',
+    buffer: minimalPdf('Answer 1: B'),
+  })
+  await expect(page.getByText('Critical Answers.pdf added')).toBeVisible()
+  await page.getByText('Keep original PDFs', { exact: true }).click()
+  await expect(page.getByRole('switch', { name: 'Keep original PDFs' })).toBeChecked()
+
+  // The browser may be closed or refreshed before conversion; the draft and
+  // its retention choice must redraw from IndexedDB, not disappear or reset.
+  await page.reload()
+  await expect(page.getByText('Critical Exam.pdf')).toBeVisible()
+  await expect(page.getByText('Critical Answers.pdf added')).toBeVisible()
+  await expect(page.getByRole('switch', { name: 'Keep original PDFs' })).toBeChecked()
+
+  await page.getByRole('button', { name: 'Start converting' }).click()
+  const reviewButton = page.getByRole('button', { name: /Review 1 flag/ })
+  await expect(reviewButton).toBeVisible({ timeout: 90_000 })
+  expect(gemini.plannerImageCount()).toBe(2)
+
+  await reviewButton.click()
+  await page.getByRole('radio', { name: /Four/ }).click()
+  await page.getByRole('button', { name: 'Confirm answer (Enter)' }).click()
+  await expect(page.getByText('All flags resolved. Your answers are in')).toBeVisible()
+
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Export bundle' }).click()
+  const download = await downloadPromise
+  expect(download.suggestedFilename()).toBe('Critical Exam Cx.zip')
+  const downloadPath = await download.path()
+  expect(downloadPath).not.toBeNull()
+  const zipped = unzipSync(new Uint8Array(await readFile(downloadPath!)))
+  const csvPath = 'Critical Exam Cx/Critical Exam Cx.csv'
+  expect(Object.keys(zipped)).toContain(csvPath)
+  const csv = new TextDecoder().decode(zipped[csvPath]).replace(/^\uFEFF/, '')
+  expect(csv).toContain('What is two plus two?')
+  expect(csv).toContain('"[""Three"",""Four""]",1,[],')
+
+  await page.getByRole('button', { name: 'Back to results' }).click()
+  await page.getByRole('button', { name: 'Convert another' }).click()
+  await expect(page.getByText('Drop PDFs here')).toBeVisible()
+
+  await page
+    .locator('.ds-sidebar')
+    .getByRole('button', { name: 'History' })
+    .click()
+  await expect(page.getByRole('heading', { name: 'Critical Exam.pdf' })).toBeVisible()
+  await expect(page.getByText('Exported')).toBeVisible()
+  await expect(page.getByText('Original PDF kept')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Use PDF again' }).click()
+  await expect(page.getByRole('heading', { name: 'Convert' })).toBeVisible()
+  await expect(page.getByText('Critical Exam.pdf')).toBeVisible()
+  await expect(page.getByText('Critical Answers.pdf added')).toBeVisible()
+})
+
+test('phone API and Help controls open bottom drawers with a large close target', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 412, height: 915 })
+  await page.goto('/')
+  const dismissCoachmark = page.getByRole('button', {
+    name: 'Dismiss API key tip',
+  })
+  if (await dismissCoachmark.isVisible()) await dismissCoachmark.click()
+
+  const mobileNav = page.locator('.ds-mobile-nav')
+  await mobileNav.getByRole('button', { name: 'API' }).click()
+  const apiDrawer = page.getByRole('dialog', { name: 'Gemini API key' })
+  await expect(apiDrawer).toBeVisible()
+  const close = page.getByRole('button', { name: 'Close dialog' })
+  const closeBox = await close.boundingBox()
+  expect(closeBox?.width).toBeGreaterThanOrEqual(52)
+  expect(closeBox?.height).toBeGreaterThanOrEqual(52)
+  const drawerBox = await apiDrawer.boundingBox()
+  expect(Math.round((drawerBox?.y ?? 0) + (drawerBox?.height ?? 0))).toBeGreaterThanOrEqual(
+    914,
+  )
+  await close.click()
+  await expect(apiDrawer).toBeHidden()
+
+  await mobileNav.getByRole('button', { name: 'Help' }).click()
+  await expect(page.getByRole('dialog', { name: 'Help' })).toBeVisible()
+  await expect(page.getByText('From PDF to Triviadox bundle in four steps.')).toBeVisible()
+})

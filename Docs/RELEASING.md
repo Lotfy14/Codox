@@ -5,9 +5,10 @@ This file records the Phase 2 shell-spike release paths.
 ## Automated builds (every push to main)
 
 `.github/workflows/auto-release.yml` runs on every push to `main`: it runs
-the test suite, builds the Tauri NSIS installer and a debug APK, and
-publishes them as prerelease `v0.0.<run-number>`. These are test builds —
-the signed release APK below and the `v1.0` release remain owner steps.
+lint, the unit/integration suite, critical Playwright browser journeys, and an
+Android-emulator launch check; then it builds the Tauri NSIS installer and a
+debug APK and publishes them as full release `v0.0.<run-number>`. The APK is
+still a test build — the signed release APK below remains an owner step.
 `.github/workflows/windows-spike.yml` is the manually-dispatched variant of
 the Windows build.
 

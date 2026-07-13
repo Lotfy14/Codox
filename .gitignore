@@ -25,6 +25,8 @@ lerna-debug.log*
 *.sln
 *.sw?
 scripts/out/
+playwright-report/
+test-results/
 
 # wrangler files
 .wrangler
