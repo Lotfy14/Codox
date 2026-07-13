@@ -184,17 +184,21 @@ function App() {
       </div>
 
       <Dialog
+        className="ds-dialog--drawer"
         dismissLabel={appMessages.dialogDismiss}
         isOpen={openDialog === 'api'}
         onOpenChange={(open) => setOpenDialog(open ? 'api' : null)}
+        overlayClassName="ds-dialog__overlay--drawer"
         title={appMessages.apiDialogTitle}
       >
         <KeysPanel />
       </Dialog>
       <Dialog
+        className="ds-dialog--drawer"
         dismissLabel={appMessages.dialogDismiss}
         isOpen={openDialog === 'help'}
         onOpenChange={(open) => setOpenDialog(open ? 'help' : null)}
+        overlayClassName="ds-dialog__overlay--drawer"
         title={appMessages.helpDialogTitle}
       >
         <HelpContent onOpenApi={openApi} />

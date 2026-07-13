@@ -24,7 +24,6 @@ import { batchProgress, isBatchRunning, runProgress } from '../engine/progress'
 import { exportableRuns, exportRuns } from '../export/exporter'
 import {
   addStoredPdf,
-  clearJobPdfs,
   putAnswerKeyPdf,
   removeStoredPdf,
   setPdfAnswerSource,
@@ -35,18 +34,13 @@ import { CURRENT_JOB_ID, useCurrentJob } from '../state/useCurrentJob'
 import { estimatedMinutes, needsAnswerKeyFile } from './convert-logic'
 import { useConversion } from './useConversion'
 import { downloadRunCsv } from './devCsv'
-import { deleteRun } from '../state/runs'
+import { archiveCurrentJobAndReset, clearCurrentDraft } from '../state/jobs'
 import { useUnresolvedCounts } from './review-data'
 import { ReviewStage } from './ReviewStage'
 import type { ControllerStatus } from '../providers/controller'
 import { useGeminiCredential } from '../state/credentials'
 
 type ConversionStatus = ControllerStatus
-
-/** "Convert another" clears this job's runs; the stored PDFs stay. */
-async function clearJobRuns(runs: readonly RunState[]): Promise<void> {
-  for (const run of runs) await deleteRun(run.id)
-}
 
 const batchSourceOptions: readonly SelectOption<AnswerSource>[] = [
   { id: 'inside', label: uploadMessages.insidePdfs },
@@ -118,6 +112,7 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
   const [busy, setBusy] = useState(false)
   const [reviewRunId, setReviewRunId] = useState<string | null>(null)
   const [exportBusy, setExportBusy] = useState(false)
+  const [resetBusy, setResetBusy] = useState(false)
   const sectionRef = useRef<HTMLElement | null>(null)
   const credential = useGeminiCredential()
 
@@ -126,7 +121,7 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
   const exams = pdfs.filter((file) => file.kind === 'exam')
   const answerKey = pdfs.find((file) => file.kind === 'answer-key')
   const batchSource = job.batchAnswerSource ?? 'inside'
-  const keepOriginal = job.keepOriginal ?? true
+  const keepOriginal = job.keepOriginal ?? false
   const totalPages = exams.reduce((sum, file) => sum + file.pageCount, 0)
   const needsKeyFile = needsAnswerKeyFile(batchSource, exams)
   const keyFileMissing = needsKeyFile && answerKey === undefined
@@ -152,6 +147,16 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
       return
     }
     void conversion.start(exams, batchSource)
+  }
+
+  const startFreshConversion = async () => {
+    if (resetBusy) return
+    setResetBusy(true)
+    try {
+      await archiveCurrentJobAndReset()
+    } finally {
+      setResetBusy(false)
+    }
   }
 
   const closeReview = () => {
@@ -253,11 +258,12 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
           <DoneStage
             exportBusy={exportBusy}
             exported={exported}
-            onConvertAnother={() => void clearJobRuns(runs)}
+            onConvertAnother={() => void startFreshConversion()}
             onExport={() => void handleExport()}
             onOpenReview={setReviewRunId}
             onRequestApiKey={onRequestApiKey}
             onRetry={(runIds) => void conversion.retry(runIds)}
+            resetBusy={resetBusy}
             runs={runs}
           />
         )}
@@ -326,7 +332,7 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
             </div>
             <div className="ds-clear-row">
               <Button
-                onPress={() => void clearJobPdfs(CURRENT_JOB_ID)}
+                onPress={() => void clearCurrentDraft()}
                 variant="quiet"
               >
                 {convertMessages.clearAll}
@@ -526,6 +532,7 @@ function DoneStage({
   onOpenReview,
   onRequestApiKey,
   onRetry,
+  resetBusy,
   runs,
 }: {
   exportBusy: boolean
@@ -535,6 +542,7 @@ function DoneStage({
   onOpenReview: (runId: string) => void
   onRequestApiKey: () => void
   onRetry: (runIds: readonly string[]) => void
+  resetBusy: boolean
   runs: readonly RunState[]
 }) {
   const stopped = runs.filter((run) => run.status === 'stopped')
@@ -647,7 +655,12 @@ function DoneStage({
               {exported ? convertMessages.exportAgain : convertMessages.exportBundle}
             </Button>
           )}
-          <Button onPress={onConvertAnother} variant="quiet">
+          <Button
+            isPending={resetBusy}
+            loadingLabel={convertMessages.startingFresh}
+            onPress={onConvertAnother}
+            variant="quiet"
+          >
             {convertMessages.convertAnother}
           </Button>
           <Badge tone={exported ? 'success' : 'neutral'}>

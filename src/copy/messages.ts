@@ -223,6 +223,7 @@ export const convertMessages = {
   exportAsIs: 'Export as-is',
   exportBundle: 'Export bundle',
   convertAnother: 'Convert another',
+  startingFresh: 'Starting fresh…',
   exportDeviceNote:
     'On a phone this opens the share sheet; on desktop it downloads a zip.',
   devGrade: 'Dev: grade this run in CodoxSandbox',
@@ -267,4 +268,21 @@ export const historyMessages = {
   deleteTitle: (runName: string) => `Delete ${runName}?`,
   deleteBody:
     'This removes the run and its stored files from this device. Bundles you already exported are not affected.',
+  current: 'Current workspace',
+  originalKept: 'Original PDF kept',
+  originalRemoved: 'Original PDF removed',
+  exported: 'Exported',
+  notExported: 'Not exported',
+  pages: (count: number) => `${count} page${count === 1 ? '' : 's'}`,
+  requests: (count: number) =>
+    `${count} Gemini request${count === 1 ? '' : 's'}`,
+  deleteAction: 'Delete from history',
+  cancelDelete: 'Keep run',
+  confirmDelete: 'Delete run',
+  status: {
+    running: 'Converting',
+    paused: 'Paused',
+    stopped: 'Stopped',
+    done: 'Ready',
+  },
 } as const

@@ -648,6 +648,16 @@
   color: var(--color-text-muted);
 }
 
+.ds-dialog__close {
+  min-width: 3.25rem;
+  min-height: 3.25rem;
+  border: 1px solid var(--color-outline);
+  background: var(--color-row);
+  color: var(--color-text-strong);
+  font-size: 2rem;
+  line-height: 1;
+}
+
 .ds-file-row__remove:hover,
 .ds-dialog__close[data-hovered] {
   background: var(--color-row-hover);
@@ -1336,14 +1346,14 @@
   top: var(--space-3);
   right: var(--space-3);
   display: grid;
-  width: var(--touch-target-min);
-  height: var(--touch-target-min);
+  width: 3.25rem;
+  height: 3.25rem;
   place-items: center;
   border: 0;
   border-radius: 999px;
   background: transparent;
   color: var(--color-text-muted);
-  font-size: 1.5rem;
+  font-size: 2rem;
 }
 
 .api-coachmark__close:hover,
@@ -1537,6 +1547,62 @@
   gap: var(--space-3);
   flex-wrap: wrap;
   font-size: var(--font-size-sm);
+}
+
+/* ---------- History ---------- */
+
+.history-list {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.history-card {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.history-card__head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.history-card__head > div {
+  min-width: 0;
+}
+
+.history-card__head h2,
+.history-card__head p {
+  margin: 0;
+}
+
+.history-card__head h2 {
+  overflow-wrap: anywhere;
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-heading);
+}
+
+.history-card__head p {
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.history-card__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.history-card__delete {
+  justify-self: start;
+  margin: 0 0 calc(-1 * var(--space-2)) calc(-1 * var(--space-3));
+  color: var(--color-danger-foreground);
 }
 
 /* ---------- Review stage (Phase 7) ---------- */
@@ -2092,19 +2158,55 @@
     display: none;
   }
 
-  .ds-dialog__overlay {
+  .ds-dialog__overlay--drawer {
     align-items: end;
     padding: 0;
   }
 
-  .ds-dialog__modal {
+  .ds-dialog__overlay--drawer .ds-dialog__modal {
     width: 100%;
     max-height: calc(100dvh - env(safe-area-inset-top, 0px));
+    overflow: visible;
   }
 
-  .ds-dialog {
+  .ds-dialog--drawer {
+    position: relative;
+    max-height: calc(100dvh - max(3rem, env(safe-area-inset-top, 0px)));
+    overflow: auto;
     border-radius: var(--radius-card) var(--radius-card) 0 0;
-    padding: var(--space-5) var(--space-4) max(var(--space-5), env(safe-area-inset-bottom, 0px));
+    padding: var(--space-8) var(--space-4) max(var(--space-5), env(safe-area-inset-bottom, 0px));
+    animation: ds-drawer-enter 320ms var(--motion-ease-emphasized) both;
+    overscroll-behavior: contain;
+  }
+
+  .ds-dialog--drawer::before {
+    content: "";
+    position: absolute;
+    top: var(--space-2);
+    left: 50%;
+    width: 2.75rem;
+    height: 0.25rem;
+    border-radius: var(--radius-full);
+    background: var(--color-control-border);
+    transform: translateX(-50%);
+  }
+
+  .ds-dialog__overlay--drawer[data-exiting] .ds-dialog--drawer {
+    animation: ds-drawer-exit 220ms var(--motion-ease-standard) both;
+  }
+}
+
+@keyframes ds-drawer-enter {
+  from {
+    opacity: 0.75;
+    transform: translateY(100%);
+  }
+}
+
+@keyframes ds-drawer-exit {
+  to {
+    opacity: 0;
+    transform: translateY(100%);
   }
 }
 

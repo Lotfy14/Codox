@@ -1,29 +1,10 @@
 import { useCallback, useEffect } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from './db'
+import { CURRENT_JOB_ID, ensureCurrentJob } from './jobs'
 import type { AppStep, JobState } from './types'
 
-export const CURRENT_JOB_ID = 'current'
-
-async function createCurrentJob(): Promise<void> {
-  const newJob: JobState = {
-    id: CURRENT_JOB_ID,
-    createdAt: Date.now(),
-    step: 'setup',
-  }
-
-  try {
-    await db.jobs.add(newJob)
-  } catch (error) {
-    const createdByConcurrentRead = await db.jobs.get(CURRENT_JOB_ID)
-
-    if (createdByConcurrentRead) {
-      return
-    }
-
-    throw error
-  }
-}
+export { CURRENT_JOB_ID } from './jobs'
 
 export function useCurrentJob() {
   const job = useLiveQuery(() => db.jobs.get(CURRENT_JOB_ID), [], null)
@@ -33,7 +14,7 @@ export function useCurrentJob() {
       return
     }
 
-    void createCurrentJob()
+    void ensureCurrentJob()
   }, [job])
 
   const setStep = useCallback(async (step: AppStep) => {
