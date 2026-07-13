@@ -11,17 +11,11 @@ import type { VisionRequest } from '../providers/types'
 import { AUDIT_PROMPT, PLANNER_PROMPT, WORKER_PROMPT } from './prompts'
 import type { AuditReport, Blueprint, MergedRow, ReducedBlueprint } from './types'
 
-/**
- * Model assignments (§1.2, availability-checked at runtime by
- * `resolveWorkerModel`). The design-doc worker name `gemma-4-31b-vision`
- * is an unverified API ID — resolved against `GET /models`, never
- * silently aliased.
- */
+/** Model assignments (§1.2). The planner primary is availability-checked. */
 export const PLANNER_MODEL = DEFAULT_GEMINI_VISION_MODEL // gemini-3.5-flash
 export const AUDIT_MODEL = 'gemini-3.1-flash-lite'
-export const INTENDED_WORKER_MODEL = 'gemini-3.1-flash-lite'
-/** Recorded fallback when the intended worker ID does not exist (§1.2). */
-export const WORKER_FALLBACK_MODEL = 'gemma-4-31b-vision'
+export const PLANNER_FALLBACK_MODEL = AUDIT_MODEL
+export const WORKER_MODEL = AUDIT_MODEL
 
 const JSON_ONLY = 'application/json'
 
@@ -35,11 +29,14 @@ export interface CallImage {
   base64Data: string
 }
 
-export function buildPlannerRequest(pages: readonly CallImage[]): VisionRequest {
+export function buildPlannerRequest(
+  pages: readonly CallImage[],
+  plannerModel = PLANNER_MODEL,
+): VisionRequest {
   return {
     prompt: PLANNER_PROMPT,
     images: pages,
-    modelId: PLANNER_MODEL,
+    modelId: plannerModel,
     generationConfig: {
       temperature: 0,
       maxOutputTokens: PLANNER_MAX_TOKENS,
@@ -58,6 +55,7 @@ export function buildPlannerRepairRequest(
   pages: readonly CallImage[],
   invalidBlueprint: string,
   errors: readonly string[],
+  plannerModel = PLANNER_MODEL,
 ): VisionRequest {
   const repairContext = [
     '',
@@ -73,7 +71,7 @@ export function buildPlannerRepairRequest(
   return {
     prompt: `${PLANNER_PROMPT}\n${repairContext}`,
     images: pages,
-    modelId: PLANNER_MODEL,
+    modelId: plannerModel,
     generationConfig: {
       temperature: 0,
       maxOutputTokens: PLANNER_MAX_TOKENS,

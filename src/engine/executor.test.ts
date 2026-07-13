@@ -69,7 +69,9 @@ interface Scripted {
   push(...results: VisionResult[]): void
 }
 
-function scriptedAdapter(): Scripted {
+function scriptedAdapter(
+  modelIds = ['gemini-3.5-flash', 'gemini-3.1-flash-lite'],
+): Scripted {
   const queue: VisionResult[] = []
   const calls: Scripted['calls'] = []
   return {
@@ -87,7 +89,7 @@ function scriptedAdapter(): Scripted {
         return { ok: true }
       },
       async listModels() {
-        return { ok: true, modelIds: ['gemini-3.5-flash', 'gemini-3.1-flash-lite'] }
+        return { ok: true, modelIds }
       },
       async complete(request) {
         calls.push({
@@ -205,10 +207,36 @@ describe('happy path', () => {
     expect(planner.prompt.startsWith('You are the PLANNER')).toBe(true)
     // Both fixture rows sit on page 1 → the worker gets one page image.
     expect(worker.imageCount).toBe(1)
+    expect(worker.modelId).toBe('gemini-3.1-flash-lite')
     expect(worker.prompt.startsWith('You are the WORKER')).toBe(true)
     expect(worker.prompt).toContain('CHUNK PACKAGE:')
     expect(audit.modelId).toBe('gemini-3.1-flash-lite')
     expect(audit.prompt.startsWith('You are the AUDIT model')).toBe(true)
+  })
+
+  it('uses the planner fallback without combining the planner, worker, and audit requests', async () => {
+    const blueprint = makeBlueprint()
+    const script = scriptedAdapter(['gemini-3.1-flash-lite'])
+    script.push(ok(JSON.stringify(blueprint)), ok(workerResponse(blueprint)), ok(AUDIT_PASS))
+    const runId = await newRun()
+
+    await executeRun(runId, PDF_BYTES, undefined, {
+      controller: new GeminiController(script.adapter),
+    })
+
+    expect(script.calls.map((call) => call.modelId)).toEqual([
+      'gemini-3.1-flash-lite',
+      'gemini-3.1-flash-lite',
+      'gemini-3.1-flash-lite',
+    ])
+    expect(script.calls.map((call) => call.prompt.startsWith('You are the'))).toEqual([
+      true,
+      true,
+      true,
+    ])
+    expect(script.calls[0].prompt).toContain('PLANNER')
+    expect(script.calls[1].prompt).toContain('WORKER')
+    expect(script.calls[2].prompt).toContain('AUDIT model')
   })
 
   it('writes every step artifact to disk', async () => {

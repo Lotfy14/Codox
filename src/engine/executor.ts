@@ -36,6 +36,7 @@ import {
   buildPlannerRepairRequest,
   buildPlannerRequest,
   buildWorkerRequest,
+  WORKER_MODEL,
   wasTruncated,
   type CallImage,
 } from './calls'
@@ -54,7 +55,7 @@ import {
   policyClaimsEvidence,
   validateWorkerChunk,
 } from './merge'
-import { resolveWorkerModel } from './models'
+import { resolvePlannerModel } from './models'
 import { stripEnumerationLabels } from './normalize'
 import { parseAuditReport, validateFinalRows } from './validate'
 import type {
@@ -242,13 +243,19 @@ async function stepPlanAndValidate(
   }
 
   const pages = await renderedPages(runId)
+  const plannerModel = (await resolvePlannerModel(controller, signal)).chosen
   const pageNumbers = pageNumbersOf(pages)
   const images = await pageImages(
     runId,
     pages.map((page) => page.pageIndex ?? 0),
   )
 
-  const planner = await call(controller, runId, buildPlannerRequest(images), signal)
+  const planner = await call(
+    controller,
+    runId,
+    buildPlannerRequest(images, plannerModel),
+    signal,
+  )
   await putArtifact({ runId, kind: 'blueprint-raw', text: planner.text })
 
   // Gate: JSON parses, no truncation, required fields present.
@@ -263,7 +270,12 @@ async function stepPlanAndValidate(
     const repair = await call(
       controller,
       runId,
-      buildPlannerRepairRequest(images, planner.text, validation.errors),
+      buildPlannerRepairRequest(
+        images,
+        planner.text,
+        validation.errors,
+        plannerModel,
+      ),
       signal,
     )
     await putArtifact({ runId, kind: 'blueprint-raw', text: repair.text })
@@ -498,7 +510,7 @@ export async function executeRun(
       runId,
       blueprint,
       controller,
-      (await resolveWorkerModel(controller, signal)).chosen,
+      WORKER_MODEL,
       chunkSize,
       signal,
     )

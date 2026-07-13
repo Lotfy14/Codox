@@ -62,8 +62,8 @@ absent or uncertain, answers stay blank and flagged.
 
 | Role | Intended model | Note |
 |---|---|---|
-| Planner | `gemini-3.5-flash` | fallback `gemini-3.1-flash-lite` for availability/quota/rate-limit or explicit cheap mode only — never as a quality rescue; an invalid blueprint goes through the repair flow with the same planner model |
-| Worker | `gemma-4-31b-vision` | **unverified API ID** — a design-doc name; resolve against the provider's live model listing before use, record intended ID / chosen ID / reason, never silently alias. Deliberately a weak model: the design tests whether planner + guardrails make a weak worker reliable |
+| Planner | `gemini-3.5-flash` | fallback `gemini-3.1-flash-lite` when the primary model is unavailable; an invalid blueprint goes through the repair flow with the same chosen planner model |
+| Worker | `gemini-3.1-flash-lite` | matches the audit model; each chunk still receives its own worker request and reduced blueprint |
 | Audit | `gemini-3.1-flash-lite` | deliberately the weakest model doing the hardest verification job; its accuracy is a *measured output*, never an assumption |
 
 ### 1.3 Step sequence (each step writes its inputs and outputs to disk before the next step starts)
