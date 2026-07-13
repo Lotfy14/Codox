@@ -31,6 +31,13 @@ const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
  */
 export const DEFAULT_GEMINI_VISION_MODEL = 'gemini-3.5-flash'
 
+/**
+ * Cheap, stable model used only to prove that a key can generate content.
+ * Keep this independent from the stronger models used for conversions: a
+ * manual key check should spend as little quota as possible.
+ */
+export const GEMINI_KEY_CHECK_MODEL = 'gemini-2.5-flash-lite'
+
 function keyHeaders(key: string): HeadersInit {
   return { 'x-goog-api-key': key }
 }
@@ -78,8 +85,8 @@ async function fetchWithTimeout(
 
 /**
  * `GET /models` costs no generation quota and returns 400 API_KEY_INVALID
- * for a bad key, which makes it both the reachability probe and the live
- * key check.
+ * for a bad key, which makes it a cheap startup reachability/authentication
+ * probe. The manual key check below additionally proves generation access.
  */
 async function listModels(
   key: string,
@@ -117,8 +124,8 @@ async function classifyHttpError(response: Response): Promise<ProviderFailure> {
 
 /**
  * A successful model listing proves authentication, but not that this key can
- * generate with Codox's required model. The manual Check key action therefore
- * makes the smallest real generation request we can make.
+ * generate content. The manual Check key action therefore makes the smallest
+ * real generation request we can make with the dedicated low-cost check model.
  */
 async function validateGeneration(
   key: string,
@@ -128,7 +135,7 @@ async function validateGeneration(
   let response: Response
   try {
     response = await fetchWithTimeout(
-      `${GEMINI_BASE_URL}/models/${encodeURIComponent(DEFAULT_GEMINI_VISION_MODEL)}:generateContent`,
+      `${GEMINI_BASE_URL}/models/${encodeURIComponent(GEMINI_KEY_CHECK_MODEL)}:generateContent`,
       {
         method: 'POST',
         headers: {

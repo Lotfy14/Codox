@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createGeminiAdapter } from './gemini'
+import {
+  createGeminiAdapter,
+  DEFAULT_GEMINI_VISION_MODEL,
+  GEMINI_KEY_CHECK_MODEL,
+} from './gemini'
 import { blobToBase64, bytesToBase64 } from './base64'
 import type { VisionRequest } from './types'
 
@@ -83,7 +87,7 @@ describe('generationConfig passthrough', () => {
 })
 
 describe('live key validation', () => {
-  it('proves generation access with the same model Codox uses', async () => {
+  it('uses only the dedicated 2.5 Flash-Lite check model', async () => {
     const fetchMock = vi.fn(async () => jsonResponse(geminiBody))
     vi.stubGlobal('fetch', fetchMock)
     const adapter = createGeminiAdapter(() => true)
@@ -95,7 +99,10 @@ describe('live key validation', () => {
       string,
       RequestInit,
     ]
-    expect(url).toContain('gemini-3.5-flash:generateContent')
+    expect(GEMINI_KEY_CHECK_MODEL).toBe('gemini-2.5-flash-lite')
+    expect(GEMINI_KEY_CHECK_MODEL).not.toBe(DEFAULT_GEMINI_VISION_MODEL)
+    expect(url).toContain('gemini-2.5-flash-lite:generateContent')
+    expect(url).not.toContain('gemini-3.5-flash')
     expect(init.method).toBe('POST')
     expect((init.headers as Record<string, string>)['x-goog-api-key']).toBe(
       'checked-key',
