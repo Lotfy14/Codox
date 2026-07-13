@@ -567,6 +567,64 @@ describe('stop reasons (§1.3)', () => {
     })
     expect((await getRun(runId))?.stopReason).toBe('invalid-request')
   })
+
+  it('a planner that stays 5xx on the primary model falls back to flash-lite', async () => {
+    const blueprint = makeBlueprint()
+    const script = scriptedAdapter()
+    const overloaded: VisionResult = {
+      ok: false,
+      kind: 'provider-error',
+      code: 'temporarily-unavailable',
+      httpStatus: 503,
+      retryAfterSeconds: 0,
+    }
+    // The controller's own transient retries (initial + 3) all fail on the
+    // primary model, then the fallback attempt plans and finishes normally.
+    script.push(overloaded, overloaded, overloaded, overloaded)
+    script.push(ok(JSON.stringify(blueprint)), ok(workerResponse(blueprint)), ok(AUDIT_PASS))
+    const runId = await newRun()
+
+    const outcome = await executeRun(runId, PDF_BYTES, undefined, {
+      controller: new GeminiController(script.adapter),
+    })
+
+    expect(outcome.status).toBe('done')
+    const plannerModels = script.calls
+      .filter((call) => call.prompt.startsWith('You are the PLANNER'))
+      .map((call) => call.modelId)
+    expect(plannerModels).toEqual([
+      'gemini-3.5-flash',
+      'gemini-3.5-flash',
+      'gemini-3.5-flash',
+      'gemini-3.5-flash',
+      'gemini-3.1-flash-lite',
+    ])
+  })
+
+  it('a planner already on the fallback model still stops on a persistent 5xx', async () => {
+    const script = scriptedAdapter(['gemini-3.1-flash-lite'])
+    const overloaded: VisionResult = {
+      ok: false,
+      kind: 'provider-error',
+      code: 'temporarily-unavailable',
+      httpStatus: 503,
+      retryAfterSeconds: 0,
+    }
+    script.push(overloaded, overloaded, overloaded, overloaded)
+    const runId = await newRun()
+
+    const outcome = await executeRun(runId, PDF_BYTES, undefined, {
+      controller: new GeminiController(script.adapter),
+    })
+
+    expect(outcome).toMatchObject({
+      status: 'provider-stopped',
+      kind: 'provider-error',
+    })
+    expect((await getRun(runId))?.stopReason).toBe('temporarily-unavailable')
+    // No second planning attempt: the fallback IS the model that failed.
+    expect(script.calls).toHaveLength(4)
+  })
 })
 
 describe('quota pause', () => {

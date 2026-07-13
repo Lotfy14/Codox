@@ -36,6 +36,7 @@ import {
   buildPlannerRepairRequest,
   buildPlannerRequest,
   buildWorkerRequest,
+  PLANNER_FALLBACK_MODEL,
   WORKER_MODEL,
   wasTruncated,
   type CallImage,
@@ -316,6 +317,52 @@ async function stepPlanAndValidate(
     pages.map((page) => page.pageIndex ?? 0),
   )
 
+  try {
+    return await planWithModel(
+      runId,
+      controller,
+      images,
+      pageNumbers,
+      plannerModel,
+      signal,
+    )
+  } catch (error) {
+    // The primary planner model staying 5xx (a 503 overload spell) is not
+    // the end of the run: the sanctioned §1.2 fallback gets one full
+    // planning attempt of its own. Restarting the whole attempt keeps the
+    // repair round single-model. Only overload falls back — a wrong key or
+    // an invalid request would fail identically on the fallback.
+    if (
+      error instanceof ProviderStop &&
+      error.kind === 'provider-error' &&
+      error.code === 'temporarily-unavailable' &&
+      plannerModel !== PLANNER_FALLBACK_MODEL
+    ) {
+      return planWithModel(
+        runId,
+        controller,
+        images,
+        pageNumbers,
+        PLANNER_FALLBACK_MODEL,
+        signal,
+      )
+    }
+    throw error
+  }
+}
+
+/** One complete planning attempt (planner call + one repair round). */
+async function planWithModel(
+  runId: string,
+  controller: GeminiController,
+  images: readonly CallImage[],
+  pageNumbers: Set<number>,
+  plannerModel: string,
+  signal: AbortSignal | undefined,
+): Promise<
+  | { ok: true; blueprint: Blueprint }
+  | { ok: false; reason: 'planner_unparseable' | 'planner_invalid_after_repair' }
+> {
   const planner = await call(
     controller,
     runId,
