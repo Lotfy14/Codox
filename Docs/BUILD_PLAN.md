@@ -313,8 +313,8 @@ Where the product quality lives.
       disables, later review edits can always leave the device.)_
 - [x] Bundle correctness: unzip → folder moves anywhere → image paths still
       resolve; batch of 3 PDFs → 3 namespaced bundles
-      _(2026-07-12: drive-verified — one zip, three
-      `Triviadox_output/<name>/` folders, each `questions.csv` (UTF-8 BOM)
+      _(2026-07-13: one PDF-derived `Cx.zip`, with one `<name> Cx/` folder
+      per input and a matching `<name> Cx.csv` (UTF-8 BOM)
       beside its own `images/`; resolved rows carry the confirmed answer
       with the flag cleared, untouched rows stay blank + flagged. Paths in
       `image_urls` are bundle-relative, so a moved folder keeps working.

@@ -28,7 +28,11 @@ export interface ConversionState {
   providerStatus: ControllerStatus
   /** True while this tab is driving the batch. */
   isDriving: boolean
-  start: (exams: readonly StoredPdf[], batchSource: AnswerSource) => Promise<void>
+  start: (
+    exams: readonly StoredPdf[],
+    answerKey: StoredPdf | undefined,
+    batchSource: AnswerSource,
+  ) => Promise<void>
   /** Re-enters provider-stopped runs from their persisted checkpoint. */
   retry: (runIds: readonly string[]) => Promise<void>
   /** User stop: aborts in-flight work, marks unfinished runs stopped. */
@@ -42,6 +46,31 @@ export function effectiveAnswerSource(
   batchSource: AnswerSource,
 ): AnswerSource {
   return file.answerSource ?? batchSource
+}
+
+interface QueueItem {
+  run: RunState
+  bytes: Uint8Array
+  examPageCount: number
+  declared: AnswerSource | undefined
+  answerKey?: {
+    bytes: Uint8Array
+    pageCount: number
+  }
+}
+
+async function answerKeyForRun(
+  run: RunState,
+  exam: StoredPdf,
+  declared: AnswerSource,
+): Promise<StoredPdf | undefined> {
+  if (declared !== 'key-file') return undefined
+  if (run.answerKeyPdfId !== undefined) {
+    const pinned = await db.files.get(run.answerKeyPdfId)
+    if (pinned !== undefined) return pinned
+  }
+  const files = await db.files.where('jobId').equals(exam.jobId).toArray()
+  return files.find((file) => file.kind === 'answer-key')
 }
 
 export function useConversion(jobId: string): ConversionState {
@@ -63,7 +92,7 @@ export function useConversion(jobId: string): ConversionState {
 
   const drive = useCallback(
     async (
-      queue: ReadonlyArray<{ run: RunState; bytes: Uint8Array; declared: AnswerSource | undefined }>,
+      queue: ReadonlyArray<QueueItem>,
     ) => {
       if (driving.current) return
       driving.current = true
@@ -78,6 +107,9 @@ export function useConversion(jobId: string): ConversionState {
             // and the next file starts.
             const outcome = await executeRun(item.run.id, item.bytes, item.declared, {
               signal: aborter.signal,
+              examPageCount: item.examPageCount,
+              answerKeyBytes: item.answerKey?.bytes,
+              answerKeyPageCount: item.answerKey?.pageCount,
             })
             setOutcomes((previous) => [...previous, outcome])
           } catch {
@@ -113,7 +145,7 @@ export function useConversion(jobId: string): ConversionState {
     const resume = async () => {
       const resumable = await findResumableRuns(jobId)
       if (cancelled || resumable.length === 0 || driving.current) return
-      const queue: Array<{ run: RunState; bytes: Uint8Array; declared: AnswerSource | undefined }> = []
+      const queue: QueueItem[] = []
       for (const run of resumable) {
         const file = await db.files.get(run.pdfId)
         if (file === undefined) {
@@ -126,10 +158,24 @@ export function useConversion(jobId: string): ConversionState {
           continue
         }
         const job = await db.jobs.get(run.jobId)
+        const declared = effectiveAnswerSource(
+          file,
+          job?.batchAnswerSource ?? 'inside',
+        )
+        const answerKey = await answerKeyForRun(run, file, declared)
         queue.push({
           run,
           bytes: new Uint8Array(await file.blob.arrayBuffer()),
-          declared: effectiveAnswerSource(file, job?.batchAnswerSource ?? 'inside'),
+          examPageCount: file.pageCount,
+          declared,
+          ...(answerKey === undefined
+            ? {}
+            : {
+                answerKey: {
+                  bytes: new Uint8Array(await answerKey.blob.arrayBuffer()),
+                  pageCount: answerKey.pageCount,
+                },
+              }),
         })
       }
       if (!cancelled && queue.length > 0) await drive(queue)
@@ -141,21 +187,37 @@ export function useConversion(jobId: string): ConversionState {
   }, [jobId, drive])
 
   const start = useCallback(
-    async (exams: readonly StoredPdf[], batchSource: AnswerSource) => {
-      const queue: Array<{ run: RunState; bytes: Uint8Array; declared: AnswerSource | undefined }> = []
+    async (
+      exams: readonly StoredPdf[],
+      answerKey: StoredPdf | undefined,
+      batchSource: AnswerSource,
+    ) => {
+      const queue: QueueItem[] = []
       for (const exam of exams) {
+        const declared = effectiveAnswerSource(exam, batchSource)
+        const usedAnswerKey = declared === 'key-file' ? answerKey : undefined
         const runId = await createRun({
           jobId,
           pdfId: exam.id,
+          answerKeyPdfId: usedAnswerKey?.id,
           fileName: exam.name,
-          pageCount: exam.pageCount,
+          pageCount: exam.pageCount + (usedAnswerKey?.pageCount ?? 0),
         })
         const run = await getRun(runId)
         if (run === undefined) continue
         queue.push({
           run,
           bytes: new Uint8Array(await exam.blob.arrayBuffer()),
-          declared: effectiveAnswerSource(exam, batchSource),
+          examPageCount: exam.pageCount,
+          declared,
+          ...(usedAnswerKey === undefined
+            ? {}
+            : {
+                answerKey: {
+                  bytes: new Uint8Array(await usedAnswerKey.blob.arrayBuffer()),
+                  pageCount: usedAnswerKey.pageCount,
+                },
+              }),
         })
       }
       await drive(queue)
@@ -165,11 +227,7 @@ export function useConversion(jobId: string): ConversionState {
 
   const retry = useCallback(
     async (runIds: readonly string[]) => {
-      const queue: Array<{
-        run: RunState
-        bytes: Uint8Array
-        declared: AnswerSource | undefined
-      }> = []
+      const queue: QueueItem[] = []
       for (const runId of runIds) {
         const run = await getRun(runId)
         if (run === undefined) continue
@@ -183,13 +241,24 @@ export function useConversion(jobId: string): ConversionState {
         }
         const job = await db.jobs.get(run.jobId)
         await updateRun(run.id, { status: 'paused', stopReason: undefined })
+        const declared = effectiveAnswerSource(
+          file,
+          job?.batchAnswerSource ?? 'inside',
+        )
+        const answerKey = await answerKeyForRun(run, file, declared)
         queue.push({
           run,
           bytes: new Uint8Array(await file.blob.arrayBuffer()),
-          declared: effectiveAnswerSource(
-            file,
-            job?.batchAnswerSource ?? 'inside',
-          ),
+          examPageCount: file.pageCount,
+          declared,
+          ...(answerKey === undefined
+            ? {}
+            : {
+                answerKey: {
+                  bytes: new Uint8Array(await answerKey.blob.arrayBuffer()),
+                  pageCount: answerKey.pageCount,
+                },
+              }),
         })
       }
       if (queue.length > 0) await drive(queue)

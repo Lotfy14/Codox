@@ -11,7 +11,7 @@
  */
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Badge, Button, GlassPanel, ProgressBar } from '../design/components'
-import { exportMessages, reviewMessages } from '../copy/messages'
+import { convertMessages, exportMessages, reviewMessages } from '../copy/messages'
 import { boxToCropBox } from '../engine/boxes'
 import { getPageArtifact } from '../state/runs'
 import type { RunState } from '../state/types'
@@ -310,8 +310,10 @@ function ReviewFlags({
             </p>
           ) : null}
           <div className="review-done-actions">
-            <Button isDisabled={exported} onPress={onExport}>
-              {exported ? exportMessages.exported : 'Export bundle'}
+            <Button onPress={onExport}>
+              {exported
+                ? convertMessages.exportAgain
+                : convertMessages.exportBundle}
             </Button>
             <Button onPress={onClose} variant="quiet">
               Back to results

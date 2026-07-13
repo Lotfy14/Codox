@@ -594,8 +594,8 @@ form — §1.6.)
 
 ### 3.4 The bundle
 
-Output is a **bundle, not a bare file**: `Triviadox_output/<pdf-name>/`
-holding `questions.csv` + a sibling `images/` folder, one bundle per PDF. The
+Output is a **bundle, not a bare file**: `<pdf-name> Cx/` holding a matching
+`<pdf-name> Cx.csv` + a sibling `images/` folder, one bundle per PDF. The
 bundle must survive being moved (hence relative paths). Delivery: zip
 (universal) or direct folder write where the platform supports it.
 

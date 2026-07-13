@@ -32,9 +32,11 @@ export const keyMessages = {
     "Can't reach Gemini right now. This is not about your key — Gemini may be down or blocked on this network. Your progress is saved; Codox will try again when the connection returns.",
   quotaPaused:
     'Your Gemini key has used its available free allowance. Nothing is broken — your progress is saved, and the run resumes when Gemini allows requests again.',
+  setupRequired:
+    'Gemini accepted the key but cannot run Codox’s required model. Enable billing or model access for this API project, then check the key again.',
   /** The quota-isolation guarantee, stated directly. */
   keyOwnership:
-    'Codox uses the Gemini API key you provide. Requests count toward that key’s quota.',
+    'Codox uses the Gemini API key you provide. Check key sends one tiny generation request; conversions count toward that key’s quota.',
   showKey: 'Show key',
   hideKey: 'Hide key',
   copyKey: 'Copy key',
@@ -109,7 +111,7 @@ export const appMessages = {
 export const privacyMessages = {
   local: 'Your API key, PDFs, and results are stored on this device.',
   processing:
-    'When you convert a PDF, Codox sends its exam pages to Google Gemini for processing.',
+    'When you convert, Codox sends the exam pages and any separate answer-key pages to Google Gemini for processing.',
   quota: 'Gemini requests use your key and count toward your quota.',
 } as const
 
@@ -174,12 +176,12 @@ export const convertMessages = {
   inplaceAfter: ' — no new tabs, no takeover screen.',
   answerKeyAdded: (fileName: string) => `${fileName} added`,
   remove: 'Remove',
-  keepOriginalLabel: 'Keep original PDF',
+  keepOriginalLabel: 'Keep original PDFs',
   keepOriginalHint:
-    'Keeps the PDF stored in Codox so this run can be converted again later. Uses more space.',
-  pagesMinutes: (pages: number, minutes: number) =>
-    `${pages} page${pages === 1 ? '' : 's'} · about ${minutes} min`,
+    'Keeps the exam PDFs and any answer key in History so they can be converted again later. Uses more space.',
   startButton: 'Start converting',
+  startFailed:
+    'Codox could not start this conversion on this device. Your PDFs are still here; try again.',
   apiKeyRequired: 'Add and check your Gemini API key before converting.',
   stopButton: 'Stop converting',
   convertingFiles: (count: number) =>
@@ -223,13 +225,11 @@ export const convertMessages = {
   exportAsIs: 'Export as-is',
   exportBundle: 'Export bundle',
   convertAnother: 'Convert another',
+  convertAnotherHint:
+    'Convert another moves these statuses to History and opens a clean converter. Original PDFs are removed unless you chose Keep original PDFs.',
   startingFresh: 'Starting fresh…',
   exportDeviceNote:
     'On a phone this opens the share sheet; on desktop it downloads a zip.',
-  devGrade: 'Dev: grade this run in CodoxSandbox',
-  devDownloadCsv: (fileName: string) => `Download ${fileName} CSV`,
-  devRunStats: (requests: number, tokens: number, auditUnavailable: boolean) =>
-    `${requests} requests · ${tokens} tokens${auditUnavailable ? ' · audit unavailable' : ''}`,
 } as const
 
 export const reviewMessages = {
@@ -253,6 +253,10 @@ export const reviewMessages = {
 export const exportMessages = {
   notExportedYet: 'Not exported yet',
   exported: 'Exported',
+  cancelled: 'Export cancelled. Your finished work is still saved in Codox.',
+  nothingToExport: 'There is no finished bundle to export yet.',
+  failed:
+    'Codox could not create the bundle. Your finished work is still saved.',
   exportDone:
     'Saved. The bundle now lives safely outside Codox — import it into Triviadox whenever you like.',
   whyExportMatters:
@@ -262,9 +266,24 @@ export const exportMessages = {
 export const historyMessages = {
   emptyTitle: 'No runs yet',
   emptyBody:
-    'Completed conversions will appear here. Start on Convert when you are ready.',
+    'Saved conversions and stopped runs will appear here. Start on Convert when you are ready.',
+  retentionNote:
+    'Runs stay on this device until you delete them or the system clears site data. Original PDFs are retained only when Keep original PDFs was selected.',
   reRunNeedsOriginal:
     'Re-running needs the original PDF, which was not kept for this run. Drop the PDF on Convert to run it again.',
+  currentNotEmpty:
+    'Convert already has a PDF or run in progress. Finish or clear that workspace before restoring this PDF.',
+  restoreFailed:
+    'Codox could not restore this PDF. The historical run was not changed.',
+  deleteFailed:
+    'Codox could not delete this run. It is still saved on this device.',
+  useAgainAction: 'Use PDF again',
+  exportAction: 'Export bundle',
+  exportAgainAction: 'Export again',
+  exportComplete: 'Bundle saved outside Codox.',
+  exportCancelled: 'Export cancelled. This run is still saved in History.',
+  exportUnavailable: 'This run does not have a finished bundle to export.',
+  exportFailed: 'Codox could not create this bundle. The saved run was not changed.',
   deleteTitle: (runName: string) => `Delete ${runName}?`,
   deleteBody:
     'This removes the run and its stored files from this device. Bundles you already exported are not affected.',

@@ -1,7 +1,7 @@
 /**
  * Bundle assembly — pure and deterministic. The output contract (§3.4):
- * one `Triviadox_output/<pdf-name>/` folder per PDF holding
- * `questions.csv` + a sibling `images/` folder, zipped. Relative image
+ * one `<pdf-name> Cx/` folder per PDF holding a matching CSV and a sibling
+ * `images/` folder, zipped. Relative image
  * paths mean a bundle folder keeps working wherever it is moved.
  */
 import { zipSync } from 'fflate'
@@ -12,8 +12,9 @@ export function safeBundleName(fileName: string): string {
     .replace(/\.pdf$/i, '')
     .replace(/[\\/:*?"<>|]/g, '-')
     .replace(/\p{Cc}/gu, '')
+    .replace(/\s+/g, ' ')
     .replace(/^[\s.]+|[\s.]+$/g, '')
-  return base === '' ? 'exam' : base
+  return base === '' || !/[\p{L}\p{N}]/u.test(base) ? 'exam' : base
 }
 
 /** One folder per PDF, batch collisions namespaced `name`, `name-2`, … */
@@ -28,8 +29,16 @@ export function uniqueBundleNames(fileNames: readonly string[]): string[] {
   })
 }
 
+/** Human-identifiable archive name derived from the PDFs in the export. */
+export function exportArchiveName(fileNames: readonly string[]): string {
+  const names = uniqueBundleNames(fileNames)
+  if (names.length === 0) return 'Codox export Cx.zip'
+  if (names.length === 1) return `${names[0]} Cx.zip`
+  return `${names[0]} +${names.length - 1} more Cx.zip`
+}
+
 export interface BundleInput {
-  /** Folder name inside Triviadox_output/ (already namespaced). */
+  /** PDF-derived folder/file stem (already namespaced for batch collisions). */
   name: string
   /** The final CSV text (resolutions applied), without a BOM. */
   csvText: string
@@ -38,7 +47,7 @@ export interface BundleInput {
 }
 
 /**
- * Lay the bundles out as zip entries. `questions.csv` gets a UTF-8 BOM —
+ * Lay the bundles out as zip entries. Each named CSV gets a UTF-8 BOM —
  * the contract is BOM-tolerant on read (§3.2) and the BOM is what makes
  * Excel open Arabic headers correctly on Windows.
  */
@@ -48,12 +57,12 @@ export function assembleBundleFiles(
   const files: Record<string, Uint8Array> = {}
   const bom = String.fromCharCode(0xfeff)
   for (const bundle of bundles) {
-    const root = `Triviadox_output/${bundle.name}`
-    files[`${root}/questions.csv`] = new TextEncoder().encode(
+    const outputName = `${bundle.name} Cx`
+    files[`${outputName}/${outputName}.csv`] = new TextEncoder().encode(
       bom + bundle.csvText,
     )
     for (const crop of bundle.crops) {
-      files[`${root}/${crop.path}`] = crop.bytes
+      files[`${outputName}/${crop.path}`] = crop.bytes
     }
   }
   return files
@@ -69,5 +78,3 @@ export function zipBundles(files: Record<string, Uint8Array>): Uint8Array {
   // crops. Move to fflate's async zip() if bundles ever grow past a few MB.
   return zipSync(entries)
 }
-
-export const ZIP_FILE_NAME = 'Triviadox_output.zip'

@@ -148,6 +148,39 @@ describe('key provenance', () => {
 })
 
 describe('failure handling', () => {
+  it('records required billing/model setup separately from a network problem', async () => {
+    await saveGeminiKey('setup-key')
+    const { adapter } = makeAdapter({
+      validateKey: () => ({
+        ok: false,
+        kind: 'provider-error',
+        code: 'billing-required',
+        httpStatus: 400,
+      }),
+    })
+    const controller = new GeminiController(adapter)
+
+    await controller.validateStoredKey()
+
+    expect((await getGeminiCredential())?.lastValidation?.status).toBe(
+      'setup-required',
+    )
+  })
+
+  it('a cheap startup probe cannot upgrade setup-required to working', async () => {
+    await saveGeminiKey('setup-key')
+    await db.credentials.update('gemini', {
+      lastValidation: { status: 'setup-required', checkedAt: 1 },
+    })
+    const { adapter } = makeAdapter({ probe: () => ({ ok: true }) })
+    const controller = new GeminiController(adapter)
+
+    expect(await controller.refreshStatus()).toBe('setup-required')
+    expect((await getGeminiCredential())?.lastValidation?.status).toBe(
+      'setup-required',
+    )
+  })
+
   it('wrong-key stops the run: one adapter call, no retry under any credential', async () => {
     await saveGeminiKey('a-bad-key')
     const { adapter, completeCallCount } = makeAdapter({

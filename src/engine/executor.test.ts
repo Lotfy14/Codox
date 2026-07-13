@@ -214,6 +214,37 @@ describe('happy path', () => {
     expect(audit.prompt.startsWith('You are the AUDIT model')).toBe(true)
   })
 
+  it('actually renders and sends a separately uploaded answer-key PDF', async () => {
+    const blueprint = makeBlueprint()
+    const script = scriptedAdapter()
+    script.push(
+      ok(JSON.stringify(blueprint)),
+      ok(workerResponse(blueprint)),
+      ok(AUDIT_PASS),
+    )
+    const runId = await createRun({
+      jobId: 'job1',
+      pdfId: 'pdf1',
+      answerKeyPdfId: 'key1',
+      fileName: 'exam.pdf',
+      pageCount: 4,
+    })
+
+    const outcome = await executeRun(runId, PDF_BYTES, 'key-file', {
+      controller: new GeminiController(script.adapter),
+      examPageCount: 2,
+      answerKeyBytes: new Uint8Array([9, 8, 7]),
+      answerKeyPageCount: 2,
+    })
+
+    expect(outcome.status).toBe('done')
+    expect(await getArtifacts(runId, 'page-jpeg')).toHaveLength(4)
+    expect(await getArtifacts(runId, 'page-text')).toHaveLength(4)
+    expect((await getRun(runId))?.pageCount).toBe(4)
+    expect(script.calls[0].imageCount).toBe(4)
+    expect(script.calls.at(-1)?.imageCount).toBe(4)
+  })
+
   it('uses the planner fallback without combining the planner, worker, and audit requests', async () => {
     const blueprint = makeBlueprint()
     const script = scriptedAdapter(['gemini-3.1-flash-lite'])

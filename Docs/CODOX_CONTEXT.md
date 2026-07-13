@@ -47,7 +47,7 @@ schema is ours to change and is pinned by the output contract
 
 The value chain: a tutor has a folder of messy exam PDFs → drops them into
 Codox → declares where the answers are → gets, per PDF, a portable bundle
-(`questions.csv` + an `images/` folder of cropped figures) → imports it into
+(`<pdf-name> Cx.csv` + an `images/` folder of cropped figures) → imports it into
 Triviadox, where every answer is either correct or explicitly queued for the
 tutor's review.
 
@@ -107,12 +107,12 @@ review/export of an already-converted bundle should work offline).
 
 ## 5. Output (summary — the authoritative contract migrates as-is)
 
-One bundle per PDF: `Triviadox_output/<pdf-name>/` containing `questions.csv`
-plus a sibling `images/` folder, delivered as a zip download (universal) or
+One bundle per PDF: `<pdf-name> Cx/` containing `<pdf-name> Cx.csv` plus a
+sibling `images/` folder, delivered in a PDF-named `Cx.zip` (universal) or
 written to a user-chosen folder where the platform supports it. The CSV core
-is 9 columns:
+is 10 columns:
 
-`id,group_id,topic,subtopic,year,question,options,correct_index,image_urls`
+`id,group_id,topic,subtopic,year,question,options,correct_index,image_urls,needs_review`
 
 plus an optional 10th `needs_review` column carrying the flag *reason*. Blank
 `correct_index` is the hard review signal. `options` is a JSON array in one

@@ -17,8 +17,3 @@ export function needsAnswerKeyFile(
     exams.some((file) => file.answerSource === 'key-file')
   )
 }
-
-/** Flat ~5 s/page estimate; refine when Phase 6 measures the real pace. */
-export function estimatedMinutes(totalPages: number): number {
-  return Math.max(1, Math.round((totalPages * 5) / 60))
-}

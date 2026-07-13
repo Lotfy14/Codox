@@ -2,7 +2,12 @@ import { useState } from 'react'
 import { Badge, Button, Dialog, GlassPanel } from '../design/components'
 import type { BadgeTone } from '../design/components'
 import { appMessages, historyMessages } from '../copy/messages'
-import { deleteHistoryRun, useHistoryRuns } from '../state/history'
+import { exportRuns } from '../export/exporter'
+import {
+  deleteHistoryRun,
+  restoreHistoryRun,
+  useHistoryRuns,
+} from '../state/history'
 import type { RunState } from '../state/types'
 
 function statusTone(status: RunState['status']): BadgeTone {
@@ -25,10 +30,20 @@ function formatDate(timestamp: number): string {
   }).format(new Date(timestamp))
 }
 
-export function History() {
+export interface HistoryProps {
+  onOpenConvert: () => void
+}
+
+export function History({ onOpenConvert }: HistoryProps) {
   const entries = useHistoryRuns()
   const [deleteRunId, setDeleteRunId] = useState<string | null>(null)
   const [deleteBusy, setDeleteBusy] = useState(false)
+  const [actionBusyId, setActionBusyId] = useState<string | null>(null)
+  const [notice, setNotice] = useState<{
+    runId: string
+    text: string
+    tone: 'info' | 'danger' | 'working'
+  } | null>(null)
   const selected = entries?.find((entry) => entry.run.id === deleteRunId)
 
   const confirmDelete = async () => {
@@ -37,8 +52,71 @@ export function History() {
     try {
       await deleteHistoryRun(deleteRunId)
       setDeleteRunId(null)
+    } catch {
+      setNotice({
+        runId: deleteRunId,
+        text: historyMessages.deleteFailed,
+        tone: 'danger',
+      })
     } finally {
       setDeleteBusy(false)
+    }
+  }
+
+  const exportRun = async (run: RunState) => {
+    if (actionBusyId !== null) return
+    setActionBusyId(run.id)
+    setNotice(null)
+    try {
+      const outcome = await exportRuns([run])
+      setNotice({
+        runId: run.id,
+        text:
+          outcome === 'cancelled'
+            ? historyMessages.exportCancelled
+            : outcome === 'nothing'
+              ? historyMessages.exportUnavailable
+              : historyMessages.exportComplete,
+        tone:
+          outcome === 'cancelled' || outcome === 'nothing' ? 'info' : 'working',
+      })
+    } catch {
+      setNotice({
+        runId: run.id,
+        text: historyMessages.exportFailed,
+        tone: 'danger',
+      })
+    } finally {
+      setActionBusyId(null)
+    }
+  }
+
+  const handleUseAgain = async (runId: string) => {
+    if (actionBusyId !== null) return
+    setActionBusyId(runId)
+    setNotice(null)
+    try {
+      const result = await restoreHistoryRun(runId)
+      if (result === 'restored') {
+        onOpenConvert()
+        return
+      }
+      setNotice({
+        runId,
+        text:
+          result === 'current-not-empty'
+            ? historyMessages.currentNotEmpty
+            : historyMessages.reRunNeedsOriginal,
+        tone: 'info',
+      })
+    } catch {
+      setNotice({
+        runId,
+        text: historyMessages.restoreFailed,
+        tone: 'danger',
+      })
+    } finally {
+      setActionBusyId(null)
     }
   }
 
@@ -46,6 +124,7 @@ export function History() {
     <section aria-labelledby="history-heading" className="ds-convert">
       <header className="ds-work__head">
         <h1 id="history-heading">{appMessages.navHistory}</h1>
+        <p>{historyMessages.retentionNote}</p>
       </header>
 
       {entries === undefined ? null : entries.length === 0 ? (
@@ -97,15 +176,47 @@ export function History() {
                 ) : null}
               </div>
 
-              {!isCurrent ? (
-                <Button
-                  className="history-card__delete"
-                  onPress={() => setDeleteRunId(run.id)}
-                  variant="quiet"
+              {notice?.runId === run.id ? (
+                <p
+                  className={`ds-inline-note ds-inline-note--${notice.tone}`}
+                  role="status"
                 >
-                  {historyMessages.deleteAction}
-                </Button>
+                  {notice.text}
+                </p>
               ) : null}
+
+              <div className="history-card__actions">
+                {run.status === 'done' ? (
+                  <Button
+                    isPending={actionBusyId === run.id}
+                    onPress={() => void exportRun(run)}
+                    variant="secondary"
+                  >
+                    {run.exportedAt === undefined
+                      ? historyMessages.exportAction
+                      : historyMessages.exportAgainAction}
+                  </Button>
+                ) : null}
+                {!isCurrent && originalKept ? (
+                  <Button
+                    isDisabled={actionBusyId !== null}
+                    onPress={() => void handleUseAgain(run.id)}
+                    variant="quiet"
+                  >
+                    {historyMessages.useAgainAction}
+                  </Button>
+                ) : null}
+                {!isCurrent ? (
+                  <Button
+                    className="history-card__delete"
+                    isDisabled={actionBusyId !== null}
+                    onPress={() => setDeleteRunId(run.id)}
+                    variant="quiet"
+                  >
+                    {historyMessages.deleteAction}
+                  </Button>
+                ) : null}
+              </div>
             </GlassPanel>
           ))}
         </div>

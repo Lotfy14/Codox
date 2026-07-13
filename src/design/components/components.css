@@ -463,7 +463,8 @@
 }
 
 .ds-badge--warning,
-.ds-status-chip--quota-paused {
+.ds-status-chip--quota-paused,
+.ds-status-chip--setup-required {
   border-color: var(--color-warning-border);
   background: var(--color-warning-surface);
   color: var(--color-warning-foreground);
@@ -1242,7 +1243,8 @@
   font-size: var(--font-size-sm);
 }
 
-.key-inline-note--quota-paused {
+.key-inline-note--quota-paused,
+.key-inline-note--setup-required {
   border-color: var(--color-warning-border);
   background: var(--color-warning-surface);
   color: var(--color-warning-foreground);
@@ -1533,22 +1535,6 @@
   margin-top: var(--space-5);
 }
 
-.ds-dev-surface {
-  margin-top: var(--space-6);
-  padding-top: var(--space-4);
-  border-top: 1px dashed var(--color-outline);
-  display: grid;
-  gap: var(--space-2);
-}
-
-.ds-dev-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-  font-size: var(--font-size-sm);
-}
-
 /* ---------- History ---------- */
 
 .history-list {
@@ -1599,9 +1585,14 @@
   font-size: var(--font-size-sm);
 }
 
+.history-card__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
 .history-card__delete {
-  justify-self: start;
-  margin: 0 0 calc(-1 * var(--space-2)) calc(-1 * var(--space-3));
   color: var(--color-danger-foreground);
 }
 

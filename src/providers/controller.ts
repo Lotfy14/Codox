@@ -9,7 +9,6 @@ import type {
   KeyCheckResult,
   ModelListResult,
   ProviderFailure,
-  ProviderFailureKind,
   VisionRequest,
   VisionResult,
 } from './types'
@@ -51,8 +50,14 @@ const MISSING_KEY_FAILURE: ProviderFailure = {
   kind: 'wrong-key',
 }
 
-function toValidationStatus(kind: ProviderFailureKind): KeyValidationStatus {
-  switch (kind) {
+function toValidationStatus(failure: ProviderFailure): KeyValidationStatus {
+  if (
+    failure.code === 'billing-required' ||
+    failure.code === 'model-unavailable'
+  ) {
+    return 'setup-required'
+  }
+  switch (failure.kind) {
     case 'wrong-key':
       return 'wrong-key'
     case 'quota-exhausted':
@@ -111,10 +116,12 @@ export class GeminiController {
     if (credential === undefined) return 'no-key'
 
     const result = await this.adapter.probe(credential.apiKey, signal)
-    const status: KeyValidationStatus = result.ok
-      ? 'working'
-      : toValidationStatus(result.kind)
-    if (!result.ok && result.kind === 'aborted') return status
+    // A cheap reachability probe must never upgrade an unchecked key (or a
+    // key lacking billing/model access) to "working". Only validateKey's
+    // real generation call earns that status.
+    if (result.ok) return credential.lastValidation?.status ?? 'working'
+    const status = toValidationStatus(result)
+    if (result.kind === 'aborted') return status
     await recordKeyValidation(status)
     if (status === 'wrong-key') this.emit({ type: 'wrong-key' })
     else if (status === 'unreachable') this.emit({ type: 'unreachable' })
@@ -132,7 +139,7 @@ export class GeminiController {
     const result = await this.adapter.validateKey(credential.apiKey, signal)
     if (!result.ok && result.kind === 'aborted') return result
     await recordKeyValidation(
-      result.ok ? 'working' : toValidationStatus(result.kind),
+      result.ok ? 'working' : toValidationStatus(result),
     )
     return result
   }

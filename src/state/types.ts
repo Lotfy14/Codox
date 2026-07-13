@@ -43,6 +43,8 @@ export interface RunState {
   id: string
   jobId: string
   pdfId: string
+  /** Separate key used by this run, when one was actually processed. */
+  answerKeyPdfId?: string
   fileName: string
   status: 'running' | 'paused' | 'stopped' | 'done'
   /** §1.3's machine-readable stop reason, when status is 'stopped'. */
@@ -126,6 +128,7 @@ export type KeyValidationStatus =
   | 'wrong-key'
   | 'unreachable'
   | 'quota-paused'
+  | 'setup-required'
 
 /**
  * The one Gemini credential on this installation. The fixed `'gemini'` id

@@ -38,6 +38,7 @@ function keyHeaders(key: string): HeadersInit {
 /** Cheap GET endpoints answer in seconds; generation carries page uploads. */
 const LIST_TIMEOUT_MS = 30_000
 const GENERATE_TIMEOUT_MS = 300_000
+const KEY_CHECK_TIMEOUT_MS = 60_000
 
 /**
  * A fetch with no deadline can stall forever and freeze a run mid-step
@@ -114,6 +115,40 @@ async function classifyHttpError(response: Response): Promise<ProviderFailure> {
   )
 }
 
+/**
+ * A successful model listing proves authentication, but not that this key can
+ * generate with Codox's required model. The manual Check key action therefore
+ * makes the smallest real generation request we can make.
+ */
+async function validateGeneration(
+  key: string,
+  onLine: () => boolean,
+  signal?: AbortSignal,
+): Promise<KeyCheckResult> {
+  let response: Response
+  try {
+    response = await fetchWithTimeout(
+      `${GEMINI_BASE_URL}/models/${encodeURIComponent(DEFAULT_GEMINI_VISION_MODEL)}:generateContent`,
+      {
+        method: 'POST',
+        headers: {
+          ...keyHeaders(key),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: 'Reply with OK.' }] }],
+          generationConfig: { temperature: 0, maxOutputTokens: 8 },
+        }),
+      },
+      KEY_CHECK_TIMEOUT_MS,
+      signal,
+    )
+  } catch (error) {
+    return classifyGeminiFetchError(error, onLine())
+  }
+  return response.ok ? { ok: true } : classifyHttpError(response)
+}
+
 /** Extracts the first candidate's concatenated text parts. */
 function extractText(body: unknown): string {
   if (typeof body !== 'object' || body === null) return ''
@@ -175,7 +210,7 @@ export function createGeminiAdapter(
       key: string,
       signal?: AbortSignal,
     ): Promise<KeyCheckResult> {
-      return listModels(key, onLine, signal)
+      return validateGeneration(key, onLine, signal)
     },
 
     async listModels(

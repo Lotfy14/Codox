@@ -24,7 +24,7 @@ function csvLine(cells: readonly string[]): string {
   return cells.map(csvField).join(',')
 }
 
-/** Emits the complete `questions.csv` content for a run's merged rows. */
+/** Emits the complete PDF-named CSV content for a run's merged rows. */
 export function emitCsv(rows: readonly MergedRow[]): string {
   const lines = [csvLine(CSV_SCHEMA)]
   for (const row of rows) {

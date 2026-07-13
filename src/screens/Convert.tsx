@@ -31,9 +31,8 @@ import {
 } from '../state/files'
 import type { AnswerSource, RunState } from '../state/types'
 import { CURRENT_JOB_ID, useCurrentJob } from '../state/useCurrentJob'
-import { estimatedMinutes, needsAnswerKeyFile } from './convert-logic'
+import { needsAnswerKeyFile } from './convert-logic'
 import { useConversion } from './useConversion'
-import { downloadRunCsv } from './devCsv'
 import { archiveCurrentJobAndReset, clearCurrentDraft } from '../state/jobs'
 import { useUnresolvedCounts } from './review-data'
 import { ReviewStage } from './ReviewStage'
@@ -112,6 +111,11 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
   const [busy, setBusy] = useState(false)
   const [reviewRunId, setReviewRunId] = useState<string | null>(null)
   const [exportBusy, setExportBusy] = useState(false)
+  const [exportNotice, setExportNotice] = useState<{
+    text: string
+    tone: 'info' | 'danger' | 'working'
+  } | null>(null)
+  const [startBusy, setStartBusy] = useState(false)
   const [resetBusy, setResetBusy] = useState(false)
   const sectionRef = useRef<HTMLElement | null>(null)
   const credential = useGeminiCredential()
@@ -134,19 +138,35 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
   const handleExport = async () => {
     if (exportBusy) return
     setExportBusy(true)
+    setExportNotice(null)
     try {
-      await exportRuns(runs)
+      const outcome = await exportRuns(runs)
+      if (outcome === 'cancelled') {
+        setExportNotice({ text: exportMessages.cancelled, tone: 'info' })
+      } else if (outcome === 'nothing') {
+        setExportNotice({ text: exportMessages.nothingToExport, tone: 'info' })
+      }
+    } catch {
+      setExportNotice({ text: exportMessages.failed, tone: 'danger' })
     } finally {
       setExportBusy(false)
     }
   }
 
-  const startConversion = () => {
+  const startConversion = async () => {
+    if (startBusy) return
     if (!keyReady) {
       onRequestApiKey()
       return
     }
-    void conversion.start(exams, batchSource)
+    setStartBusy(true)
+    try {
+      await conversion.start(exams, answerKey, batchSource)
+    } catch {
+      setNotes([convertMessages.startFailed])
+    } finally {
+      setStartBusy(false)
+    }
   }
 
   const startFreshConversion = async () => {
@@ -241,6 +261,14 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
           <h1 id="convert-heading">{convertMessages.title}</h1>
           <p>{convertMessages.subtitle}</p>
         </header>
+        {exportNotice !== null ? (
+          <p
+            className={`ds-inline-note ds-inline-note--${exportNotice.tone}`}
+            role="status"
+          >
+            {exportNotice.text}
+          </p>
+        ) : null}
         {running ? (
           <RunningStage
             onStop={() => void conversion.stop()}
@@ -390,13 +418,14 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
             </div>
             <div className="ds-start-row">
               <Button
-                isDisabled={busy || keyFileMissing}
-                onPress={startConversion}
+                isDisabled={busy || startBusy || keyFileMissing}
+                isPending={startBusy}
+                onPress={() => void startConversion()}
               >
                 {convertMessages.startButton}
               </Button>
               <span className="ds-start-row__note">
-                {convertMessages.pagesMinutes(totalPages, estimatedMinutes(totalPages))}
+                {uploadMessages.pageCount(totalPages)}
               </span>
             </div>
             {keyFileMissing ? (
@@ -670,30 +699,10 @@ function DoneStage({
         <p className="ds-muted ds-phase-note">
           {convertMessages.exportDeviceNote} {exportMessages.whyExportMatters}
         </p>
+        <p className="ds-muted ds-phase-note">
+          {convertMessages.convertAnotherHint}
+        </p>
 
-        {import.meta.env.DEV ? (
-          <div className="ds-dev-surface">
-            <p className="ds-muted">{convertMessages.devGrade}</p>
-            {done.map((run) => (
-              <div className="ds-dev-row" key={run.id}>
-                <Button
-                  data-testid={`dev-download-csv-${run.id}`}
-                  onPress={() => void downloadRunCsv(run)}
-                  variant="quiet"
-                >
-                  {convertMessages.devDownloadCsv(run.fileName)}
-                </Button>
-                <span className="ds-muted">
-                  {convertMessages.devRunStats(
-                    run.requestCount ?? 0,
-                    run.totalTokens ?? 0,
-                    run.auditUnavailable === true,
-                  )}
-                </span>
-              </div>
-            ))}
-          </div>
-        ) : null}
       </GlassPanel>
     </div>
   )

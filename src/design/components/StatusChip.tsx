@@ -4,6 +4,7 @@ export type StatusChipStatus =
   | 'checking'
   | 'idle'
   | 'quota-paused'
+  | 'setup-required'
   | 'unreachable'
   | 'working'
   | 'wrong-key';
@@ -23,6 +24,7 @@ const statusLabels: Readonly<Record<StatusChipStatus, string>> = {
   checking: 'Checking',
   idle: 'Not checked',
   'quota-paused': 'Resting until quota returns',
+  'setup-required': 'Setup required',
   unreachable: "Can't reach",
   working: 'Working',
   'wrong-key': 'Wrong key',

@@ -146,7 +146,11 @@ function App() {
         </aside>
 
         <main className="ds-work">
-          {activeTab === 'convert' ? <Convert onRequestApiKey={openApi} /> : <History />}
+          {activeTab === 'convert' ? (
+            <Convert onRequestApiKey={openApi} />
+          ) : (
+            <History onOpenConvert={() => setActiveTab('convert')} />
+          )}
         </main>
 
         <aside className="ds-rail">

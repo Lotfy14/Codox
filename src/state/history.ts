@@ -59,3 +59,74 @@ export async function deleteHistoryRun(runId: string): Promise<void> {
     },
   )
 }
+
+export type RestoreHistoryResult =
+  | 'restored'
+  | 'missing-original'
+  | 'current-not-empty'
+
+/**
+ * Copies one retained historical exam (and its job's answer key, when any)
+ * into the empty current workspace. History itself is never mutated, so the
+ * old result and its export remain available after the new conversion starts.
+ */
+export async function restoreHistoryRun(
+  runId: string,
+): Promise<RestoreHistoryResult> {
+  return db.transaction('rw', db.jobs, db.files, db.runs, async () => {
+    const run = await db.runs.get(runId)
+    if (run === undefined || run.jobId === CURRENT_JOB_ID) {
+      return 'missing-original'
+    }
+
+    const source = await db.files.get(run.pdfId)
+    if (source === undefined) return 'missing-original'
+
+    const [currentFiles, currentRuns] = await Promise.all([
+      db.files.where('jobId').equals(CURRENT_JOB_ID).count(),
+      db.runs.where('jobId').equals(CURRENT_JOB_ID).count(),
+    ])
+    if (currentFiles > 0 || currentRuns > 0) return 'current-not-empty'
+
+    const archivedJob = await db.jobs.get(run.jobId)
+    const archivedFiles = await db.files
+      .where('jobId')
+      .equals(run.jobId)
+      .toArray()
+    const needsAnswerKey =
+      (source.answerSource ?? archivedJob?.batchAnswerSource ?? 'inside') ===
+      'key-file'
+    const answerKey = needsAnswerKey
+      ? archivedFiles.find(
+          (file) =>
+            file.kind === 'answer-key' &&
+            (run.answerKeyPdfId === undefined || file.id === run.answerKeyPdfId),
+        )
+      : undefined
+    const now = Date.now()
+    const examId = crypto.randomUUID()
+
+    await db.jobs.put({
+      id: CURRENT_JOB_ID,
+      createdAt: now,
+      step: 'setup',
+      batchAnswerSource: archivedJob?.batchAnswerSource,
+      keepOriginal: false,
+    })
+    await db.files.add({
+      ...source,
+      id: examId,
+      jobId: CURRENT_JOB_ID,
+      addedAt: now,
+    })
+    if (answerKey !== undefined) {
+      await db.files.add({
+        ...answerKey,
+        id: crypto.randomUUID(),
+        jobId: CURRENT_JOB_ID,
+        addedAt: now + 1,
+      })
+    }
+    return 'restored'
+  })
+}

@@ -73,6 +73,11 @@ export interface ExecutorOptions {
   signal?: AbortSignal
   /** Rendered-page DPI override; production always uses the pinned 200. */
   dpi?: number
+  /** Separate answer-key PDF, appended after the exam pages when declared. */
+  answerKeyBytes?: Uint8Array
+  /** Intake page counts make render checkpoints complete and resumable. */
+  examPageCount?: number
+  answerKeyPageCount?: number
 }
 
 export type RunOutcome =
@@ -189,22 +194,61 @@ async function stepRender(
   runId: string,
   pdfBytes: Uint8Array,
   options: ExecutorOptions,
-): Promise<{ ok: boolean; badPages: number[] }> {
+): Promise<{
+  ok: boolean
+  badPages: number[]
+  examPageCount: number
+  answerKeyPageCount: number
+}> {
   const existing = await renderedPages(runId)
-  if (existing.length > 0) {
+  const run = await getRun(runId)
+  const expectedExamPages = options.examPageCount
+  const expectedAnswerKeyPages =
+    options.answerKeyBytes === undefined ? 0 : options.answerKeyPageCount
+  const expectedTotal =
+    expectedExamPages !== undefined && expectedAnswerKeyPages !== undefined
+      ? expectedExamPages + expectedAnswerKeyPages
+      : run?.pageCount
+  const knownFailures = run?.badPages ?? []
+  const renderIsComplete =
+    existing.length > 0 &&
+    (expectedTotal === undefined ||
+      existing.length + knownFailures.length >= expectedTotal)
+
+  if (renderIsComplete) {
     await updateRun(runId, { pagesRendered: existing.length })
-    return { ok: true, badPages: [] }
+    const examPages = expectedExamPages ?? expectedTotal ?? existing.length
+    return {
+      ok: existing.some((page) => (page.pageIndex ?? 0) < examPages),
+      badPages: knownFailures,
+      examPageCount: examPages,
+      answerKeyPageCount: expectedAnswerKeyPages ?? 0,
+    }
+  }
+
+  // A crash can leave a partial stream on disk. Re-rendering from a clean
+  // page checkpoint avoids duplicate indexes and makes completion provable.
+  if (existing.length > 0) {
+    await clearArtifacts(runId, 'page-jpeg')
+    await clearArtifacts(runId, 'page-text')
+    await updateRun(runId, { pagesRendered: 0, badPages: undefined })
   }
 
   let renderedCount = 0
-  const result = await processPdf(
-    pdfBytes,
-    async (page) => {
+  let examRenderedCount = 0
+  const badPages: number[] = []
+  const renderDocument = async (
+    bytes: Uint8Array,
+    pageOffset: number,
+    isExam: boolean,
+  ) => {
+    const result = await processPdf(bytes, async (page) => {
+      const pageIndex = pageOffset + page.pageIndex
       // Persist as it streams: never hold all pages in JS memory.
       await putArtifact({
         runId,
         kind: 'page-jpeg',
-        pageIndex: page.pageIndex,
+        pageIndex,
         width: page.width,
         height: page.height,
         bytes: await blobToBytes(page.jpeg),
@@ -213,24 +257,40 @@ async function stepRender(
         await putArtifact({
           runId,
           kind: 'page-text',
-          pageIndex: page.pageIndex,
+          pageIndex,
           text: page.text,
         })
       }
       renderedCount += 1
+      if (isExam) examRenderedCount += 1
       await updateRun(runId, {
-        pageCount: page.pageCount,
+        pageCount: expectedTotal ?? pageOffset + page.pageCount,
         pagesRendered: renderedCount,
       })
-    },
-    { dpi: options.dpi, signal: options.signal },
-  )
+    }, { dpi: options.dpi, signal: options.signal })
+    badPages.push(
+      ...result.failures.map((failure) => pageOffset + failure.pageIndex),
+    )
+    return result.pageCount
+  }
 
-  const badPages = result.failures.map((failure) => failure.pageIndex)
-  const rendered = await renderedPages(runId)
-  // Zero successfully rendered pages → render_failed. One bad page flags
-  // and the run continues.
-  return { ok: rendered.length > 0, badPages }
+  const examPageCount = await renderDocument(pdfBytes, 0, true)
+  const answerKeyPageCount =
+    options.answerKeyBytes === undefined
+      ? 0
+      : await renderDocument(options.answerKeyBytes, examPageCount, false)
+  await updateRun(runId, {
+    pageCount: examPageCount + answerKeyPageCount,
+    pagesRendered: renderedCount,
+  })
+
+  // Answer-key pages alone cannot rescue an unreadable exam.
+  return {
+    ok: examRenderedCount > 0,
+    badPages,
+    examPageCount,
+    answerKeyPageCount,
+  }
 }
 
 // ---------------------------------------------------------------- step 2/3

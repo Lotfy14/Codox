@@ -17,9 +17,9 @@ import type { RunState } from '../state/types'
 import { applyResolutions, getResolutions } from '../screens/review-data'
 import {
   assembleBundleFiles,
+  exportArchiveName,
   uniqueBundleNames,
   zipBundles,
-  ZIP_FILE_NAME,
   type BundleInput,
 } from './bundle'
 
@@ -37,7 +37,10 @@ async function buildBundleInputs(
   const bundles: BundleInput[] = []
   for (const [index, run] of runs.entries()) {
     const merged = await getArtifact(run.id, 'merged-rows')
-    const rows = (merged?.json as MergedRow[] | undefined) ?? []
+    if (!Array.isArray(merged?.json)) {
+      throw new Error(`Finished run ${run.id} has no merged rows`)
+    }
+    const rows = merged.json as MergedRow[]
     const resolutions = await getResolutions(run.id)
     const csvText = emitCsv(applyResolutions(rows, resolutions))
     const crops = (await getArtifacts(run.id, 'crop')).flatMap((crop) =>
@@ -69,7 +72,10 @@ function preferShareSheet(): boolean {
   return window.matchMedia('(pointer: coarse)').matches
 }
 
-async function deliverZip(bytes: Uint8Array): Promise<ExportOutcome> {
+async function deliverZip(
+  bytes: Uint8Array,
+  fileName: string,
+): Promise<ExportOutcome> {
   // Inside the .apk: write to the app cache, then the native share sheet.
   // The Capacitor plugins load lazily so the web bundle never pays for them.
   if (Capacitor.isNativePlatform()) {
@@ -78,7 +84,7 @@ async function deliverZip(bytes: Uint8Array): Promise<ExportOutcome> {
       import('@capacitor/share'),
     ])
     const written = await Filesystem.writeFile({
-      path: ZIP_FILE_NAME,
+      path: fileName,
       data: bytesToBase64(bytes),
       directory: Directory.Cache,
     })
@@ -91,7 +97,7 @@ async function deliverZip(bytes: Uint8Array): Promise<ExportOutcome> {
     }
   }
 
-  const file = new File([bytes as Uint8Array<ArrayBuffer>], ZIP_FILE_NAME, {
+  const file = new File([bytes as Uint8Array<ArrayBuffer>], fileName, {
     type: 'application/zip',
   })
   // Files-only payload — adding title/text breaks file sharing on iOS.
@@ -112,13 +118,13 @@ async function deliverZip(bytes: Uint8Array): Promise<ExportOutcome> {
       // so the export never silently dies.
     }
   }
-  downloadZip(bytes, ZIP_FILE_NAME)
+  downloadZip(bytes, fileName)
   return 'downloaded'
 }
 
 /**
  * Export every finished run as one zip of namespaced bundles
- * (`Triviadox_output/<pdf-name>/questions.csv` + `images/`).
+ * (one PDF-derived `Cx` folder and CSV per run, plus `images/`).
  */
 export async function exportRuns(
   runs: readonly RunState[],
@@ -127,7 +133,8 @@ export async function exportRuns(
   if (exportable.length === 0) return 'nothing'
   const bundles = await buildBundleInputs(exportable)
   const zipped = zipBundles(assembleBundleFiles(bundles))
-  const outcome = await deliverZip(zipped)
+  const fileName = exportArchiveName(exportable.map((run) => run.fileName))
+  const outcome = await deliverZip(zipped, fileName)
   if (outcome === 'shared' || outcome === 'downloaded') {
     const stamp = Date.now()
     for (const run of exportable) {

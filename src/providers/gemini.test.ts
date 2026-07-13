@@ -82,6 +82,51 @@ describe('generationConfig passthrough', () => {
   })
 })
 
+describe('live key validation', () => {
+  it('proves generation access with the same model Codox uses', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse(geminiBody))
+    vi.stubGlobal('fetch', fetchMock)
+    const adapter = createGeminiAdapter(() => true)
+
+    const result = await adapter.validateKey('checked-key')
+
+    expect(result).toEqual({ ok: true })
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ]
+    expect(url).toContain('gemini-3.5-flash:generateContent')
+    expect(init.method).toBe('POST')
+    expect((init.headers as Record<string, string>)['x-goog-api-key']).toBe(
+      'checked-key',
+    )
+    expect(JSON.parse(init.body as string)).toMatchObject({
+      contents: [{ parts: [{ text: 'Reply with OK.' }] }],
+      generationConfig: { temperature: 0, maxOutputTokens: 8 },
+    })
+    expect(init.body as string).not.toContain('checked-key')
+  })
+
+  it('does not report working when generation access is rejected', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({ error: { status: 'FAILED_PRECONDITION' } }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } },
+        ),
+      ),
+    )
+    const adapter = createGeminiAdapter(() => true)
+
+    expect(await adapter.validateKey('needs-setup')).toMatchObject({
+      ok: false,
+      kind: 'provider-error',
+      code: 'billing-required',
+    })
+  })
+})
+
 describe('finishReason and usage extraction', () => {
   it('reports the first candidate finishReason and token counts verbatim', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(geminiBody)))

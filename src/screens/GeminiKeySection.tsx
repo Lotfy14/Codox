@@ -21,6 +21,7 @@ const statusMessages: Readonly<Record<KeyValidationStatus, string>> = {
   'wrong-key': keyMessages.wrongKey,
   unreachable: keyMessages.unreachable,
   'quota-paused': keyMessages.quotaPaused,
+  'setup-required': keyMessages.setupRequired,
 }
 
 function EyeIcon({ open }: { open: boolean }) {
@@ -125,7 +126,10 @@ export function GeminiKeySection({ allowRemove = false }: GeminiKeySectionProps)
   const showWrongKey = !checking && validation === 'wrong-key'
   const showWorking = !checking && validation === 'working'
   const inlineNote =
-    !checking && (validation === 'unreachable' || validation === 'quota-paused')
+    !checking &&
+    (validation === 'unreachable' ||
+      validation === 'quota-paused' ||
+      validation === 'setup-required')
       ? validation
       : undefined
 
