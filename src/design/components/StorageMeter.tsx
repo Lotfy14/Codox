@@ -2,6 +2,8 @@ import type { HTMLAttributes } from 'react';
 
 export interface StorageMeterProps
   extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
+  /** 'percent' shows only the percentage beside the label (sidebar foot). */
+  detail?: 'full' | 'percent';
   formatValue?: (value: number) => string;
   label: string;
   total: number;
@@ -32,6 +34,7 @@ function normalizeStorageValue(value: number) {
 /** A determinate meter for the app's locally used storage. */
 export function StorageMeter({
   className,
+  detail = 'full',
   formatValue = formatBytes,
   label,
   total,
@@ -53,7 +56,9 @@ export function StorageMeter({
       <span className="ds-storage-meter__header">
         <span className="ds-storage-meter__label">{label}</span>
         <span aria-hidden="true" className="ds-storage-meter__value">
-          {usedText} of {totalText} · {percent}%
+          {detail === 'percent'
+            ? `${percent}%`
+            : `${usedText} of ${totalText} · ${percent}%`}
         </span>
       </span>
       <div

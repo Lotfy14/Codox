@@ -48,6 +48,8 @@ export interface GlassInputProps
   label: ReactNode;
   status?: GlassInputStatus;
   successMessage?: ReactNode;
+  /** Icon buttons rendered inside the field's right edge (show/copy…). */
+  trailing?: ReactNode;
 }
 
 /** A labelled glass text field with linked help, error, and success text. */
@@ -62,6 +64,7 @@ export function GlassInput({
   label,
   status = 'default',
   successMessage,
+  trailing,
   ...textFieldProps
 }: GlassInputProps) {
   const isInvalid = isInvalidProp || status === 'error';
@@ -88,11 +91,22 @@ export function GlassInput({
       isInvalid={isInvalid}
     >
       <Label className="ds-glass-input__label">{label}</Label>
-      <AriaInput
-        {...inputProps}
-        ref={inputRef}
-        className={controlClasses}
-      />
+      {trailing !== undefined ? (
+        <div className="ds-glass-input__row">
+          <AriaInput
+            {...inputProps}
+            ref={inputRef}
+            className={controlClasses}
+          />
+          <span className="ds-glass-input__trailing">{trailing}</span>
+        </div>
+      ) : (
+        <AriaInput
+          {...inputProps}
+          ref={inputRef}
+          className={controlClasses}
+        />
+      )}
       {hasDescription ? (
         <Text className="ds-glass-input__description" slot="description">
           {description !== undefined ? (

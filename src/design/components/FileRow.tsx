@@ -18,8 +18,12 @@ export interface FileRowProps
   name: string;
   onAnswerSourceChange?: (answerSource: FileAnswerSource | undefined) => void;
   onRemove?: () => void;
+  /** Shown before the size, e.g. "14 pages". */
+  pageCountLabel?: string;
   removeLabel: string;
   size: number | string;
+  /** Compact trigger text per selection, e.g. "Answers: inside". */
+  answerSourceValueLabels?: Record<FileAnswerSourceSelection, string>;
 }
 
 const fileSizeFormatter = new Intl.NumberFormat('en', {
@@ -57,6 +61,7 @@ export function FileRow({
   answerSource,
   answerSourceLabel,
   answerSourceOptionLabels,
+  answerSourceValueLabels,
   children,
   className,
   flagLabel,
@@ -65,6 +70,7 @@ export function FileRow({
   name,
   onAnswerSourceChange,
   onRemove,
+  pageCountLabel,
   removeLabel,
   size,
   ...divProps
@@ -95,7 +101,11 @@ export function FileRow({
       </span>
       <span className="ds-file-row__details">
         <span className="ds-file-row__name">{name}</span>
-        <span className="ds-file-row__size">{formatFileSize(size)}</span>
+        <span className="ds-file-row__size">
+          {pageCountLabel !== undefined
+            ? `${pageCountLabel} · ${formatFileSize(size)}`
+            : formatFileSize(size)}
+        </span>
       </span>
       {flagged ? (
         <span className="ds-file-row__flag">{flagLabel}</span>
@@ -108,6 +118,7 @@ export function FileRow({
         onChange={selectAnswerSource}
         options={answerSourceOptions}
         value={answerSource ?? 'batch-default'}
+        valueLabel={answerSourceValueLabels?.[answerSource ?? 'batch-default']}
       />
       {children !== undefined ? (
         <div className="ds-file-row__extra">{children}</div>

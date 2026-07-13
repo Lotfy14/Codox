@@ -1,7 +1,7 @@
 /**
  * Every tutor-visible message in Codox — the canonical, owner-reviewed
- * strings from design-system/ERROR_LANGUAGE.md. That document is the source
- * of truth: update this file from it, never the other way around.
+ * strings. This file is the single source of truth for copy; the running
+ * app is where the owner reviews it.
  *
  * The rules these strings follow:
  * - Bad key ≠ can't reach ≠ quota used up. Three situations, three
@@ -27,6 +27,10 @@ export const keyMessages = {
   /** The quota-isolation guarantee, stated directly. */
   keyOwnership:
     "Codox uses only your Gemini key. Requests count against your Gemini quota and never another user's.",
+  showKey: 'Show key',
+  hideKey: 'Hide key',
+  copyKey: 'Copy key',
+  keyCopied: 'Key copied.',
 } as const
 
 export const progressMessages = {
@@ -59,6 +63,12 @@ export const uploadMessages = {
     'You said the answers are in a separate file — drop that answer key below before starting.',
   chooseFiles: 'Choose files',
   answerSourceLabel: 'Answers',
+  /** The compact per-file pill, e.g. "Answers: inside". */
+  answersPill: (source: string) => `Answers: ${source}`,
+  answersShortInside: 'inside',
+  answersShortKeyFile: 'key file',
+  answersShortNone: 'none',
+  pageCount: (pages: number) => `${pages} page${pages === 1 ? '' : 's'}`,
   flagLabel: 'Needs attention',
   removeFile: (fileName: string) => `Remove ${fileName}`,
   batchDefault: 'Use batch default',
@@ -83,7 +93,6 @@ export const appMessages = {
   helpDialogTitle: 'Help',
   privacyDialogTitle: 'Privacy',
   dialogDismiss: 'Close dialog',
-  loadingPdfCheck: 'Loading PDF check…',
   themeGroupLabel: 'Appearance',
   themeLight: 'Light theme',
   themeDark: 'Dark theme',
@@ -99,16 +108,18 @@ export const convertMessages = {
   dropMoreHint: 'Add more PDFs to this batch',
   keyDropTitle: 'Drop the answer key here',
   keyDropHint: 'PDF answer key',
-  startPanelLabel: 'Start a conversion',
   batchPanelLabel: 'Batch files',
   optionsPanelLabel: 'Before you start',
   progressPanelLabel: 'Conversion progress',
   finishedPanelLabel: 'Conversion finished',
   readingPdf: 'Reading PDF…',
   filesReady: (count: number) => `${count} PDF${count === 1 ? '' : 's'} ready`,
-  batchOverrideHint:
-    'Change any file below if its answers differ from the batch default.',
+  batchOverrideHint: 'Answers apply to the whole batch, override per file',
   clearAll: 'Clear all',
+  inplaceBefore:
+    'Progress, flagged questions to review, and export all appear ',
+  inplaceHighlight: 'right here',
+  inplaceAfter: ' — no new tabs, no takeover screen.',
   answerKeyAdded: (fileName: string) => `${fileName} added`,
   remove: 'Remove',
   keepOriginalLabel: 'Keep original PDF',

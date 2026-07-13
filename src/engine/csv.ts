@@ -2,7 +2,7 @@
  * RFC-4180 emit of the 10-column Triviadox contract (§3.1–3.2). Hand-rolled
  * after the 2026-07-12 package search: every maintained writer (papaparse,
  * csv-stringify, @json2csv) pulls in an order of magnitude more code than
- * these ~30 lines need — see Docs/PHASE6_PLAN.md.
+ * these ~30 lines need.
  *
  * Contract facts enforced here:
  * - Column order is exactly `CSV_SCHEMA`.

@@ -47,12 +47,25 @@ export function FileDropZone({
       }}
     >
       <div aria-hidden="true" className="ds-file-drop-zone__mark">
-        PDF
+        <svg
+          fill="none"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          viewBox="0 0 24 24"
+        >
+          <path d="M12 16V4" />
+          <path d="M8 8l4-4 4 4" />
+          <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+        </svg>
       </div>
       <div className="ds-file-drop-zone__copy">
         <strong>{label}</strong>
         <span>{description}</span>
       </div>
+      {/* The trigger stretches invisibly across the zone: clicking or
+          keyboard-activating anywhere opens the file picker. */}
       <FileTrigger
         acceptedFileTypes={['application/pdf']}
         allowsMultiple={allowsMultiple}
@@ -65,11 +78,10 @@ export function FileDropZone({
         }}
       >
         <AriaButton
-          className="ds-button ds-button--secondary"
+          aria-label={chooseLabel}
+          className="ds-file-drop-zone__trigger"
           isDisabled={isDisabled}
-        >
-          {chooseLabel}
-        </AriaButton>
+        />
       </FileTrigger>
     </DropZone>
   )

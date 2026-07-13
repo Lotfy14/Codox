@@ -43,6 +43,8 @@ export interface SelectProps<K extends Key = string>
   onChange?: (key: K | null) => void;
   options: readonly SelectOption<K>[];
   value?: K | null;
+  /** Overrides the trigger's display text (options keep their own labels). */
+  valueLabel?: string;
 }
 
 /** A single-selection listbox with full keyboard and typeahead support. */
@@ -55,6 +57,7 @@ export function Select<K extends Key = string>({
   onChange,
   options,
   value,
+  valueLabel,
   ...selectProps
 }: SelectProps<K>) {
   const classes = ['ds-select', className].filter(Boolean).join(' ');
@@ -69,7 +72,9 @@ export function Select<K extends Key = string>({
     >
       <Label className="ds-select__label">{label}</Label>
       <AriaButton className="ds-select__trigger">
-        <SelectValue<SelectOption<K>> className="ds-select__value" />
+        <SelectValue<SelectOption<K>> className="ds-select__value">
+          {({ defaultChildren }) => valueLabel ?? defaultChildren}
+        </SelectValue>
         <svg
           aria-hidden="true"
           className="ds-select__chevron"

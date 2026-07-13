@@ -39,6 +39,7 @@
 
   /* Geometry — the one-screen trio (frame 32 / card 22 / input 12) */
   --radius-input: 0.75rem;
+  --radius-row: 0.875rem;
   --radius-chip: 1rem;
   --radius-card: 1.375rem;
   --radius-action: 1.75rem;
@@ -47,13 +48,15 @@
   --radius-frame: var(--radius-dashboard);
   --radius-full: 999px;
 
-  /* One-screen frame structure */
+  /* One-screen frame structure. The frame is fluid: it always fills the
+     window minus the thin cream margin — never a fixed width. Only the
+     work column's content caps, for readability on wide monitors. */
   --layout-sidebar-width: 14.5rem;
   --layout-rail-width: 6rem;
   --frame-padding: 1rem;
   --frame-gap: 1rem;
-  --frame-max-width: 73.75rem;
-  --stage-padding: clamp(1rem, 3vw, 2.5rem);
+  --work-max-width: 68.75rem;
+  --stage-padding: clamp(0.5rem, 1.5vw, 1.25rem);
 
   /* Interaction and motion */
   --touch-target-min: 2.75rem;
@@ -99,6 +102,14 @@
     var(--color-drop-top),
     var(--color-drop-bottom)
   );
+  --color-inplace-border: #d9c3c8;
+  --color-inplace-text: #7a5c62;
+  --inplace-hatch: repeating-linear-gradient(
+    135deg,
+    #fdf6f3 0 10px,
+    #fbf1ee 10px 20px
+  );
+  --color-nav-item: #6f5e62;
   --color-scrim: rgb(43 17 24 / 54%);
 
   /* Light theme text and actions */
@@ -155,6 +166,14 @@
   --color-drop-border: #4a3036;
   --color-drop-top: #2d1d21;
   --color-drop-bottom: #291a1e;
+  --color-inplace-border: #4d3339;
+  --color-inplace-text: #cbb2b9;
+  --inplace-hatch: repeating-linear-gradient(
+    135deg,
+    #271a1e 0 10px,
+    #231619 10px 20px
+  );
+  --color-nav-item: #c2adb3;
   --color-scrim: rgb(15 5 8 / 72%);
 
   --color-text-strong: #f6edef;

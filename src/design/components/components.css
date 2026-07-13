@@ -69,6 +69,7 @@
 .ds-button--primary {
   background: var(--color-primary);
   color: var(--color-text-on-primary);
+  font-weight: 700;
 }
 
 .ds-button--primary[data-hovered] {
@@ -134,8 +135,7 @@
 }
 
 .ds-glass-input__label,
-.ds-select__label,
-.ds-theme-switcher__label {
+.ds-select__label {
   color: var(--color-text-strong);
   font-family: var(--font-family-heading);
   font-size: var(--font-size-xs);
@@ -156,6 +156,62 @@
 .ds-glass-input__control::placeholder {
   color: var(--color-text-muted);
   opacity: 1;
+}
+
+/* A field with trailing icon buttons (show/copy) inside its right edge. */
+.ds-glass-input__row {
+  position: relative;
+  display: grid;
+}
+
+.ds-glass-input__row .ds-glass-input__control {
+  padding-right: 5.75rem;
+}
+
+.ds-glass-input__trailing {
+  position: absolute;
+  top: 50%;
+  right: var(--space-2);
+  display: inline-flex;
+  gap: var(--space-1);
+  transform: translateY(-50%);
+}
+
+.ds-input-icon-button {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  border-radius: var(--radius-input);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.ds-input-icon-button svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.ds-input-icon-button[data-hovered] {
+  background: var(--color-row-hover);
+  color: var(--color-text-strong);
+}
+
+.ds-input-icon-button[data-pressed],
+.ds-input-icon-button[aria-pressed="true"] {
+  color: var(--color-primary-foreground);
+}
+
+.ds-input-icon-button[data-disabled] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.ds-input-icon-button[data-focus-visible] {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: 1px;
 }
 
 .ds-glass-input[data-invalid] .ds-glass-input__control,
@@ -225,9 +281,12 @@
 }
 
 .ds-select--pill .ds-select__trigger {
+  width: auto;
   border-radius: var(--radius-full);
   padding: var(--space-2) var(--space-3);
+  color: var(--color-nav-item);
   font-size: var(--font-size-xs);
+  font-weight: 600;
 }
 
 .ds-select__chevron {
@@ -304,9 +363,14 @@
   font-weight: var(--font-weight-label);
 }
 
+/* Label reads left, switch sits at the row's right edge (the mockup's
+   toggle row); DOM keeps track-then-label for the switch pattern. */
 .ds-toggle__control {
   display: flex;
+  flex-direction: row-reverse;
   align-items: center;
+  justify-content: space-between;
+  width: 100%;
   min-height: var(--touch-target-min);
   gap: var(--space-3);
   border: 0;
@@ -315,6 +379,7 @@
   color: var(--color-text-strong);
   text-align: start;
 }
+
 
 .ds-toggle__track {
   position: relative;
@@ -357,7 +422,7 @@
 }
 
 .ds-toggle__label {
-  font-weight: var(--font-weight-medium);
+  font-weight: 650;
 }
 
 .ds-badge,
@@ -506,7 +571,7 @@
   gap: var(--space-3);
   min-height: var(--touch-target-min);
   border: 1px solid var(--color-row-border);
-  border-radius: var(--radius-input);
+  border-radius: var(--radius-row);
   padding: var(--space-3);
   background: var(--color-row);
 }
@@ -556,6 +621,7 @@
 .ds-file-row__answer-source {
   grid-column: 3;
   grid-row: 1 / span 2;
+  justify-self: end;
 }
 
 .ds-file-row__answer-source .ds-select__label {
@@ -578,58 +644,6 @@
 .ds-dialog__close[data-hovered] {
   background: var(--color-row-hover);
   color: var(--color-text-strong);
-}
-
-.ds-resume-card {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  border: 1px solid var(--color-primary-border);
-  border-radius: var(--radius-card);
-  padding: var(--space-4);
-  background: var(--color-primary-soft);
-}
-
-.ds-resume-card__icon {
-  display: grid;
-  place-items: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: var(--radius-full);
-  background: var(--color-primary);
-  color: var(--color-text-on-primary);
-}
-
-.ds-resume-card__summary {
-  display: grid;
-  min-width: 0;
-  flex: 1;
-}
-
-.ds-resume-card__file-name {
-  overflow: hidden;
-  color: var(--color-text-strong);
-  font-weight: var(--font-weight-medium);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ds-resume-card__flag-count {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-}
-
-.ds-resume-card__continue {
-  display: inline-grid;
-  place-items: center;
-  min-width: var(--touch-target-min);
-  min-height: var(--touch-target-min);
-  border: 1px solid var(--color-primary-border);
-  border-radius: var(--radius-full);
-  padding-inline: var(--space-4);
-  background: var(--color-surface-elevated);
-  color: var(--color-primary-foreground);
-  font-weight: var(--font-weight-medium);
 }
 
 .ds-storage-meter__header {
@@ -723,22 +737,36 @@
   border: 1px solid var(--color-outline);
   border-radius: var(--radius-action);
   padding: var(--space-1);
-  background: var(--color-row);
+  background: var(--color-card-fill);
   box-shadow: var(--shadow-raised);
 }
 
 .ds-tab-nav__item {
   position: relative;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.125rem;
   min-height: var(--touch-target-min);
   border: 1px solid transparent;
   border-radius: var(--radius-input);
-  padding: var(--space-2);
+  padding: var(--space-2) var(--space-1);
   background: transparent;
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
+  color: var(--color-nav-item);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
+}
+
+.ds-tab-nav__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.ds-tab-nav__icon svg {
+  width: 1.125rem;
+  height: 1.125rem;
 }
 
 .ds-tab-nav__item[data-hovered] {
@@ -750,6 +778,7 @@
   border-color: var(--color-primary-border);
   background: var(--color-primary-soft);
   color: var(--color-primary-foreground);
+  font-weight: 700;
 }
 
 .ds-tab-nav__indicator {
@@ -796,15 +825,21 @@
   box-shadow: var(--shadow-card);
 }
 
+/* The whole zone is the click target: the file trigger stretches invisibly
+   across it, so there is no separate "choose" button to hunt for. */
 .ds-file-drop-zone {
+  position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: var(--space-4);
-  min-height: 10rem;
+  justify-content: center;
+  text-align: center;
+  gap: var(--space-3);
   border: 2px dashed var(--color-drop-border);
   border-radius: var(--radius-card);
-  padding: var(--space-6);
+  padding: var(--space-8) var(--space-6);
   background: var(--drop-gradient);
+  cursor: pointer;
 }
 
 .ds-file-drop-zone[data-drop-target] {
@@ -814,13 +849,24 @@
 
 .ds-file-drop-zone[data-disabled] {
   opacity: 0.52;
+  cursor: default;
+}
+
+.ds-file-drop-zone__mark svg {
+  width: 1.375rem;
+  height: 1.375rem;
 }
 
 .ds-file-drop-zone__copy {
   display: grid;
   min-width: 0;
-  flex: 1;
   gap: var(--space-1);
+}
+
+.ds-file-drop-zone__copy strong {
+  color: var(--color-text-strong);
+  font-size: 0.9375rem;
+  font-weight: 700;
 }
 
 .ds-file-drop-zone__copy span {
@@ -828,21 +874,42 @@
   font-size: var(--font-size-sm);
 }
 
+.ds-file-drop-zone__trigger {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: inherit;
+}
+
+.ds-file-drop-zone:has(.ds-file-drop-zone__trigger[data-focus-visible]) {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
+  box-shadow: 0 0 0 calc(var(--focus-ring-width) + 2px) var(--color-focus-halo);
+}
+
 .ds-stage {
-  min-height: 100vh;
+  min-height: 100dvh;
   padding: var(--stage-padding);
   background: var(--stage-gradient);
 }
 
-/* The stage gradient IS the app surface — no framed card around the
-   layout, so the window never reads as a window inside a window. The
-   grid fills the window: brand on the left edge, rail on the right. */
+/* The framed one screen: a fluid white frame on the thin cream stage.
+   It always fills the window minus the stage margin — never a fixed
+   width — with the sidebar card, the work column, and the utility rail
+   as its three grid columns. */
 .ds-frame {
   display: grid;
   grid-template-columns: var(--layout-sidebar-width) minmax(0, 1fr) var(--layout-rail-width);
   gap: var(--frame-gap);
   width: 100%;
-  min-height: calc(100vh - 2 * var(--stage-padding));
+  min-height: calc(100dvh - 2 * var(--stage-padding));
+  border: 1px solid var(--color-frame-border);
+  border-radius: var(--radius-frame);
+  padding: var(--frame-padding);
+  background: var(--color-frame);
+  box-shadow: var(--shadow-frame);
 }
 
 .ds-sidebar,
@@ -853,8 +920,14 @@
   flex-direction: column;
 }
 
+/* The sidebar is a full-height white card: brand, nav, meter at its foot. */
 .ds-sidebar {
   gap: var(--space-6);
+  border: 1px solid var(--color-outline);
+  border-radius: var(--radius-card);
+  padding: var(--space-5) var(--space-4);
+  background: var(--color-card-fill);
+  box-shadow: var(--shadow-card);
 }
 
 .ds-sidebar__foot,
@@ -866,10 +939,21 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  padding-inline: var(--space-1);
 }
 
-.ds-brand img {
+.ds-brand__lockup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.ds-brand__logo {
   display: block;
+  width: 2.375rem;
+  height: 2.375rem;
+  flex: none;
   border-radius: var(--radius-input);
 }
 
@@ -882,21 +966,32 @@
   line-height: var(--line-height-tight);
 }
 
-/* Short content rests near the vertical center instead of pinning to the
-   top; tall content (running/review stages) grows and flows naturally. */
+/* Theme + storage land here on phones; the rail and sidebar foot carry
+   them on desktop. */
+.ds-sidebar__mobile-tools,
+.ds-brand__tools {
+  display: none;
+}
+
+/* Work starts at the top of the frame and caps at a readable width on
+   wide monitors; the spare room becomes breathing space, not stretch. */
 .ds-work {
-  gap: var(--space-6);
-  justify-content: center;
+  gap: var(--space-4);
+  justify-content: flex-start;
+  width: 100%;
+  max-width: var(--work-max-width);
+  margin-inline: auto;
 }
 
 .ds-convert {
   display: grid;
-  gap: var(--space-6);
+  gap: var(--space-4);
 }
 
 .ds-work__head {
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-1) 0;
 }
 
 .ds-work__head h1 {
@@ -924,14 +1019,62 @@
   flex-wrap: wrap;
 }
 
+.ds-panel-head strong {
+  color: var(--color-text-strong);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.ds-panel-head span,
+.ds-panel-head p {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+/* Start converting sits left with the page estimate beside it. */
 .ds-start-row {
-  justify-content: flex-end;
+  justify-content: flex-start;
   margin-top: var(--space-6);
 }
 
 .ds-start-row__note {
   font-size: var(--font-size-sm);
   font-variant-numeric: tabular-nums;
+}
+
+/* The hatched in-place marker: the whole job happens on this screen. */
+.ds-inplace {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  border: 1.5px dashed var(--color-inplace-border);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
+  background: var(--inplace-hatch);
+  color: var(--color-inplace-text);
+  font-size: var(--font-size-sm);
+}
+
+.ds-inplace svg {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex: none;
+  color: var(--color-primary-foreground);
+}
+
+.ds-inplace p {
+  margin: 0;
+}
+
+.ds-inplace strong {
+  color: var(--color-primary-foreground);
+  font-weight: 700;
+}
+
+.ds-clear-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-2);
 }
 
 .ds-rail {
@@ -956,16 +1099,23 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: var(--touch-target-min);
+  width: 3.75rem;
   min-height: var(--touch-target-min);
   flex-direction: column;
   gap: var(--space-1);
   border: 1px solid var(--color-outline);
   border-radius: var(--radius-chip);
-  padding: var(--space-2);
+  padding: var(--space-2) var(--space-1);
   background: var(--color-card-fill);
-  color: var(--color-text-muted);
+  box-shadow: var(--shadow-card);
+  color: var(--color-nav-item);
   font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.ds-rail-button[data-hovered] {
+  border-color: var(--color-primary-border);
+  color: var(--color-text-strong);
 }
 
 .ds-rail-button__icon {
@@ -1069,6 +1219,12 @@
   gap: var(--space-3);
   margin-bottom: var(--space-6);
   text-align: center;
+}
+
+.first-run__logo {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: var(--radius-input);
 }
 
 .first-run__header h1 {
@@ -1176,10 +1332,26 @@
   margin-top: var(--space-4);
 }
 
+/* Secondary drop zones (add-more, answer key) stay slim rows so the
+   primary panels keep the visual weight. */
+.ds-drop-more .ds-file-drop-zone,
+.ds-key-file-slot .ds-file-drop-zone {
+  flex-direction: row;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  text-align: start;
+}
+
+.ds-drop-more .ds-file-drop-zone__mark,
+.ds-key-file-slot .ds-file-drop-zone__mark {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
 .ds-field-stack {
   display: grid;
   gap: var(--space-5);
-  max-width: 34rem;
 }
 
 .ds-key-file-slot {
@@ -1191,20 +1363,6 @@
   margin: 0;
   color: var(--color-success-foreground);
   font-weight: var(--font-weight-medium);
-}
-
-.ds-start-row {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-4);
-  flex-wrap: wrap;
-  margin-top: var(--space-6);
-}
-
-.ds-start-row__note {
-  font-size: var(--font-size-sm);
-  font-variant-numeric: tabular-nums;
 }
 
 .ds-phase-note {
@@ -1513,43 +1671,6 @@
   }
 }
 
-/* ---------- PDF spike (diagnostic surface) ---------- */
-
-.pdf-spike-controls {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  flex-wrap: wrap;
-}
-
-.pdf-spike-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--font-size-sm);
-  font-variant-numeric: tabular-nums;
-}
-
-.pdf-spike-table th,
-.pdf-spike-table td {
-  padding: var(--space-1) var(--space-3);
-  border-bottom: 1px solid var(--color-outline);
-  text-align: right;
-}
-
-.pdf-spike-table th:first-child,
-.pdf-spike-table td:first-child {
-  text-align: left;
-}
-
-.pdf-spike-thumbnail {
-  display: block;
-  max-width: 100%;
-  max-height: 24rem;
-  margin: 0 auto;
-}
-
-
-
 @keyframes ds-spin {
   to {
     transform: rotate(360deg);
@@ -1569,20 +1690,28 @@
   }
 }
 
+/* Desktop sidebar nav: a plain list inside the sidebar card, exactly the
+   mockup's nav items — no second card around it. */
 @media (min-width: 64rem) {
-  .ds-tab-nav {
+  .ds-sidebar .ds-tab-nav {
     grid-template-columns: 1fr;
     align-content: start;
-    width: 13rem;
-    border-radius: var(--radius-dashboard);
-    padding: var(--space-2);
+    width: 100%;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
   }
 
-  .ds-tab-nav__item {
-    place-items: center start;
-    padding-inline: var(--space-4);
+  .ds-sidebar .ds-tab-nav__item {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
   }
-
 }
 
 @media (max-width: 48rem) {
@@ -1622,6 +1751,9 @@
 
 }
 
+/* Phones: the sidebar card flattens into a header (brand + theme +
+   storage), the rail disappears, and the fixed bottom tab bar carries
+   Convert / History / API / Help. */
 @media (max-width: 63.999rem) {
   .ds-stage {
     padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
@@ -1629,6 +1761,16 @@
 
   .ds-frame {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+  }
+
+  .ds-sidebar {
+    gap: var(--space-3);
+    border: 0;
+    border-radius: 0;
+    padding: var(--space-1);
+    background: transparent;
+    box-shadow: none;
   }
 
   .ds-sidebar > .ds-tab-nav,
@@ -1636,5 +1778,26 @@
   .ds-sidebar__foot,
   .ds-rail {
     display: none;
+  }
+
+  .ds-sidebar__mobile-tools {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .ds-sidebar__mobile-tools .ds-storage-meter {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .ds-brand {
+    justify-content: space-between;
+  }
+
+  .ds-brand__tools {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
   }
 }

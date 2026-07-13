@@ -60,6 +60,46 @@ const fileAnswerSourceLabels = {
   none: uploadMessages.noAnswersProvided,
 } as const
 
+const answersShort: Record<AnswerSource, string> = {
+  inside: uploadMessages.answersShortInside,
+  'key-file': uploadMessages.answersShortKeyFile,
+  none: uploadMessages.answersShortNone,
+}
+
+/** Pill text resolves "batch default" to the batch's actual declaration. */
+function answersPillLabels(batchSource: AnswerSource) {
+  return {
+    'batch-default': uploadMessages.answersPill(answersShort[batchSource]),
+    inside: uploadMessages.answersPill(answersShort.inside),
+    'key-file': uploadMessages.answersPill(answersShort['key-file']),
+    none: uploadMessages.answersPill(answersShort.none),
+  } as const
+}
+
+/** The hatched marker: the whole job happens on this one screen. */
+function InplaceHint() {
+  return (
+    <div className="ds-inplace">
+      <svg
+        aria-hidden="true"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+        viewBox="0 0 24 24"
+      >
+        <path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M19 5l-3 3M8 16l-3 3" />
+      </svg>
+      <p>
+        {convertMessages.inplaceBefore}
+        <strong>{convertMessages.inplaceHighlight}</strong>
+        {convertMessages.inplaceAfter}
+      </p>
+    </div>
+  )
+}
+
 /**
  * The real Convert tab: home, files, running, and done stages. Progress is
  * read from the persisted run state, so a reload mid-run redraws the same
@@ -216,32 +256,23 @@ export function Convert() {
       </header>
       {exams.length === 0 ? (
         <div className="ds-stack">
-          <GlassPanel aria-label={convertMessages.startPanelLabel} as="section" padding="spacious">
-            <FileDropZone
-              chooseLabel={uploadMessages.chooseFiles}
-              description={convertMessages.dropHint}
-              isDisabled={busy}
-              label={convertMessages.dropTitle}
-              onFiles={(files) => void intake(files, 'exam')}
-              onRejected={rejectFiles}
-            />
-            {inlineNotes}
-          </GlassPanel>
+          <FileDropZone
+            chooseLabel={uploadMessages.chooseFiles}
+            description={convertMessages.dropHint}
+            isDisabled={busy}
+            label={convertMessages.dropTitle}
+            onFiles={(files) => void intake(files, 'exam')}
+            onRejected={rejectFiles}
+          />
+          {inlineNotes}
+          <InplaceHint />
         </div>
       ) : (
         <div className="ds-stack">
           <GlassPanel aria-label={convertMessages.batchPanelLabel} as="section" padding="compact">
             <div className="ds-panel-head">
-              <span>
-                <strong>{convertMessages.filesReady(exams.length)}</strong>
-                <p>{convertMessages.batchOverrideHint}</p>
-              </span>
-              <Button
-                onPress={() => void clearJobPdfs(CURRENT_JOB_ID)}
-                variant="quiet"
-              >
-                {convertMessages.clearAll}
-              </Button>
+              <strong>{convertMessages.filesReady(exams.length)}</strong>
+              <span>{convertMessages.batchOverrideHint}</span>
             </div>
             {inlineNotes}
             <div className="ds-row-list" role="list">
@@ -250,6 +281,7 @@ export function Convert() {
                   answerSource={file.answerSource}
                   answerSourceLabel={uploadMessages.answerSourceLabel}
                   answerSourceOptionLabels={fileAnswerSourceLabels}
+                  answerSourceValueLabels={answersPillLabels(batchSource)}
                   flagLabel={uploadMessages.flagLabel}
                   isDisabled={busy}
                   key={file.id}
@@ -258,6 +290,7 @@ export function Convert() {
                     void setPdfAnswerSource(file.id, source)
                   }
                   onRemove={() => void removeStoredPdf(file.id)}
+                  pageCountLabel={uploadMessages.pageCount(file.pageCount)}
                   removeLabel={uploadMessages.removeFile(file.name)}
                   role="listitem"
                   size={file.size}
@@ -273,6 +306,14 @@ export function Convert() {
                 onFiles={(files) => void intake(files, 'exam')}
                 onRejected={rejectFiles}
               />
+            </div>
+            <div className="ds-clear-row">
+              <Button
+                onPress={() => void clearJobPdfs(CURRENT_JOB_ID)}
+                variant="quiet"
+              >
+                {convertMessages.clearAll}
+              </Button>
             </div>
           </GlassPanel>
 
@@ -325,15 +366,15 @@ export function Convert() {
               />
             </div>
             <div className="ds-start-row">
-              <span className="ds-start-row__note">
-                {convertMessages.pagesMinutes(totalPages, estimatedMinutes(totalPages))}
-              </span>
               <Button
                 isDisabled={busy || keyFileMissing}
                 onPress={() => void conversion.start(exams, batchSource)}
               >
                 {convertMessages.startButton}
               </Button>
+              <span className="ds-start-row__note">
+                {convertMessages.pagesMinutes(totalPages, estimatedMinutes(totalPages))}
+              </span>
             </div>
             {keyFileMissing ? (
               <p className="ds-muted ds-phase-note">
@@ -341,6 +382,7 @@ export function Convert() {
               </p>
             ) : null}
           </GlassPanel>
+          <InplaceHint />
         </div>
       )}
     </section>

@@ -105,24 +105,27 @@ must survive; the surface is free.
       - Export: prominent manual export with no auto-download; share sheet on
         mobile, zip download on desktop
 - [x] Error-language pass: every failure a tutor can hit, written in plain
-      English ("Gemini is unreachable" ≠ "your key is wrong") — see
-      `design-system/ERROR_LANGUAGE.md`; live strings ship from
-      `src/copy/messages.ts` and are visible in the running app
+      English ("Gemini is unreachable" ≠ "your key is wrong") — the live
+      strings ship from `src/copy/messages.ts`, the single source of truth,
+      and are visible in the running app
 - [x] One-screen relayout (2026-07-11): the design was restructured to the owner's
       one-screen design — left workspace nav (Convert/History + storage),
       the whole job in one center column with review inline (no takeover),
-      Keys/Help as overlay panels on a right utility rail. See
-      approved one-screen layout and now runs directly in the app.
+      Keys/Help as overlay panels on a right utility rail. The design runs
+      directly in the app.
 - [x] Owner reviews the one-screen design and signs off _(2026-07-11: owner
-      approved `one-screen-layout.html`; standalone mockups are retired and
-      the running app is now the design artifact)_
+      approved the one-screen design; standalone mockups are retired and
+      the running app is now the design artifact. 2026-07-13: the app was
+      re-ported faithfully to that design and every standalone design
+      artifact was hard-deleted from the repo.)_
 
 **Done when:** owner has clicked through the five screens and approved them.
 
 ## Phase 4 — Setup screen + Gemini integration (~3–4 days)
 
 The first real feature, because everything downstream needs a working key.
-Detailed AI handoff plan: [PHASE4_PLAN.md](PHASE4_PLAN.md).
+(The per-phase AI handoff plans were retired after completion; git history
+keeps them.)
 
 - [x] Store exactly one user-supplied Gemini API key on-device
       (2026-07-11: Dexie v3 singleton `credentials` record, fixed id
@@ -143,10 +146,10 @@ Detailed AI handoff plan: [PHASE4_PLAN.md](PHASE4_PLAN.md).
 - [x] Setup screen per the in-app one-screen design: paste key → live test call → green check
       or plain-English failure; replace/remove the key, but do not add more
       (first-run walkthrough + Keys panel; flows driven in a headless
-      browser against live Gemini, see PHASE4_PLAN.md Step-6 evidence)
+      browser against live Gemini)
 - [x] Error taxonomy wired: bad key vs. provider unreachable vs. quota
       exhausted are three distinct, user-visible states (verified visually:
-      danger / blue-neutral / amber with the ERROR_LANGUAGE.md words)
+      danger / blue-neutral / amber with the approved plain-English words)
 - [x] One-line first-run notice (pages are sent to the provider under your
       key) — minimal per owner decision (the exact canonical sentence)
 - [x] Relay: **skipped** — Phase-2 Gemini direct-call check passed in the
@@ -158,8 +161,7 @@ round-trips using that exact key, and inspection confirms there is no code path
 that can substitute a shared, bundled, developer, fallback, or second user's
 key.
 
-> **Gate status (2026-07-11): PASSED.** Every automated part is verified (see
-> PHASE4_PLAN.md Step-6 evidence): live wrong-key/unreachable states against
+> **Gate status (2026-07-11): PASSED.** Every automated part is verified: live wrong-key/unreachable states against
 > the real Gemini endpoint, no-fallback behavior, provenance tests, and the
 > dev-only test-image-call surface in Keys. Owner confirmed the manual step —
 > real key validates green and "Send test image call" round-trips — and the
@@ -169,7 +171,7 @@ key.
 ## Phase 5 — PDF pipeline (~4–5 days)
 
 All client-side, memory-disciplined. This phase decides whether the app
-survives on phones. Detailed AI handoff plan: [PHASE5_PLAN.md](PHASE5_PLAN.md).
+survives on phones.
 
 - [x] Integrate @hyzyla/pdfium: open PDF, page count, render one page at a
       controllable DPI
@@ -181,7 +183,7 @@ survives on phones. Detailed AI handoff plan: [PHASE5_PLAN.md](PHASE5_PLAN.md).
       every ~5–10 pages as a safety net
       _(2026-07-12: `forEachRenderedPage` re-inits every 8 pages; verified
       across two re-init boundaries — 20-page run, 0 failures — by
-      `scripts/drive-phase5.mjs` in headless Edge.)_
+      a headless-Edge drive script, retired after verification.)_
 - [x] pdf.js `getTextContent()` alongside, for PDFs that have a text layer
       _(2026-07-12: `src/pdf/textLayer.ts`; text extracted per page in the
       drive run; unparseable PDFs degrade to empty text, never an error.)_
@@ -204,17 +206,14 @@ survives on phones. Detailed AI handoff plan: [PHASE5_PLAN.md](PHASE5_PLAN.md).
       run. Start stays honestly disabled until Phase 6.)_
 - [ ] Stress test: a real 25-page scan on a mid-range Android phone and the
       oldest available iPhone — no crash, memory stays flat page-to-page
-      _(Instrument ready: open `?pdfspike=1` on the shipped build, load the
-      scan, watch per-page ms / JPEG KB / heap. Owner step — see
-      PHASE5_PLAN.md Step 8.)_
+      _(The diagnostic instrument was retired in the 2026-07-13 old-UI purge; recover it from git history if this test is revisited. Owner step.)_
 
 **Done when:** the 25-page stress test passes on both phones.
 
 ## Phase 6 — Engine port (~5–7 days)
 
 Port the Planner-Worker-Audit engine per CODOX_MIGRATION.md. Semantics are
-pinned; only the executor is new. Detailed AI handoff plan:
-[PHASE6_PLAN.md](PHASE6_PLAN.md).
+pinned; only the executor is new.
 
 - [x] Deterministic emit layer first: CSV writer implementing the 9+1-column
       contract exactly (IDs, JSON-array cells, relative image paths,
@@ -260,7 +259,7 @@ pinned; only the executor is new. Detailed AI handoff plan:
       CodoxSandbox for grading. Iterate until **127/127**
       _(Owner step — needs the real key. Everything it needs exists: run the
       dev build, enter the key, convert the PDF, download the CSV from the
-      done stage's dev surface. See PHASE6_PLAN.md §6.)_
+      done stage's dev surface.)_
 - [ ] **Measure and record quota burn** on a real 25-page scan (the doc's
       "one number that could force a redesign") → write it into this file
       _(Owner step. The number is already counted and persisted per run —
@@ -270,7 +269,7 @@ pinned; only the executor is new. Detailed AI handoff plan:
 number is written down.
 
 _Status 2026-07-12: the engine is built and green — 185 unit tests, plus
-`scripts/drive-phase6.mjs`, which drives a full conversion through the real
+a retired headless-Edge drive script that drove a full conversion through the real
 engine, controller, PDF pipeline, and Dexie in headless Edge with only the
 network faked (start → planner → crops → worker → 429 quota pause →
 auto-resume → mid-run reload → merge → CSV → audit → done). The two
@@ -324,15 +323,13 @@ Where the product quality lives.
       photo-of-screen) → grade in CodoxSandbox; fix until the mark-reading
       and grouping gates pass
       _(Owner step — needs the real key and the gold PDFs. The whole path
-      it exercises is drive-verified: `scripts/drive-phase7.mjs` →
-      `PHASE7 DRIVE: ALL GREEN`, real engine/Dexie/review/zip, network
-      faked. Screenshots in `scripts/out/phase7-*.png`.)_
+      it exercises is drive-verified end to end — real engine/Dexie/review/zip, network faked; the drive script was retired after verification.)_
 
 **Done when:** all four gold PDFs pass their gates in CodoxSandbox and a
 non-technical person can review + export on a phone unaided.
 
 > Status 2026-07-12: every buildable box is done and drive-verified
-> (203 unit tests + `drive-phase7.mjs` end-to-end). The gold-input runs
+> (203 unit tests + an end-to-end headless drive, since retired). The gold-input runs
 > and the phone hand-off test are the owner's; nothing else blocks them.
 
 ## Phase 8 — Hardening & release (~3–4 days)
@@ -342,8 +339,7 @@ non-technical person can review + export on a phone unaided.
       _(2026-07-12: all three verified — bad page in `executor.test.ts`
       ("one bad page flags the run and continues"); wrong declaration and
       a mid-job 429 → calm pause → auto-resume → mid-run reload in
-      `drive-phase6.mjs`; both drives re-run green against the final
-      Phase-7 code.)_
+      the phase-6 drive; both drives re-ran green against the final Phase-7 code before being retired.)_
 - [ ] Rebuild both shells from the final web build; install-test each again
       _(2026-07-12: web build + `cap sync` + `gradlew assembleRelease`
       rebuilt the Android shell from the final bundle (unsigned — the

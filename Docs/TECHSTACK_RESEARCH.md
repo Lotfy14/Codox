@@ -10,7 +10,7 @@ as a real `.apk` file, not just an installable link._
 _Provider update 2026-07-11: the multi-provider recommendations below are
 historical research only. The binding roadmap is Gemini-only: one
 user-supplied Gemini key per installation, with no shared quota, fallback key,
-or provider chain. See `CODOX_CONTEXT.md` §7 and `PHASE4_PLAN.md`._
+or provider chain. See `CODOX_CONTEXT.md` §7._
 
 ---
 

@@ -388,7 +388,7 @@ export function validateBlueprint(
 /**
  * Code owns paths (§1.4): actual crops are JPEG, so every asset path and
  * row image_url gets its extension deterministically rewritten to `.jpg`
- * (the planner example suggests `.png`; recorded in PHASE6_PLAN §5).
+ * (the planner example suggests `.png`; deterministic-code decision).
  */
 export function assetJpegPath(path: string): string {
   return path.replace(/\.[A-Za-z0-9]+$/, '.jpg')

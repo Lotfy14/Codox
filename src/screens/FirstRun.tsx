@@ -1,4 +1,4 @@
-import { Button, GlassPanel } from '../design/components'
+import { Button, GlassPanel, Logo } from '../design/components'
 import { firstRunMessages } from '../copy/messages'
 import { markFirstRunCompleted } from '../state/settings'
 import { useGeminiCredential } from '../state/credentials'
@@ -26,7 +26,7 @@ export function FirstRun({ onDone }: FirstRunProps) {
     <div className="ds-stage first-run">
       <GlassPanel aria-labelledby="first-run-heading" as="section" padding="spacious">
         <header className="first-run__header">
-          <img alt="" className="first-run__logo" height="56" src="/brand-logo.png" width="56" />
+          <Logo className="first-run__logo" />
           <h1 id="first-run-heading">Welcome to Codox</h1>
           <p>{firstRunMessages.welcome}</p>
         </header>

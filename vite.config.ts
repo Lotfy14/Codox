@@ -21,7 +21,6 @@ export default defineConfig({
         'favicon.ico',
         'apple-touch-icon-180x180.png',
         'logo.svg',
-        'brand-logo.png',
       ],
       manifest: {
         name: 'Codox',
@@ -29,8 +28,8 @@ export default defineConfig({
         description:
           'Convert exam PDFs into Triviadox-ready CSV bundles entirely client-side.',
         display: 'standalone',
-        // theme_color stays burgundy (brand) per the port plan; the splash
-        // background matches the cream stage.
+        // theme_color stays burgundy (brand); the splash background
+        // matches the cream stage.
         theme_color: '#800020',
         background_color: '#f4e9e0',
         icons: [

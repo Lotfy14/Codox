@@ -20,8 +20,8 @@ import type {
  * formatting, no retries, no fallback keys. The API key travels only in the
  * `x-goog-api-key` header — never in a URL, log line, or error object.
  *
- * Endpoint facts verified live 2026-07-11 (see the Step-1 research table in
- * Docs/PHASE4_PLAN.md before trusting any of these against newer docs).
+ * Endpoint facts verified live 2026-07-11 against the real Gemini API;
+ * re-verify against current Google docs before trusting them for new work.
  */
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
 

@@ -1,6 +1,7 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Dialog,
+  Logo,
   RailButton,
   StorageMeter,
   TabNav,
@@ -17,27 +18,27 @@ import { KeysPanel } from './screens/KeysPanel'
 import { useFirstRunCompleted } from './state/settings'
 import { useStorageEstimate } from './state/storage'
 
-const PdfSpikeScreen = lazy(() =>
-  import('./screens/PdfSpike').then(({ PdfSpike }) => ({ default: PdfSpike })),
-)
-
 type OpenDialog = 'api' | 'help' | 'privacy' | null
 type MobileNavItem = AppTab | Exclude<OpenDialog, null | 'privacy'>
 
-const workspaceItems: readonly TabNavItem<AppTab>[] = [
-  { id: 'convert', label: appMessages.navConvert },
-  { id: 'history', label: appMessages.navHistory },
-]
-
-const mobileItems: readonly TabNavItem<MobileNavItem>[] = [
-  ...workspaceItems,
-  { id: 'api', label: appMessages.railApi },
-  { id: 'help', label: appMessages.railHelp },
-]
+function NavIcon({ kind }: { kind: AppTab }) {
+  return kind === 'convert' ? (
+    <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24">
+      <path d="M4 4h10l6 6v10H4z" />
+      <path d="M14 4v6h6" />
+      <path d="M9 15l2 2 4-4" />
+    </svg>
+  ) : (
+    <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24">
+      <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+      <path d="M3 3v5h5" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  )
+}
 
 function RailIcon({ kind }: { kind: 'api' | 'help' }) {
   return kind === 'api' ? (
-    // The key icon from the approved one-screen design.
     <svg fill="none" height="20" viewBox="0 0 24 24" width="20">
       <path
         d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"
@@ -56,26 +57,26 @@ function RailIcon({ kind }: { kind: 'api' | 'help' }) {
   )
 }
 
+const workspaceItems: readonly TabNavItem<AppTab>[] = [
+  { id: 'convert', icon: <NavIcon kind="convert" />, label: appMessages.navConvert },
+  { id: 'history', icon: <NavIcon kind="history" />, label: appMessages.navHistory },
+]
+
+const mobileItems: readonly TabNavItem<MobileNavItem>[] = [
+  ...workspaceItems,
+  { id: 'api', icon: <RailIcon kind="api" />, label: appMessages.railApi },
+  { id: 'help', icon: <RailIcon kind="help" />, label: appMessages.railHelp },
+]
+
 function App() {
   const firstRunCompleted = useFirstRunCompleted()
   const storage = useStorageEstimate()
   const [activeTab, setActiveTab] = useState<AppTab>('convert')
   const [openDialog, setOpenDialog] = useState<OpenDialog>(null)
-  const [pdfSpikeOpen] = useState(
-    () => new URLSearchParams(window.location.search).get('pdfspike') === '1',
-  )
 
   useEffect(() => {
     void geminiController.refreshStatus().catch(() => undefined)
   }, [])
-
-  if (pdfSpikeOpen) {
-    return (
-      <Suspense fallback={<p>{appMessages.loadingPdfCheck}</p>}>
-        <PdfSpikeScreen />
-      </Suspense>
-    )
-  }
 
   if (firstRunCompleted === null) return null
   if (!firstRunCompleted) {
@@ -91,10 +92,31 @@ function App() {
     <div className="ds-stage">
       <div className="ds-frame">
         <aside className="ds-sidebar">
-          <span className="ds-brand">
-            <img alt="" height="40" src="/brand-logo.png" width="40" />
-            <strong>{appMessages.brandName}</strong>
-          </span>
+          <div className="ds-brand">
+            <span className="ds-brand__lockup">
+              <Logo className="ds-brand__logo" />
+              <strong>{appMessages.brandName}</strong>
+            </span>
+            <span className="ds-brand__tools">
+              <ThemeSwitcher />
+            </span>
+          </div>
+          <div className="ds-sidebar__mobile-tools">
+            {storage !== null ? (
+              <StorageMeter
+                label={appMessages.storageLabel}
+                total={storage.total}
+                used={storage.used}
+              />
+            ) : null}
+            <button
+              className="ds-rail__privacy"
+              onClick={() => setOpenDialog('privacy')}
+              type="button"
+            >
+              {appMessages.railPrivacy}
+            </button>
+          </div>
           <span className="ds-tab-nav__label">{appMessages.navLabel}</span>
           <TabNav
             activeTab={activeTab}
@@ -105,6 +127,7 @@ function App() {
           {storage !== null ? (
             <div className="ds-sidebar__foot">
               <StorageMeter
+                detail="percent"
                 label={appMessages.storageLabel}
                 total={storage.total}
                 used={storage.used}
