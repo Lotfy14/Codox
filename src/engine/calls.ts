@@ -19,9 +19,9 @@ import type { AuditReport, Blueprint, MergedRow, ReducedBlueprint } from './type
  */
 export const PLANNER_MODEL = DEFAULT_GEMINI_VISION_MODEL // gemini-3.5-flash
 export const AUDIT_MODEL = 'gemini-3.1-flash-lite'
-export const INTENDED_WORKER_MODEL = 'gemma-4-31b-vision'
+export const INTENDED_WORKER_MODEL = 'gemini-3.1-flash-lite'
 /** Recorded fallback when the intended worker ID does not exist (§1.2). */
-export const WORKER_FALLBACK_MODEL = 'gemini-3.1-flash-lite'
+export const WORKER_FALLBACK_MODEL = 'gemma-4-31b-vision'
 
 const JSON_ONLY = 'application/json'
 
