@@ -44,6 +44,7 @@ type Listener = (event: ControllerEvent) => void
 const RATE_LIMIT_RECHECK_SECONDS = 30
 const QUOTA_RECHECK_SECONDS = 5 * 60
 const UNREACHABLE_RECHECK_SECONDS = 60
+const TRANSIENT_RETRY_DELAYS_SECONDS = [1, 2, 4] as const
 
 const MISSING_KEY_FAILURE: ProviderFailure = {
   ok: false,
@@ -161,6 +162,7 @@ export class GeminiController {
   ): Promise<VisionResult> {
     const { signal } = opts
 
+    let transientAttempt = 0
     for (;;) {
       if (signal?.aborted) return { ok: false, kind: 'aborted' }
 
@@ -211,8 +213,20 @@ export class GeminiController {
           break
         }
         case 'aborted':
-        case 'provider-error':
           return result
+        case 'provider-error': {
+          const transient =
+            result.httpStatus === 408 ||
+            result.httpStatus === 499 ||
+            (result.httpStatus !== undefined && result.httpStatus >= 500)
+          const defaultWait = TRANSIENT_RETRY_DELAYS_SECONDS[transientAttempt]
+          if (!transient || defaultWait === undefined) return result
+          const waitSeconds = result.retryAfterSeconds ?? defaultWait
+          transientAttempt += 1
+          await waitForResume(waitSeconds, signal)
+          if (signal?.aborted) return { ok: false, kind: 'aborted' }
+          break
+        }
       }
     }
   }

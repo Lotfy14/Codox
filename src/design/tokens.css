@@ -152,20 +152,20 @@
   color-scheme: dark;
 
   /* Dark surfaces re-derived from the warm ink family, not midnight blue */
-  --color-surface: #191013;
-  --color-stage-mid: #1e1316;
-  --color-stage-glow: #241619;
-  --color-frame: #211517;
-  --color-frame-border: #2e1d21;
-  --color-surface-elevated: #2a1b1f;
+  --color-surface: #111013;
+  --color-stage-mid: #151417;
+  --color-stage-glow: #1d171a;
+  --color-frame: #171619;
+  --color-frame-border: #28252b;
+  --color-surface-elevated: #201e22;
   --color-card-fill: var(--color-surface-elevated);
-  --color-outline: #3a262b;
-  --color-row: #332125;
-  --color-row-border: #3d282d;
-  --color-row-hover: #402a2f;
-  --color-drop-border: #4a3036;
-  --color-drop-top: #2d1d21;
-  --color-drop-bottom: #291a1e;
+  --color-outline: #343138;
+  --color-row: #29262c;
+  --color-row-border: #3a363e;
+  --color-row-hover: #343039;
+  --color-drop-border: #5a3b44;
+  --color-drop-top: #242126;
+  --color-drop-bottom: #211e23;
   --color-inplace-border: #4d3339;
   --color-inplace-text: #cbb2b9;
   --inplace-hatch: repeating-linear-gradient(
@@ -177,14 +177,14 @@
   --color-scrim: rgb(15 5 8 / 72%);
 
   --color-text-strong: #f6edef;
-  --color-text-muted: #b7a1a7;
+  --color-text-muted: #b9b1ba;
   --color-text-on-primary: #ffffff;
   --color-primary: #af2b3e;
   --color-primary-foreground: #ff9aac;
   --color-primary-hover: #c43d51;
-  --color-primary-soft: #3b1c25;
-  --color-primary-border: #6b3542;
-  --color-control-border: #5c3f47;
+  --color-primary-soft: #351d25;
+  --color-primary-border: #70404b;
+  --color-control-border: #514b55;
   --color-focus-ring: #ff9aac;
   --color-focus-halo: rgb(255 154 172 / 24%);
 

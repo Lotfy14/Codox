@@ -78,11 +78,34 @@ describe('classifyGeminiHttpFailure', () => {
       parseGeminiErrorBody(invalidKeyBody),
     )
     expect(failure.kind).toBe('wrong-key')
+    expect(failure.code).toBeUndefined()
   })
 
   it('maps plain 400 without the key reason to provider-error, never wrong-key', () => {
     const failure = classifyGeminiHttpFailure(400, parseGeminiErrorBody({}))
     expect(failure.kind).toBe('provider-error')
+    expect(failure.code).toBe('invalid-request')
+  })
+
+  it('keeps Gemini billing/setup failures actionable without storing response text', () => {
+    const failure = classifyGeminiHttpFailure(
+      400,
+      parseGeminiErrorBody({ error: { status: 'FAILED_PRECONDITION' } }),
+    )
+    expect(failure).toMatchObject({
+      kind: 'provider-error',
+      code: 'billing-required',
+      httpStatus: 400,
+    })
+  })
+
+  it('identifies unavailable models and transient provider failures', () => {
+    expect(
+      classifyGeminiHttpFailure(404, parseGeminiErrorBody({})).code,
+    ).toBe('model-unavailable')
+    expect(
+      classifyGeminiHttpFailure(503, parseGeminiErrorBody({})).code,
+    ).toBe('temporarily-unavailable')
   })
 
   it('maps 401 and 403 to wrong-key', () => {

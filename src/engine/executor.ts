@@ -16,7 +16,7 @@
 import { blobToBytes, bytesToBase64 } from '../providers/base64'
 import type { GeminiController } from '../providers/controller'
 import { geminiController } from '../providers/controller'
-import type { VisionResult } from '../providers/types'
+import type { ProviderFailureCode, VisionResult } from '../providers/types'
 import { cropJpeg } from '../pdf/images'
 import { processPdf } from '../pdf/pipeline'
 import {
@@ -99,10 +99,15 @@ const JPEG = 'image/jpeg'
 /** A provider failure the engine cannot continue past. */
 class ProviderStop extends Error {
   readonly kind: 'wrong-key' | 'provider-error' | 'aborted'
+  readonly code?: ProviderFailureCode
 
-  constructor(kind: 'wrong-key' | 'provider-error' | 'aborted') {
+  constructor(
+    kind: 'wrong-key' | 'provider-error' | 'aborted',
+    code?: ProviderFailureCode,
+  ) {
     super(`provider stop: ${kind}`)
     this.kind = kind
+    this.code = code
   }
 }
 
@@ -128,6 +133,7 @@ async function call(
         : result.kind === 'aborted'
           ? 'aborted'
           : 'provider-error',
+      result.code,
     )
   }
   await recordRequestUsage(runId, result.usage)
@@ -615,7 +621,7 @@ export async function executeRun(
       const run = await getRun(runId)
       await updateRun(runId, {
         status: 'stopped',
-        stopReason: error.kind,
+        stopReason: error.code ?? error.kind,
         step: (run?.step ?? 'planner') as RunStep,
       })
       return { status: 'provider-stopped', runId, kind: error.kind }

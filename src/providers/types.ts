@@ -20,6 +20,13 @@ export type ProviderFailureKind =
   | 'provider-error'
   | 'aborted'
 
+/** Safe, non-secret detail that lets the UI explain a provider stop. */
+export type ProviderFailureCode =
+  | 'billing-required'
+  | 'invalid-request'
+  | 'model-unavailable'
+  | 'temporarily-unavailable'
+
 export interface ProviderFailure {
   ok: false
   kind: ProviderFailureKind
@@ -36,6 +43,8 @@ export interface ProviderFailure {
   offline?: boolean
   /** HTTP status when a response was received. Never contains the key. */
   httpStatus?: number
+  /** Coarse provider detail only; never contains response text or the key. */
+  code?: ProviderFailureCode
 }
 
 export interface ProbeSuccess {

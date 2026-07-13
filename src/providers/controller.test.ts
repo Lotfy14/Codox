@@ -169,6 +169,49 @@ describe('failure handling', () => {
     )
   })
 
+  it('retries transient Gemini failures and then returns the successful response', async () => {
+    await saveGeminiKey('working-key')
+    let attempt = 0
+    const { adapter, completeCallCount } = makeAdapter({
+      complete: () => {
+        attempt += 1
+        return attempt < 3
+          ? {
+              ok: false,
+              kind: 'provider-error',
+              code: 'temporarily-unavailable',
+              httpStatus: 503,
+              retryAfterSeconds: 0,
+            }
+          : { ok: true, text: 'recovered' }
+      },
+    })
+    const controller = new GeminiController(adapter)
+
+    const result = await controller.runGeminiRequest(request)
+
+    expect(result).toMatchObject({ ok: true, text: 'recovered' })
+    expect(completeCallCount()).toBe(3)
+  })
+
+  it('does not retry a rejected request', async () => {
+    await saveGeminiKey('working-key')
+    const { adapter, completeCallCount } = makeAdapter({
+      complete: () => ({
+        ok: false,
+        kind: 'provider-error',
+        code: 'invalid-request',
+        httpStatus: 400,
+      }),
+    })
+    const controller = new GeminiController(adapter)
+
+    const result = await controller.runGeminiRequest(request)
+
+    expect(result).toMatchObject({ ok: false, code: 'invalid-request' })
+    expect(completeCallCount()).toBe(1)
+  })
+
   it('a 429 produces a calm paused state, then resumes and completes', async () => {
     await saveGeminiKey('quota-key')
     let attempt = 0

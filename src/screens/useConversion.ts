@@ -29,6 +29,8 @@ export interface ConversionState {
   /** True while this tab is driving the batch. */
   isDriving: boolean
   start: (exams: readonly StoredPdf[], batchSource: AnswerSource) => Promise<void>
+  /** Re-enters provider-stopped runs from their persisted checkpoint. */
+  retry: (runIds: readonly string[]) => Promise<void>
   /** User stop: aborts in-flight work, marks unfinished runs stopped. */
   stop: () => Promise<void>
   outcomes: RunOutcome[]
@@ -161,5 +163,47 @@ export function useConversion(jobId: string): ConversionState {
     [jobId, drive],
   )
 
-  return { runs, providerStatus, isDriving, start, stop: stopConversion, outcomes }
+  const retry = useCallback(
+    async (runIds: readonly string[]) => {
+      const queue: Array<{
+        run: RunState
+        bytes: Uint8Array
+        declared: AnswerSource | undefined
+      }> = []
+      for (const runId of runIds) {
+        const run = await getRun(runId)
+        if (run === undefined) continue
+        const file = await db.files.get(run.pdfId)
+        if (file === undefined) {
+          await updateRun(run.id, {
+            status: 'stopped',
+            stopReason: 'source_pdf_missing',
+          })
+          continue
+        }
+        const job = await db.jobs.get(run.jobId)
+        await updateRun(run.id, { status: 'paused', stopReason: undefined })
+        queue.push({
+          run,
+          bytes: new Uint8Array(await file.blob.arrayBuffer()),
+          declared: effectiveAnswerSource(
+            file,
+            job?.batchAnswerSource ?? 'inside',
+          ),
+        })
+      }
+      if (queue.length > 0) await drive(queue)
+    },
+    [drive],
+  )
+
+  return {
+    runs,
+    providerStatus,
+    isDriving,
+    start,
+    retry,
+    stop: stopConversion,
+    outcomes,
+  }
 }

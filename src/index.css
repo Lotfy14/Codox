@@ -19,6 +19,8 @@ html {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
@@ -27,6 +29,7 @@ body {
   margin: 0;
   background: var(--color-surface);
   color: var(--color-text-strong);
+  overflow-x: hidden;
 }
 
 button,

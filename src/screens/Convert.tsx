@@ -256,6 +256,8 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
             onConvertAnother={() => void clearJobRuns(runs)}
             onExport={() => void handleExport()}
             onOpenReview={setReviewRunId}
+            onRequestApiKey={onRequestApiKey}
+            onRetry={(runIds) => void conversion.retry(runIds)}
             runs={runs}
           />
         )}
@@ -522,6 +524,8 @@ function DoneStage({
   onConvertAnother,
   onExport,
   onOpenReview,
+  onRequestApiKey,
+  onRetry,
   runs,
 }: {
   exportBusy: boolean
@@ -529,9 +533,22 @@ function DoneStage({
   onConvertAnother: () => void
   onExport: () => void
   onOpenReview: (runId: string) => void
+  onRequestApiKey: () => void
+  onRetry: (runIds: readonly string[]) => void
   runs: readonly RunState[]
 }) {
   const stopped = runs.filter((run) => run.status === 'stopped')
+  const retryable = stopped.filter((run) =>
+    [
+      'billing-required',
+      'invalid-request',
+      'model-unavailable',
+      'temporarily-unavailable',
+      'provider-error',
+      'unexpected_error',
+    ].includes(run.stopReason ?? ''),
+  )
+  const wrongKey = stopped.some((run) => run.stopReason === 'wrong-key')
   const unsafe = runs.filter((run) => run.notSafeToImport === true)
   const done = runs.filter((run) => run.status === 'done')
   const counts = useUnresolvedCounts(done.map((run) => run.id))
@@ -593,6 +610,19 @@ function DoneStage({
         ) : null}
 
         <div className="ds-done-actions">
+          {wrongKey ? (
+            <Button onPress={onRequestApiKey} variant="secondary">
+              {convertMessages.fixApiKey}
+            </Button>
+          ) : null}
+          {retryable.length > 0 ? (
+            <Button
+              onPress={() => onRetry(retryable.map((run) => run.id))}
+              variant="secondary"
+            >
+              {convertMessages.retryStopped}
+            </Button>
+          ) : null}
           {remaining > 0 && firstFlagged !== undefined ? (
             <>
               <Button onPress={() => onOpenReview(firstFlagged.id)}>

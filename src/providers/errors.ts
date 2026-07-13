@@ -115,7 +115,20 @@ export function classifyGeminiHttpFailure(
     kind = 'provider-error'
   }
 
-  return { ok: false, kind, httpStatus, retryAfterSeconds }
+  const code =
+    kind !== 'provider-error'
+      ? undefined
+      : parsed.status === 'FAILED_PRECONDITION'
+        ? 'billing-required'
+        : httpStatus === 400
+          ? 'invalid-request'
+          : httpStatus === 404
+            ? 'model-unavailable'
+            : httpStatus >= 500
+              ? 'temporarily-unavailable'
+              : undefined
+
+  return { ok: false, kind, httpStatus, retryAfterSeconds, code }
 }
 
 /**

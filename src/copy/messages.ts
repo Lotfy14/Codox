@@ -186,8 +186,35 @@ export const convertMessages = {
     `Converting ${count} PDF${count === 1 ? '' : 's'}`,
   allPages: 'All pages',
   stoppedHeading: 'This run stopped.',
-  stoppedRun: (fileName: string, reason: string) =>
-    `${fileName} stopped: ${reason}. Its pages and everything read so far are saved.`,
+  stoppedRun: (fileName: string, reason: string) => {
+    const explanation: Record<string, string> = {
+      'billing-required':
+        'Gemini requires billing to be enabled for this API project.',
+      'invalid-request':
+        'Gemini rejected the document request. Try a smaller PDF or fewer pages.',
+      'model-unavailable':
+        'The required Gemini model is not available for this API key.',
+      'temporarily-unavailable':
+        'Gemini stayed unavailable after several automatic retries.',
+      'provider-error': 'Gemini could not complete the request.',
+      'wrong-key': 'Gemini rejected the saved API key.',
+      'unexpected_error': 'Codox hit an unexpected device error.',
+      'source_pdf_missing': 'The original PDF is no longer on this device.',
+      cancelled: 'You stopped the conversion.',
+      render_failed: 'Codox could not read any page from this PDF.',
+      planner_unparseable: 'Gemini did not return a readable question plan.',
+      planner_invalid_after_repair:
+        'Gemini could not produce a valid question plan after a repair attempt.',
+      worker_chunk_invalid:
+        'Gemini could not return a valid question set after a repair attempt.',
+      merge_validation_failed:
+        'The extracted questions did not pass Codox’s safety checks.',
+    }
+    const detail = explanation[reason] ?? 'Codox could not finish this file.'
+    return `${fileName} stopped. ${detail} Its pages and everything read so far are saved.`
+  },
+  retryStopped: 'Retry saved run',
+  fixApiKey: 'Fix API key',
   unsafeRuns: (count: number) =>
     `${count === 1 ? 'One file came' : `${count} files came`} back with checks that did not pass, so ${count === 1 ? 'it is' : 'they are'} marked for your review before import. Codox never guesses.`,
   reviewFlags: (count: number, fileName?: string) =>

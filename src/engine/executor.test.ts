@@ -515,6 +515,27 @@ describe('stop reasons (§1.3)', () => {
     expect(outcome).toMatchObject({ status: 'provider-stopped', kind: 'wrong-key' })
     expect((await getRun(runId))?.stopReason).toBe('wrong-key')
   })
+
+  it('persists a safe provider detail so the stopped-run UI is actionable', async () => {
+    const script = scriptedAdapter()
+    script.push({
+      ok: false,
+      kind: 'provider-error',
+      code: 'invalid-request',
+      httpStatus: 400,
+    })
+    const runId = await newRun()
+
+    const outcome = await executeRun(runId, PDF_BYTES, undefined, {
+      controller: new GeminiController(script.adapter),
+    })
+
+    expect(outcome).toMatchObject({
+      status: 'provider-stopped',
+      kind: 'provider-error',
+    })
+    expect((await getRun(runId))?.stopReason).toBe('invalid-request')
+  })
 })
 
 describe('quota pause', () => {

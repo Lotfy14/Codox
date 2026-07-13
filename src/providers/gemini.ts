@@ -45,12 +45,34 @@ const GENERATE_TIMEOUT_MS = 300_000
  * to `unreachable`, so the controller pauses and retries instead of
  * hanging.
  */
-function withTimeout(
+async function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init: RequestInit,
   timeoutMs: number,
-  signal?: AbortSignal,
-): AbortSignal {
-  const timeout = AbortSignal.timeout(timeoutMs)
-  return signal === undefined ? timeout : AbortSignal.any([signal, timeout])
+  parentSignal?: AbortSignal,
+): Promise<Response> {
+  const controller = new AbortController()
+  let timedOut = false
+  const abortFromParent = () => controller.abort(parentSignal?.reason)
+  const timer = window.setTimeout(() => {
+    timedOut = true
+    controller.abort()
+  }, timeoutMs)
+
+  if (parentSignal?.aborted) abortFromParent()
+  else parentSignal?.addEventListener('abort', abortFromParent, { once: true })
+
+  try {
+    return await fetch(input, { ...init, signal: controller.signal })
+  } catch (error) {
+    if (timedOut) {
+      throw new DOMException('Gemini request timed out', 'TimeoutError')
+    }
+    throw error
+  } finally {
+    window.clearTimeout(timer)
+    parentSignal?.removeEventListener('abort', abortFromParent)
+  }
 }
 
 /**
@@ -65,10 +87,12 @@ async function listModels(
 ): Promise<ProbeResult> {
   let response: Response
   try {
-    response = await fetch(`${GEMINI_BASE_URL}/models?pageSize=1`, {
-      headers: keyHeaders(key),
-      signal: withTimeout(LIST_TIMEOUT_MS, signal),
-    })
+    response = await fetchWithTimeout(
+      `${GEMINI_BASE_URL}/models?pageSize=1`,
+      { headers: keyHeaders(key) },
+      LIST_TIMEOUT_MS,
+      signal,
+    )
   } catch (error) {
     return classifyGeminiFetchError(error, onLine())
   }
@@ -160,10 +184,12 @@ export function createGeminiAdapter(
     ): Promise<ModelListResult> {
       let response: Response
       try {
-        response = await fetch(`${GEMINI_BASE_URL}/models?pageSize=1000`, {
-          headers: keyHeaders(key),
-          signal: withTimeout(LIST_TIMEOUT_MS, signal),
-        })
+        response = await fetchWithTimeout(
+          `${GEMINI_BASE_URL}/models?pageSize=1000`,
+          { headers: keyHeaders(key) },
+          LIST_TIMEOUT_MS,
+          signal,
+        )
       } catch (error) {
         return classifyGeminiFetchError(error, onLine())
       }
@@ -198,7 +224,7 @@ export function createGeminiAdapter(
       const model = request.modelId ?? DEFAULT_GEMINI_VISION_MODEL
       let response: Response
       try {
-        response = await fetch(
+        response = await fetchWithTimeout(
           `${GEMINI_BASE_URL}/models/${encodeURIComponent(model)}:generateContent`,
           {
             method: 'POST',
@@ -224,8 +250,9 @@ export function createGeminiAdapter(
                 ? { generationConfig: request.generationConfig }
                 : {}),
             }),
-            signal: withTimeout(GENERATE_TIMEOUT_MS, signal),
           },
+          GENERATE_TIMEOUT_MS,
+          signal,
         )
       } catch (error) {
         return classifyGeminiFetchError(error, onLine())
