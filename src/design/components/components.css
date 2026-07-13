@@ -900,6 +900,7 @@
    width — with the sidebar card, the work column, and the utility rail
    as its three grid columns. */
 .ds-frame {
+  position: relative;
   display: grid;
   grid-template-columns: var(--layout-sidebar-width) minmax(0, 1fr) var(--layout-rail-width);
   gap: var(--frame-gap);
@@ -933,6 +934,10 @@
 .ds-sidebar__foot,
 .ds-rail__foot {
   margin-top: auto;
+}
+
+.ds-sidebar__foot {
+  transform: translateY(var(--space-3));
 }
 
 .ds-brand {
@@ -991,7 +996,7 @@
 .ds-work__head {
   display: grid;
   gap: var(--space-1);
-  padding: var(--space-1) var(--space-1) 0;
+  padding: 0;
 }
 
 .ds-work__head h1 {
@@ -1078,21 +1083,33 @@
 }
 
 .ds-rail {
-  align-items: center;
+  align-items: flex-end;
   gap: var(--space-3);
 }
 
 .ds-rail__foot {
   display: grid;
+  align-self: flex-end;
   justify-items: center;
-  gap: var(--space-3);
 }
 
-.ds-rail__privacy {
+.ds-frame__privacy {
+  position: absolute;
+  left: 50%;
+  bottom: var(--frame-padding);
+  min-height: var(--touch-target-min);
   border: 0;
+  border-radius: var(--radius-full);
+  padding-inline: var(--space-3);
   background: transparent;
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
+  transform: translateX(-50%);
+}
+
+.ds-frame__privacy:hover {
+  background: var(--color-primary-soft);
+  color: var(--color-text-strong);
 }
 
 .ds-rail-button {
@@ -1125,14 +1142,16 @@
 }
 
 .ds-empty-state,
-.ds-dialog-copy {
+.ds-dialog-copy,
+.privacy-copy {
   display: grid;
   gap: var(--space-3);
 }
 
 .ds-empty-state h2,
 .ds-empty-state p,
-.ds-dialog-copy p {
+.ds-dialog-copy p,
+.privacy-copy p {
   margin: 0;
 }
 
@@ -1144,7 +1163,8 @@
 }
 
 .ds-empty-state p,
-.ds-dialog-copy p {
+.ds-dialog-copy p,
+.privacy-copy p {
   color: var(--color-text-muted);
 }
 
@@ -1887,7 +1907,26 @@
 
   .ds-frame {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto 1fr;
+    grid-template-rows: auto 1fr auto;
+  }
+
+  .ds-sidebar {
+    grid-row: 1;
+  }
+
+  .ds-work {
+    grid-row: 2;
+  }
+
+  .ds-frame__privacy {
+    position: fixed;
+    z-index: 19;
+    left: 50%;
+    bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+    grid-row: 3;
+    margin: 0;
+    background: var(--color-frame);
+    transform: translateX(-50%);
   }
 
   .ds-sidebar {

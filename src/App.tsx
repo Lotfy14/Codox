@@ -8,7 +8,7 @@ import {
   ThemeSwitcher,
 } from './design/components'
 import type { AppTab, TabNavItem } from './design/components'
-import { appMessages, firstRunMessages, keyMessages } from './copy/messages'
+import { appMessages, privacyMessages } from './copy/messages'
 import { geminiController } from './providers/controller'
 import { Convert } from './screens/Convert'
 import { ApiCoachmark } from './screens/ApiCoachmark'
@@ -125,13 +125,6 @@ function App() {
                 used={storage.used}
               />
             ) : null}
-            <button
-              className="ds-rail__privacy"
-              onClick={() => setOpenDialog('privacy')}
-              type="button"
-            >
-              {appMessages.railPrivacy}
-            </button>
           </div>
           <span className="ds-tab-nav__label">{appMessages.navLabel}</span>
           <TabNav
@@ -170,15 +163,16 @@ function App() {
           />
           <div className="ds-rail__foot">
             <ThemeSwitcher />
-            <button
-              className="ds-rail__privacy"
-              onClick={() => setOpenDialog('privacy')}
-              type="button"
-            >
-              {appMessages.railPrivacy}
-            </button>
           </div>
         </aside>
+
+        <button
+          className="ds-frame__privacy"
+          onClick={() => setOpenDialog('privacy')}
+          type="button"
+        >
+          {appMessages.railPrivacy}
+        </button>
 
         <TabNav<MobileNavItem>
           activeTab={activeTab}
@@ -211,9 +205,10 @@ function App() {
         onOpenChange={(open) => setOpenDialog(open ? 'privacy' : null)}
         title={appMessages.privacyDialogTitle}
       >
-        <div className="ds-dialog-copy">
-          <p>{firstRunMessages.privacyNotice}</p>
-          <p>{keyMessages.keyOwnership}</p>
+        <div className="privacy-copy">
+          <p>{privacyMessages.local}</p>
+          <p>{privacyMessages.processing}</p>
+          <p>{privacyMessages.quota}</p>
         </div>
       </Dialog>
       {showCoachmark ? (

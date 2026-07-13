@@ -34,7 +34,7 @@ export const keyMessages = {
     'Your Gemini key has used its available free allowance. Nothing is broken — your progress is saved, and the run resumes when Gemini allows requests again.',
   /** The quota-isolation guarantee, stated directly. */
   keyOwnership:
-    "Codox uses only your Gemini key. Requests count against your Gemini quota and never another user's.",
+    'Codox uses the Gemini API key you provide. Requests count toward that key’s quota.',
   showKey: 'Show key',
   hideKey: 'Hide key',
   copyKey: 'Copy key',
@@ -104,6 +104,13 @@ export const appMessages = {
   themeGroupLabel: 'Appearance',
   themeLight: 'Light theme',
   themeDark: 'Dark theme',
+} as const
+
+export const privacyMessages = {
+  local: 'Your API key, PDFs, and results are stored on this device.',
+  processing:
+    'When you convert a PDF, Codox sends its exam pages to Google Gemini for processing.',
+  quota: 'Gemini requests use your key and count toward your quota.',
 } as const
 
 export const coachmarkMessages = {
@@ -233,12 +240,4 @@ export const historyMessages = {
   deleteTitle: (runName: string) => `Delete ${runName}?`,
   deleteBody:
     'This removes the run and its stored files from this device. Bundles you already exported are not affected.',
-} as const
-
-export const firstRunMessages = {
-  welcome:
-    'Codox turns exam PDFs into ready-to-import Triviadox question sets. It runs on this device — you bring your own Gemini API key.',
-  /** The owner-approved one-line minimal privacy notice. */
-  privacyNotice:
-    'Exam pages go straight from this device to Gemini, under your key. Your key never leaves this device.',
 } as const
