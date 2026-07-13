@@ -11,11 +11,14 @@ import type { AppTab, TabNavItem } from './design/components'
 import { appMessages, firstRunMessages, keyMessages } from './copy/messages'
 import { geminiController } from './providers/controller'
 import { Convert } from './screens/Convert'
-import { FirstRun } from './screens/FirstRun'
+import { ApiCoachmark } from './screens/ApiCoachmark'
 import { HelpContent } from './screens/HelpContent'
 import { History } from './screens/History'
 import { KeysPanel } from './screens/KeysPanel'
-import { useFirstRunCompleted } from './state/settings'
+import {
+  dismissApiCoachmark,
+  useApiCoachmarkDismissed,
+} from './state/settings'
 import { useStorageEstimate } from './state/storage'
 
 type OpenDialog = 'api' | 'help' | 'privacy' | null
@@ -64,32 +67,45 @@ const workspaceItems: readonly TabNavItem<AppTab>[] = [
 
 const mobileItems: readonly TabNavItem<MobileNavItem>[] = [
   ...workspaceItems,
-  { id: 'api', icon: <RailIcon kind="api" />, label: appMessages.railApi },
+  {
+    id: 'api',
+    icon: <RailIcon kind="api" />,
+    label: appMessages.railApi,
+    className: 'api-coachmark__mobile-target',
+  },
   { id: 'help', icon: <RailIcon kind="help" />, label: appMessages.railHelp },
 ]
 
 function App() {
-  const firstRunCompleted = useFirstRunCompleted()
+  const coachmarkDismissed = useApiCoachmarkDismissed()
   const storage = useStorageEstimate()
   const [activeTab, setActiveTab] = useState<AppTab>('convert')
   const [openDialog, setOpenDialog] = useState<OpenDialog>(null)
+  const [coachmarkHidden, setCoachmarkHidden] = useState(false)
+  const showCoachmark = coachmarkDismissed === false && !coachmarkHidden
 
   useEffect(() => {
     void geminiController.refreshStatus().catch(() => undefined)
   }, [])
 
-  if (firstRunCompleted === null) return null
-  if (!firstRunCompleted) {
-    return <FirstRun onDone={() => setActiveTab('convert')} />
+  const hideCoachmark = () => {
+    setCoachmarkHidden(true)
+    void dismissApiCoachmark()
+  }
+
+  const openApi = () => {
+    hideCoachmark()
+    setOpenDialog('api')
   }
 
   const handleMobileNav = (item: MobileNavItem) => {
+    if (showCoachmark) hideCoachmark()
     if (item === 'convert' || item === 'history') setActiveTab(item)
     else setOpenDialog(item)
   }
 
   return (
-    <div className="ds-stage">
+    <div className={`ds-stage${showCoachmark ? ' app--coachmark' : ''}`}>
       <div className="ds-frame">
         <aside className="ds-sidebar">
           <div className="ds-brand">
@@ -137,14 +153,15 @@ function App() {
         </aside>
 
         <main className="ds-work">
-          {activeTab === 'convert' ? <Convert /> : <History />}
+          {activeTab === 'convert' ? <Convert onRequestApiKey={openApi} /> : <History />}
         </main>
 
         <aside className="ds-rail">
           <RailButton
+            className="api-coachmark__desktop-target"
             icon={<RailIcon kind="api" />}
             label={appMessages.railApi}
-            onPress={() => setOpenDialog('api')}
+            onPress={openApi}
           />
           <RailButton
             icon={<RailIcon kind="help" />}
@@ -186,7 +203,7 @@ function App() {
         onOpenChange={(open) => setOpenDialog(open ? 'help' : null)}
         title={appMessages.helpDialogTitle}
       >
-        <HelpContent />
+        <HelpContent onOpenApi={openApi} />
       </Dialog>
       <Dialog
         dismissLabel={appMessages.dialogDismiss}
@@ -199,6 +216,9 @@ function App() {
           <p>{keyMessages.keyOwnership}</p>
         </div>
       </Dialog>
+      {showCoachmark ? (
+        <ApiCoachmark onDismiss={hideCoachmark} onOpenApi={openApi} />
+      ) : null}
     </div>
   )
 }

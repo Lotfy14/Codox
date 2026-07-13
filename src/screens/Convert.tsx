@@ -39,6 +39,7 @@ import { deleteRun } from '../state/runs'
 import { useUnresolvedCounts } from './review-data'
 import { ReviewStage } from './ReviewStage'
 import type { ControllerStatus } from '../providers/controller'
+import { useGeminiCredential } from '../state/credentials'
 
 type ConversionStatus = ControllerStatus
 
@@ -105,7 +106,11 @@ function InplaceHint() {
  * read from the persisted run state, so a reload mid-run redraws the same
  * bars and the executor picks up where it left off.
  */
-export function Convert() {
+export interface ConvertProps {
+  onRequestApiKey: () => void
+}
+
+export function Convert({ onRequestApiKey }: ConvertProps) {
   const { job, updateJob } = useCurrentJob()
   const pdfs = useJobPdfs(CURRENT_JOB_ID)
   const conversion = useConversion(CURRENT_JOB_ID)
@@ -114,6 +119,7 @@ export function Convert() {
   const [reviewRunId, setReviewRunId] = useState<string | null>(null)
   const [exportBusy, setExportBusy] = useState(false)
   const sectionRef = useRef<HTMLElement | null>(null)
+  const credential = useGeminiCredential()
 
   if (job === undefined || pdfs === undefined) return null
 
@@ -124,6 +130,7 @@ export function Convert() {
   const totalPages = exams.reduce((sum, file) => sum + file.pageCount, 0)
   const needsKeyFile = needsAnswerKeyFile(batchSource, exams)
   const keyFileMissing = needsKeyFile && answerKey === undefined
+  const keyReady = credential?.lastValidation?.status === 'working'
 
   const runs = conversion.runs ?? []
   const hasRuns = runs.length > 0
@@ -137,6 +144,14 @@ export function Convert() {
     } finally {
       setExportBusy(false)
     }
+  }
+
+  const startConversion = () => {
+    if (!keyReady) {
+      onRequestApiKey()
+      return
+    }
+    void conversion.start(exams, batchSource)
   }
 
   const closeReview = () => {
@@ -368,7 +383,7 @@ export function Convert() {
             <div className="ds-start-row">
               <Button
                 isDisabled={busy || keyFileMissing}
-                onPress={() => void conversion.start(exams, batchSource)}
+                onPress={startConversion}
               >
                 {convertMessages.startButton}
               </Button>
@@ -379,6 +394,10 @@ export function Convert() {
             {keyFileMissing ? (
               <p className="ds-muted ds-phase-note">
                 {uploadMessages.needsKeyFile}
+              </p>
+            ) : !keyReady ? (
+              <p className="ds-muted ds-phase-note">
+                {convertMessages.apiKeyRequired}
               </p>
             ) : null}
           </GlassPanel>

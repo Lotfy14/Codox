@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 export type AppTab = 'convert' | 'history'
 
 export interface TabNavItem<T extends string> {
+  className?: string
   id: T
   icon?: ReactNode
   label: string
@@ -29,7 +30,9 @@ export function TabNav<T extends string>({
       {items.map((item) => (
         <AriaButton
           aria-current={activeTab === item.id ? 'page' : undefined}
-          className="ds-tab-nav__item"
+          className={['ds-tab-nav__item', item.className]
+            .filter(Boolean)
+            .join(' ')}
           key={item.id}
           onPress={() => onTabChange(item.id)}
         >

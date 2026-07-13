@@ -122,7 +122,7 @@ export class GeminiController {
 
   /**
    * Validates the stored key with a live call and records the outcome.
-   * Used by the API-key panel's "Check key" and the first-run walkthrough.
+   * Used by the API-key panel's "Check key" action.
    */
   async validateStoredKey(signal?: AbortSignal): Promise<KeyCheckResult> {
     const credential = await getGeminiCredential()

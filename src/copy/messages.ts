@@ -98,6 +98,41 @@ export const appMessages = {
   themeDark: 'Dark theme',
 } as const
 
+export const coachmarkMessages = {
+  eyebrow: 'First step',
+  title: 'Add your Gemini API key',
+  body:
+    'Codox needs your key before it can convert a PDF. Open API, paste the key, then choose Check key.',
+  action: 'Open API settings',
+  dismiss: 'Dismiss API key tip',
+} as const
+
+export const helpMessages = {
+  intro: 'From PDF to Triviadox bundle in four steps.',
+  openApi: 'Open API key settings',
+  steps: [
+    {
+      title: '1. Connect Gemini',
+      body: 'Open API, paste your Gemini key, and choose Check key.',
+    },
+    {
+      title: '2. Add the PDFs',
+      body: 'Drop one or more exam PDFs onto Convert.',
+    },
+    {
+      title: '3. Describe the answers',
+      body: 'Choose whether answers are inside the PDFs, in a separate key, or not provided.',
+    },
+    {
+      title: '4. Review and export',
+      body: 'Start converting, check anything Codox flags, then export the Triviadox bundle.',
+    },
+  ],
+  troubleTitle: 'If something gets in the way',
+  trouble:
+    'Wrong key means Gemini rejected it. Paused means its allowance needs time. Unreachable means Codox cannot contact Gemini. Your saved progress stays on this device.',
+} as const
+
 export const convertMessages = {
   title: 'Convert',
   subtitle:
@@ -128,6 +163,7 @@ export const convertMessages = {
   pagesMinutes: (pages: number, minutes: number) =>
     `${pages} page${pages === 1 ? '' : 's'} · about ${minutes} min`,
   startButton: 'Start converting',
+  apiKeyRequired: 'Add and check your Gemini API key before converting.',
   stopButton: 'Stop converting',
   convertingFiles: (count: number) =>
     `Converting ${count} PDF${count === 1 ? '' : 's'}`,
