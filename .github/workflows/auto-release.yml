@@ -57,6 +57,36 @@ jobs:
             test-results
           if-no-files-found: ignore
 
+  # The web app ships from HERE, not from Cloudflare's own git integration.
+  # Building it in this workflow is what gives it the release version: VERSION
+  # exists only in Actions, so a Cloudflare-side build fell back to
+  # package.json's stale 0.4.0 and every web build mislabelled itself.
+  web:
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      # Picks up the workflow-level VERSION → __APP_VERSION__ (vite.config.ts).
+      - name: Build web app
+        run: npm run build
+
+      - name: Deploy to Cloudflare Workers
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
   windows:
     runs-on: windows-latest
     steps:
@@ -174,7 +204,9 @@ jobs:
           if-no-files-found: error
 
   release:
-    needs: [quality, windows, android]
+    # Ship everywhere or nowhere: the release notes point at the web app as
+    # "always latest", so do not cut a release whose web deploy failed.
+    needs: [quality, web, windows, android]
     runs-on: ubuntu-latest
     steps:
       - name: Download artifacts
