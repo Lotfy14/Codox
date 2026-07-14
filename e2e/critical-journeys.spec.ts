@@ -225,13 +225,8 @@ test('critical journey: answer-key PDF → review → named export → History r
   })
   await expect(page.getByText('Critical Exam.pdf')).toBeVisible()
 
-  const sourceSelect = page.locator('.ds-select').filter({
-    hasText: 'Where are the answers?',
-  })
-  await sourceSelect.getByRole('button').click()
-  await page
-    .getByRole('option', { name: 'In a separate answer key file' })
-    .click()
+  // The answer-key slot is always visible and optional — no declaration
+  // question stands between the tutor and dropping the key.
   await page.locator('.ds-key-file-slot input[type="file"]').setInputFiles({
     name: 'Critical Answers.pdf',
     mimeType: 'application/pdf',

@@ -54,8 +54,6 @@ export const progressMessages = {
     'Your Gemini allowance is resting. The run resumes when Gemini allows requests again — you can close Codox and come back later.',
   badPage: (page: number, fileName: string) =>
     `Page ${page} of ${fileName} could not be read reliably. It is flagged for your review — the rest of the run continues.`,
-  wrongDeclaration: (fileName: string) =>
-    `The answers in ${fileName} do not match what you declared. To be safe, every question from this file is flagged for your review — Codox never guesses.`,
   finishedWithFlags: (flagCount: number) =>
     `Done. ${flagCount} answer${flagCount === 1 ? '' : 's'} need${flagCount === 1 ? 's' : ''} your eyes — everything else is ready.`,
   finishedClean: 'Done. Every answer was read cleanly.',
@@ -66,28 +64,12 @@ export const uploadMessages = {
     `Only PDF files work here — "${fileName}" was skipped.`,
   encryptedPdf: (fileName: string) =>
     `"${fileName}" is password-protected, so Codox cannot open it. Remove the password and drop it again.`,
-  declarationQuestion: 'Where are the answers?',
-  declarationHelp:
-    'This tells Codox how to read each PDF. If a file is different, change it on that row.',
-  needsKeyFile:
-    'You said the answers are in a separate file — drop that answer key below before starting.',
+  keyFileOptional:
+    'Optional — have a separate answer-key PDF? Drop it here and Codox reads it alongside the exams. Codox finds answers printed on the pages by itself.',
   chooseFiles: 'Choose files',
-  answerSourceLabel: 'Answers',
-  /** The compact per-file pill, e.g. "Answers: inside". */
-  answersPill: (source: string) => `Answers: ${source}`,
-  answersShortInside: 'inside',
-  answersShortKeyFile: 'key file',
-  answersShortNone: 'none',
   pageCount: (pages: number) => `${pages} page${pages === 1 ? '' : 's'}`,
   flagLabel: 'Needs attention',
   removeFile: (fileName: string) => `Remove ${fileName}`,
-  batchDefault: 'Use batch default',
-  insideThisPdf: 'Inside this PDF',
-  separateKeyFile: 'Separate key file',
-  noAnswersProvided: 'No answers provided',
-  insidePdfs: 'Inside the PDFs',
-  inSeparateKeyFile: 'In a separate answer key file',
-  noAnswers: 'There are no answers',
 } as const
 
 export const appMessages = {
@@ -139,8 +121,8 @@ export const helpMessages = {
       body: 'Drop one or more exam PDFs onto Convert.',
     },
     {
-      title: '3. Describe the answers',
-      body: 'Choose whether answers are inside the PDFs, in a separate key, or not provided.',
+      title: '3. Add an answer key (optional)',
+      body: 'Drop a separate answer-key PDF if you have one. Codox reads answers printed inside the PDFs on its own.',
     },
     {
       title: '4. Review and export',
@@ -168,7 +150,6 @@ export const convertMessages = {
   finishedPanelLabel: 'Conversion finished',
   readingPdf: 'Reading PDF…',
   filesReady: (count: number) => `${count} PDF${count === 1 ? '' : 's'} ready`,
-  batchOverrideHint: 'Answers apply to the whole batch, override per file',
   clearAll: 'Clear all',
   inplaceBefore:
     'Progress, flagged questions to review, and export all appear ',
@@ -261,6 +242,53 @@ export const exportMessages = {
     'Saved. The bundle now lives safely outside Codox — import it into Triviadox whenever you like.',
   whyExportMatters:
     'Codox stores work in the browser, which the system can clear to free space. An exported bundle is the copy nothing can take away.',
+  menuLabel: 'More export options',
+  withoutAnswers: 'Export without answers',
+  withoutAnswersHint: 'A practice set — every answer column left blank.',
+  withAiAnswers: 'Export with AI answers…',
+  withAiAnswersHint: 'Gemini answers questions from its own knowledge.',
+} as const
+
+export const aiExportMessages = {
+  title: 'Export with AI answers',
+  description:
+    'Gemini answers from its own knowledge, not from your document. Every AI-filled row is marked ai_answered in the CSV, so you can always tell these answers apart.',
+  scopeLegend: 'Which questions should the AI answer?',
+  scopeUnanswered: 'Only unanswered questions',
+  scopeUnansweredHint:
+    'Answers found in the document or confirmed by you stay untouched.',
+  scopeVerify: 'Unanswered + double-check the rest',
+  scopeVerifyHint:
+    'Also compares document answers with its own; disagreements are flagged, never changed.',
+  scopeAll: 'Every question',
+  scopeAllHint:
+    'AI answers replace document answers too. Uses the most quota.',
+  thresholdLegend: 'When unsure, the AI should…',
+  thresholdCertain: 'Only answer when certain',
+  thresholdCertainHint: 'Anything less stays blank and flagged for you.',
+  thresholdLikely: 'Answer when certain or likely',
+  thresholdLikelyHint: 'Blank only when the AI says it would be guessing.',
+  thresholdNever: 'Answer whenever it can',
+  thresholdNeverHint: 'Accepts every answer the AI gives, however unsure.',
+  quotaNote: (requests: number) =>
+    requests === 0
+      ? 'Using saved AI answers — no new Gemini requests.'
+      : `About ${requests} Gemini request${requests === 1 ? '' : 's'} against your key.`,
+  savedAnswersNote: (when: string) =>
+    `Saved AI answers from ${when} cover these questions.`,
+  reSolve: 'Ask Gemini again',
+  solving: (done: number, total: number) =>
+    `Asking Gemini… ${done}/${total}`,
+  solvePausedQuota:
+    'Paused — Gemini’s allowance needs a moment. Answers so far are saved; this continues automatically.',
+  solveUnreachable:
+    'Cannot reach Gemini right now. Answers so far are saved — try again when the connection returns.',
+  solveWrongKey:
+    'Gemini rejected the saved API key. Fix the key, then try again.',
+  solveFailed:
+    'Gemini could not answer right now. Answers so far are saved — try again in a moment.',
+  confirm: 'Answer and export',
+  cancel: 'Cancel',
 } as const
 
 export const historyMessages = {

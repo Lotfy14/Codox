@@ -30,7 +30,7 @@ import {
   recordRequestUsage,
   updateRun,
 } from '../state/runs'
-import type { AnswerSource, RunArtifact } from '../state/types'
+import type { RunArtifact } from '../state/types'
 import {
   buildAuditRequest,
   buildPlannerRepairRequest,
@@ -50,12 +50,7 @@ import {
 } from './blueprint'
 import { boxToCropBox, hasPositiveExtent } from './boxes'
 import { emitCsv } from './csv'
-import {
-  forceAllRowsBlankFlagged,
-  mergeRows,
-  policyClaimsEvidence,
-  validateWorkerChunk,
-} from './merge'
+import { mergeRows, validateWorkerChunk } from './merge'
 import { resolvePlannerModel } from './models'
 import { stripEnumerationLabels } from './normalize'
 import { parseAuditReport, validateFinalRows } from './validate'
@@ -555,29 +550,6 @@ async function stepWorker(
   return { ok: true, rows }
 }
 
-// ---------------------------------------------------------------- step 6/7
-
-/**
- * The declaration cross-check (BUILD_PLAN). The user's Upload declaration
- * never feeds a prompt; it is compared with the planner's evidence-based
- * policy AFTER the fact. A contradiction degrades to "everything flagged"
- * — never to wrong rows.
- */
-export function declarationContradictsPolicy(
-  declared: AnswerSource | undefined,
-  blueprint: Blueprint,
-): boolean {
-  if (declared === undefined) return false
-  const policyType = blueprint.document_profile.answer_policy.type
-  const policyFoundEvidence = policyClaimsEvidence(policyType)
-  // "The answers are in the file" / "in a separate key file" — but the
-  // planner found no usable evidence anywhere.
-  if (declared !== 'none' && !policyFoundEvidence) return true
-  // "There are no answers" — but the planner read answers off the pages.
-  if (declared === 'none' && policyFoundEvidence) return true
-  return false
-}
-
 // ---------------------------------------------------------------- the run
 
 /**
@@ -588,7 +560,6 @@ export function declarationContradictsPolicy(
 export async function executeRun(
   runId: string,
   pdfBytes: Uint8Array,
-  declared: AnswerSource | undefined,
   options: ExecutorOptions = {},
 ): Promise<RunOutcome> {
   const controller = options.controller ?? geminiController
@@ -634,7 +605,7 @@ export async function executeRun(
     const merged = mergeRows(blueprint, worker.rows)
     if (!merged.ok) return stop(runId, 'merge', 'merge_validation_failed')
 
-    let rows: MergedRow[] = merged.rows.map((row) => {
+    const rows: MergedRow[] = merged.rows.map((row) => {
       const normalized = stripEnumerationLabels(row.options)
       return {
         ...row,
@@ -647,13 +618,6 @@ export async function executeRun(
       }
     })
 
-    // Declaration cross-check — degrade to everything-flagged, never to
-    // wrong rows.
-    const wrongDeclaration = declarationContradictsPolicy(declared, blueprint)
-    if (wrongDeclaration) {
-      rows = forceAllRowsBlankFlagged(rows, 'wrong_declaration')
-      await updateRun(runId, { wrongDeclaration: true })
-    }
     await putArtifact({ runId, kind: 'merged-rows', json: rows })
 
     // 7 — final validation + CSV emit. A failure still writes the CSV.

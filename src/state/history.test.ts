@@ -69,7 +69,6 @@ describe('history restore', () => {
       createdAt: 1,
       step: 'export',
       keepOriginal: withOriginal,
-      batchAnswerSource: 'key-file',
     })
     const pdfId = withOriginal
       ? await addStoredPdf({
@@ -78,7 +77,6 @@ describe('history restore', () => {
           name: 'old exam.pdf',
           size: 100,
           pageCount: 2,
-          answerSource: 'key-file',
           blob: new Blob(['exam'], { type: 'application/pdf' }),
         })
       : 'removed-pdf'
@@ -113,7 +111,6 @@ describe('history restore', () => {
       ['exam', 'old exam.pdf'],
       ['answer-key', 'answers.pdf'],
     ])
-    expect((await db.jobs.get('current'))?.batchAnswerSource).toBe('key-file')
     expect(await db.runs.get(runId)).toMatchObject({ jobId: HISTORY_JOB })
   })
 

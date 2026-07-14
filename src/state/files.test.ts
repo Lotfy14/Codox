@@ -6,7 +6,6 @@ import {
   clearJobPdfs,
   putAnswerKeyPdf,
   removeStoredPdf,
-  setPdfAnswerSource,
 } from './files'
 
 const JOB = 'current'
@@ -47,14 +46,6 @@ describe('stored PDFs', () => {
     await addStoredPdf(pdfEntry('b.pdf'))
     await clearJobPdfs(JOB)
     expect(await db.files.count()).toBe(0)
-  })
-
-  it('sets and clears a per-file declaration override', async () => {
-    const id = await addStoredPdf(pdfEntry('a.pdf'))
-    await setPdfAnswerSource(id, 'key-file')
-    expect((await db.files.get(id))?.answerSource).toBe('key-file')
-    await setPdfAnswerSource(id, undefined)
-    expect((await db.files.get(id))?.answerSource).toBeUndefined()
   })
 
   it('keeps at most one answer key per job — adding replaces', async () => {

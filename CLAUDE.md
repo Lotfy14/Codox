@@ -16,6 +16,12 @@ for why each stack piece was chosen.
    ambiguity → blank value + `needs_review` flag. Enforced in deterministic
    code and the audit gate, not just prompts. A confidently wrong answer is
    strictly worse than a blank one.
+   *Sole exception (owner-approved 2026-07-13):* the opt-in **"Export with
+   AI answers"** feature (`src/engine/solver.ts`) answers from model
+   knowledge — at export time only, never inside the engine path. It never
+   modifies `merged-rows`, and deterministic code provenance-flags every row
+   it touches (`ai_answered` / `ai_unsure` / `ai_disagrees`). The extraction
+   engine itself still never guesses.
 3. **The key stays on-device** — each user brings their own Gemini API key;
    calls go directly from their device to Gemini. No Codox-operated server ever
    sees a key or a page. First run shows a one-line notice that pages are
@@ -70,7 +76,9 @@ vite-plugin-pwa, Dexie (IndexedDB), @hyzyla/pdfium (render/crop), pdf.js
   design target is a ~100 MB working set (iPhone-SE-class).
 - Export-early is law: the app must never be the sole holder of a user's
   work; loud or automatic export when review completes.
-- One bad page never crashes a job — flag it and continue. A wrong user
-  declaration degrades to "everything flagged," never to wrong CSV rows.
+- One bad page never crashes a job — flag it and continue. There is no
+  answer-source declaration: the planner's evidence-based policy is the only
+  authority on where answers live; the answer-key drop zone is optional and
+  a present key PDF is always attached.
 - Provider errors must be distinguishable in the UI: bad key ≠ provider
   unreachable ≠ quota exhausted (quota reads as "paused," not broken).

@@ -10,7 +10,9 @@
  */
 import { Capacitor } from '@capacitor/core'
 import { emitCsv } from '../engine/csv'
+import { applyAiAnswers, readAiAnswers } from '../engine/solver'
 import type { MergedRow } from '../engine/types'
+import { getAiAnswerSettings } from '../state/ai-answers-settings'
 import { bytesToBase64 } from '../providers/base64'
 import { getArtifact, getArtifacts, updateRun } from '../state/runs'
 import type { RunState } from '../state/types'
@@ -25,13 +27,54 @@ import {
 
 export type ExportOutcome = 'shared' | 'downloaded' | 'cancelled' | 'nothing'
 
+/**
+ * What the exported CSVs carry in `correct_index`:
+ * - `with-answers` — the default: document answers + tutor resolutions.
+ * - `no-answers` — every `correct_index` blanked (a practice set); flags
+ *   are untouched. Deterministic, no model involved.
+ * - `ai-answers` — the run's saved AI answers applied per the user's AI
+ *   settings. The exporter only APPLIES the saved artifact — solving
+ *   happened before export, and `merged-rows` itself is never modified.
+ */
+export type ExportMode = 'with-answers' | 'no-answers' | 'ai-answers'
+
+export interface ExportOptions {
+  mode?: ExportMode
+}
+
+/** The zip-name suffix marking variant exports; folder names stay §3.4. */
+const VARIANT_SUFFIX: Record<ExportMode, string | undefined> = {
+  'with-answers': undefined,
+  'no-answers': 'no answers',
+  'ai-answers': 'AI answers',
+}
+
 /** Runs that have a bundle to export: finished, rows persisted. */
 export function exportableRuns(runs: readonly RunState[]): RunState[] {
   return runs.filter((run) => run.status === 'done')
 }
 
+async function rowsForMode(
+  run: RunState,
+  rows: MergedRow[],
+  mode: ExportMode,
+): Promise<MergedRow[]> {
+  if (mode === 'no-answers') {
+    return rows.map((row) => ({ ...row, correct_index: '' }))
+  }
+  if (mode === 'ai-answers') {
+    return applyAiAnswers(
+      rows,
+      await readAiAnswers(run.id),
+      await getAiAnswerSettings(),
+    )
+  }
+  return rows
+}
+
 async function buildBundleInputs(
   runs: readonly RunState[],
+  mode: ExportMode,
 ): Promise<BundleInput[]> {
   const names = uniqueBundleNames(runs.map((run) => run.fileName))
   const bundles: BundleInput[] = []
@@ -42,7 +85,8 @@ async function buildBundleInputs(
     }
     const rows = merged.json as MergedRow[]
     const resolutions = await getResolutions(run.id)
-    const csvText = emitCsv(applyResolutions(rows, resolutions))
+    const resolved = applyResolutions(rows, resolutions)
+    const csvText = emitCsv(await rowsForMode(run, resolved, mode))
     const crops = (await getArtifacts(run.id, 'crop')).flatMap((crop) =>
       crop.path !== undefined && crop.bytes !== undefined
         ? [{ path: crop.path, bytes: crop.bytes }]
@@ -128,12 +172,17 @@ async function deliverZip(
  */
 export async function exportRuns(
   runs: readonly RunState[],
+  options: ExportOptions = {},
 ): Promise<ExportOutcome> {
+  const mode = options.mode ?? 'with-answers'
   const exportable = exportableRuns(runs)
   if (exportable.length === 0) return 'nothing'
-  const bundles = await buildBundleInputs(exportable)
+  const bundles = await buildBundleInputs(exportable, mode)
   const zipped = zipBundles(assembleBundleFiles(bundles))
-  const fileName = exportArchiveName(exportable.map((run) => run.fileName))
+  const fileName = exportArchiveName(
+    exportable.map((run) => run.fileName),
+    VARIANT_SUFFIX[mode],
+  )
   const outcome = await deliverZip(zipped, fileName)
   if (outcome === 'shared' || outcome === 'downloaded') {
     const stamp = Date.now()

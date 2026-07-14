@@ -88,21 +88,17 @@ export async function restoreHistoryRun(
     ])
     if (currentFiles > 0 || currentRuns > 0) return 'current-not-empty'
 
-    const archivedJob = await db.jobs.get(run.jobId)
     const archivedFiles = await db.files
       .where('jobId')
       .equals(run.jobId)
       .toArray()
-    const needsAnswerKey =
-      (source.answerSource ?? archivedJob?.batchAnswerSource ?? 'inside') ===
-      'key-file'
-    const answerKey = needsAnswerKey
-      ? archivedFiles.find(
-          (file) =>
-            file.kind === 'answer-key' &&
-            (run.answerKeyPdfId === undefined || file.id === run.answerKeyPdfId),
-        )
-      : undefined
+    // Restore the archived answer key whenever one exists — a key present
+    // is a key attached; the planner decides from evidence what it means.
+    const answerKey = archivedFiles.find(
+      (file) =>
+        file.kind === 'answer-key' &&
+        (run.answerKeyPdfId === undefined || file.id === run.answerKeyPdfId),
+    )
     const now = Date.now()
     const examId = crypto.randomUUID()
 
@@ -110,7 +106,6 @@ export async function restoreHistoryRun(
       id: CURRENT_JOB_ID,
       createdAt: now,
       step: 'setup',
-      batchAnswerSource: archivedJob?.batchAnswerSource,
       keepOriginal: false,
     })
     await db.files.add({

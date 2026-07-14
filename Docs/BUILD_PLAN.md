@@ -365,6 +365,38 @@ non-technical person can review + export on a phone unaided.
 **Done when:** a real user on their own device converts a real PDF, reviews
 it, exports it, and imports it into Triviadox — without help.
 
+## Phase 9 — Declaration removal, export modes, AI answers (2026-07-13, owner-approved)
+
+Three owner-requested changes, approved 2026-07-13. The NEVER-GUESS carve-out
+for the third is recorded in CLAUDE.md hard rule 2 and CODOX_CONTEXT §3.
+
+- [x] **Remove the answer-source declaration.** The "Where are the answers?"
+      question (batch Select + per-file overrides) is gone; the planner's
+      evidence-based `answer_policy` is the sole authority. The answer-key
+      drop zone is always visible and optional; a present key PDF is always
+      attached (start, resume, retry, and History restore). The
+      `wrong_declaration` degrade path retired with the declaration
+      (`executeRun` no longer takes `declared`).
+- [x] **Split-button export with three modes.** New `SplitButton` design
+      component (react-aria-components Menu); Done panel + History cards
+      offer "Export without answers" (every `correct_index` blanked,
+      deterministic) and "Export with AI answers…". Variant exports suffix
+      the zip name only — bundle folder/CSV names stay contract-exact
+      (§3.4); any successful export stamps `exportedAt`.
+- [x] **AI answers (fourth model call, opt-in).** `src/engine/solver.ts` +
+      its own prompt (`solver-prompt.ts` — the three §2 prompts untouched):
+      chunks of 10 rows + their figure crops, temperature 0, JSON-only,
+      primary model with the flash-lite 5xx fallback, one content-repair
+      retry, per-chunk caching in an `ai-answers` artifact (re-export never
+      re-burns quota). Scope (`unanswered` / `unanswered+verify` / `all`)
+      and confidence threshold (`certain` / `likely` / `never`) chosen in a
+      pre-export dialog with an honest request count, persisted in `meta`.
+      Deterministic application flags every touched row: `ai_answered`,
+      `ai_unsure`, `ai_disagrees` (verify mode never overrides a document
+      answer). `merged-rows` stays pristine — AI answers exist only in the
+      exported CSV.
+- [ ] Owner click-through of the new export flow on a real device.
+
 ---
 
 ## Rough total

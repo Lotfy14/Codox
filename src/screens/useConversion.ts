@@ -20,7 +20,7 @@ import {
   updateRun,
   useJobRuns,
 } from '../state/runs'
-import type { AnswerSource, RunState, StoredPdf } from '../state/types'
+import type { RunState, StoredPdf } from '../state/types'
 
 export interface ConversionState {
   runs: RunState[] | undefined
@@ -31,7 +31,6 @@ export interface ConversionState {
   start: (
     exams: readonly StoredPdf[],
     answerKey: StoredPdf | undefined,
-    batchSource: AnswerSource,
   ) => Promise<void>
   /** Re-enters provider-stopped runs from their persisted checkpoint. */
   retry: (runIds: readonly string[]) => Promise<void>
@@ -40,31 +39,25 @@ export interface ConversionState {
   outcomes: RunOutcome[]
 }
 
-/** The declaration that applies to one file: its override, else the batch. */
-export function effectiveAnswerSource(
-  file: Pick<StoredPdf, 'answerSource'>,
-  batchSource: AnswerSource,
-): AnswerSource {
-  return file.answerSource ?? batchSource
-}
-
 interface QueueItem {
   run: RunState
   bytes: Uint8Array
   examPageCount: number
-  declared: AnswerSource | undefined
   answerKey?: {
     bytes: Uint8Array
     pageCount: number
   }
 }
 
+/**
+ * The answer key that travels with a run: the run's pinned key if it still
+ * exists, else the job's key file. The planner decides from evidence what
+ * the extra pages mean — a key is always attached when one is present.
+ */
 async function answerKeyForRun(
   run: RunState,
   exam: StoredPdf,
-  declared: AnswerSource,
 ): Promise<StoredPdf | undefined> {
-  if (declared !== 'key-file') return undefined
   if (run.answerKeyPdfId !== undefined) {
     const pinned = await db.files.get(run.answerKeyPdfId)
     if (pinned !== undefined) return pinned
@@ -105,7 +98,7 @@ export function useConversion(jobId: string): ConversionState {
           try {
             // One file's stop never kills the batch: the outcome is recorded
             // and the next file starts.
-            const outcome = await executeRun(item.run.id, item.bytes, item.declared, {
+            const outcome = await executeRun(item.run.id, item.bytes, {
               signal: aborter.signal,
               examPageCount: item.examPageCount,
               answerKeyBytes: item.answerKey?.bytes,
@@ -157,17 +150,11 @@ export function useConversion(jobId: string): ConversionState {
           })
           continue
         }
-        const job = await db.jobs.get(run.jobId)
-        const declared = effectiveAnswerSource(
-          file,
-          job?.batchAnswerSource ?? 'inside',
-        )
-        const answerKey = await answerKeyForRun(run, file, declared)
+        const answerKey = await answerKeyForRun(run, file)
         queue.push({
           run,
           bytes: new Uint8Array(await file.blob.arrayBuffer()),
           examPageCount: file.pageCount,
-          declared,
           ...(answerKey === undefined
             ? {}
             : {
@@ -190,18 +177,15 @@ export function useConversion(jobId: string): ConversionState {
     async (
       exams: readonly StoredPdf[],
       answerKey: StoredPdf | undefined,
-      batchSource: AnswerSource,
     ) => {
       const queue: QueueItem[] = []
       for (const exam of exams) {
-        const declared = effectiveAnswerSource(exam, batchSource)
-        const usedAnswerKey = declared === 'key-file' ? answerKey : undefined
         const runId = await createRun({
           jobId,
           pdfId: exam.id,
-          answerKeyPdfId: usedAnswerKey?.id,
+          answerKeyPdfId: answerKey?.id,
           fileName: exam.name,
-          pageCount: exam.pageCount + (usedAnswerKey?.pageCount ?? 0),
+          pageCount: exam.pageCount + (answerKey?.pageCount ?? 0),
         })
         const run = await getRun(runId)
         if (run === undefined) continue
@@ -209,13 +193,12 @@ export function useConversion(jobId: string): ConversionState {
           run,
           bytes: new Uint8Array(await exam.blob.arrayBuffer()),
           examPageCount: exam.pageCount,
-          declared,
-          ...(usedAnswerKey === undefined
+          ...(answerKey === undefined
             ? {}
             : {
                 answerKey: {
-                  bytes: new Uint8Array(await usedAnswerKey.blob.arrayBuffer()),
-                  pageCount: usedAnswerKey.pageCount,
+                  bytes: new Uint8Array(await answerKey.blob.arrayBuffer()),
+                  pageCount: answerKey.pageCount,
                 },
               }),
         })
@@ -239,18 +222,12 @@ export function useConversion(jobId: string): ConversionState {
           })
           continue
         }
-        const job = await db.jobs.get(run.jobId)
         await updateRun(run.id, { status: 'paused', stopReason: undefined })
-        const declared = effectiveAnswerSource(
-          file,
-          job?.batchAnswerSource ?? 'inside',
-        )
-        const answerKey = await answerKeyForRun(run, file, declared)
+        const answerKey = await answerKeyForRun(run, file)
         queue.push({
           run,
           bytes: new Uint8Array(await file.blob.arrayBuffer()),
           examPageCount: file.pageCount,
-          declared,
           ...(answerKey === undefined
             ? {}
             : {

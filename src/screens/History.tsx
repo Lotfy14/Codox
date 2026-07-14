@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Badge, Button, Dialog, GlassPanel } from '../design/components'
+import { Badge, Button, Dialog, GlassPanel, SplitButton } from '../design/components'
 import type { BadgeTone } from '../design/components'
-import { appMessages, historyMessages } from '../copy/messages'
-import { exportRuns } from '../export/exporter'
+import { appMessages, exportMessages, historyMessages } from '../copy/messages'
+import { exportRuns, type ExportMode, type ExportOutcome } from '../export/exporter'
+import { AiExportDialog } from './AiExportDialog'
 import {
   deleteHistoryRun,
   restoreHistoryRun,
@@ -39,12 +40,16 @@ export function History({ onOpenConvert }: HistoryProps) {
   const [deleteRunId, setDeleteRunId] = useState<string | null>(null)
   const [deleteBusy, setDeleteBusy] = useState(false)
   const [actionBusyId, setActionBusyId] = useState<string | null>(null)
+  const [aiExportRunId, setAiExportRunId] = useState<string | null>(null)
   const [notice, setNotice] = useState<{
     runId: string
     text: string
     tone: 'info' | 'danger' | 'working'
   } | null>(null)
   const selected = entries?.find((entry) => entry.run.id === deleteRunId)
+  const aiExportRun = entries?.find(
+    (entry) => entry.run.id === aiExportRunId,
+  )?.run
 
   const confirmDelete = async () => {
     if (deleteRunId === null || deleteBusy) return
@@ -63,23 +68,26 @@ export function History({ onOpenConvert }: HistoryProps) {
     }
   }
 
-  const exportRun = async (run: RunState) => {
+  const noticeForOutcome = (runId: string, outcome: ExportOutcome) => {
+    setNotice({
+      runId,
+      text:
+        outcome === 'cancelled'
+          ? historyMessages.exportCancelled
+          : outcome === 'nothing'
+            ? historyMessages.exportUnavailable
+            : historyMessages.exportComplete,
+      tone:
+        outcome === 'cancelled' || outcome === 'nothing' ? 'info' : 'working',
+    })
+  }
+
+  const exportRun = async (run: RunState, mode: ExportMode) => {
     if (actionBusyId !== null) return
     setActionBusyId(run.id)
     setNotice(null)
     try {
-      const outcome = await exportRuns([run])
-      setNotice({
-        runId: run.id,
-        text:
-          outcome === 'cancelled'
-            ? historyMessages.exportCancelled
-            : outcome === 'nothing'
-              ? historyMessages.exportUnavailable
-              : historyMessages.exportComplete,
-        tone:
-          outcome === 'cancelled' || outcome === 'nothing' ? 'info' : 'working',
-      })
+      noticeForOutcome(run.id, await exportRuns([run], { mode }))
     } catch {
       setNotice({
         runId: run.id,
@@ -187,15 +195,33 @@ export function History({ onOpenConvert }: HistoryProps) {
 
               <div className="history-card__actions">
                 {run.status === 'done' ? (
-                  <Button
+                  <SplitButton
                     isPending={actionBusyId === run.id}
-                    onPress={() => void exportRun(run)}
+                    items={[
+                      {
+                        id: 'no-answers',
+                        label: exportMessages.withoutAnswers,
+                        description: exportMessages.withoutAnswersHint,
+                      },
+                      {
+                        id: 'ai-answers',
+                        label: exportMessages.withAiAnswers,
+                        description: exportMessages.withAiAnswersHint,
+                      },
+                    ]}
+                    menuLabel={exportMessages.menuLabel}
+                    onAction={(id) =>
+                      id === 'ai-answers'
+                        ? setAiExportRunId(run.id)
+                        : void exportRun(run, 'no-answers')
+                    }
+                    onPress={() => void exportRun(run, 'with-answers')}
                     variant="secondary"
                   >
                     {run.exportedAt === undefined
                       ? historyMessages.exportAction
                       : historyMessages.exportAgainAction}
-                  </Button>
+                  </SplitButton>
                 ) : null}
                 {!isCurrent && originalKept ? (
                   <Button
@@ -246,6 +272,17 @@ export function History({ onOpenConvert }: HistoryProps) {
       >
         <p className="ds-muted">{historyMessages.deleteBody}</p>
       </Dialog>
+
+      <AiExportDialog
+        isOpen={aiExportRun !== undefined}
+        onExported={(outcome) => {
+          if (aiExportRunId !== null) noticeForOutcome(aiExportRunId, outcome)
+        }}
+        onOpenChange={(open) => {
+          if (!open) setAiExportRunId(null)
+        }}
+        runs={aiExportRun === undefined ? [] : [aiExportRun]}
+      />
     </section>
   )
 }

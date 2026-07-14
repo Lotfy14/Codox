@@ -5,7 +5,7 @@ import { saveGeminiKey } from '../state/credentials'
 import { db } from '../state/db'
 import { createRun, getArtifacts, getRun } from '../state/runs'
 import type { GeminiAdapter, VisionResult } from '../providers/types'
-import { declarationContradictsPolicy, executeRun } from './executor'
+import { executeRun } from './executor'
 import { makeBlueprint, makeEvidenceBlueprint, makePlannedRow } from './fixtures'
 import type { Blueprint, WorkerRow } from './types'
 
@@ -167,7 +167,7 @@ describe('happy path', () => {
     )
     const runId = await newRun()
 
-    const outcome = await executeRun(runId, PDF_BYTES, undefined, {
+    const outcome = await executeRun(runId, PDF_BYTES, {
       controller: new GeminiController(script.adapter),
     })
 
@@ -197,7 +197,7 @@ describe('happy path', () => {
     script.push(ok(JSON.stringify(blueprint)), ok(workerResponse(blueprint)), ok(AUDIT_PASS))
     const runId = await newRun()
 
-    await executeRun(runId, PDF_BYTES, undefined, {
+    await executeRun(runId, PDF_BYTES, {
       controller: new GeminiController(script.adapter),
     })
 
@@ -230,7 +230,7 @@ describe('happy path', () => {
       pageCount: 4,
     })
 
-    const outcome = await executeRun(runId, PDF_BYTES, 'key-file', {
+    const outcome = await executeRun(runId, PDF_BYTES, {
       controller: new GeminiController(script.adapter),
       examPageCount: 2,
       answerKeyBytes: new Uint8Array([9, 8, 7]),
@@ -251,7 +251,7 @@ describe('happy path', () => {
     script.push(ok(JSON.stringify(blueprint)), ok(workerResponse(blueprint)), ok(AUDIT_PASS))
     const runId = await newRun()
 
-    await executeRun(runId, PDF_BYTES, undefined, {
+    await executeRun(runId, PDF_BYTES, {
       controller: new GeminiController(script.adapter),
     })
 
@@ -276,7 +276,7 @@ describe('happy path', () => {
     script.push(ok(JSON.stringify(blueprint)), ok(workerResponse(blueprint)), ok(AUDIT_PASS))
     const runId = await newRun()
 
-    await executeRun(runId, PDF_BYTES, undefined, {
+    await executeRun(runId, PDF_BYTES, {
       controller: new GeminiController(script.adapter),
     })
 
@@ -316,7 +316,7 @@ describe('happy path', () => {
     )
     const runId = await newRun()
 
-    const outcome = await executeRun(runId, PDF_BYTES, undefined, {
+    const outcome = await executeRun(runId, PDF_BYTES, {
       controller: new GeminiController(script.adapter),
     })
 
@@ -335,7 +335,7 @@ describe('stop reasons (§1.3)', () => {
     const script = scriptedAdapter()
     const runId = await newRun()
 
-    const outcome = await executeRun(runId, PDF_BYTES, undefined, {
+    const outcome = await executeRun(runId, PDF_BYTES, {
       controller: new GeminiController(script.adapter),
     })
 
@@ -352,7 +352,7 @@ describe('stop reasons (§1.3)', () => {
     script.push(ok(JSON.stringify(blueprint)), ok(workerResponse(blueprint)), ok(AUDIT_PASS))
     const runId = await newRun()
 
-    const outcome = await executeRun(runId, PDF_BYTES, undefined, {
+    const outcome = await executeRun(runId, PDF_BYTES, {
       controller: new GeminiController(script.adapter),
     })
 
@@ -368,7 +368,7 @@ describe('stop reasons (§1.3)', () => {
     script.push(ok('still prose'))
     const runId = await newRun()
 
-    const outcome = await executeRun(runId, PDF_BYTES, undefined, {
+    const outcome = await executeRun(runId, PDF_BYTES, {
       controller: new GeminiController(script.adapter),
     })
 
@@ -387,7 +387,7 @@ describe('stop reasons (§1.3)', () => {
     script.push(ok('{"csv_schema": [', 'MAX_TOKENS'))
     const runId = await newRun()
 
-    const outcome = await executeRun(runId, PDF_BYTES, undefined, {
+    const outcome = await executeRun(runId, PDF_BYTES, {
       controller: new GeminiController(script.adapter),
     })
 
@@ -408,7 +408,7 @@ describe('stop reasons (§1.3)', () => {
     )
     const runId = await newRun()
 
-    const outcome = await executeRun(runId, PDF_BYTES, undefined, {
+    const outcome = await executeRun(runId, PDF_BYTES, {
       controller: new GeminiController(script.adapter),
     })
 
@@ -427,7 +427,7 @@ describe('stop reasons (§1.3)', () => {
     script.push(ok(JSON.stringify(broken)), ok(JSON.stringify(broken)))
     const runId = await newRun()
 
-    const outcome = await executeRun(runId, PDF_BYTES, undefined, {
+    const outcome = await executeRun(runId, PDF_BYTES, {
       controller: new GeminiController(script.adapter),
     })
 
@@ -450,7 +450,7 @@ describe('stop reasons (§1.3)', () => {
     )
     const runId = await newRun()
 
-    const outcome = await executeRun(runId, PDF_BYTES, undefined, {
+    const outcome = await executeRun(runId, PDF_BYTES, {
       controller: new GeminiController(script.adapter),
     })
 
@@ -469,7 +469,7 @@ describe('stop reasons (§1.3)', () => {
     )
     const runId = await newRun()
 
-    const outcome = await executeRun(runId, PDF_BYTES, undefined, {
+    const outcome = await executeRun(runId, PDF_BYTES, {
       controller: new GeminiController(script.adapter),
     })
 
@@ -490,7 +490,7 @@ describe('stop reasons (§1.3)', () => {
     )
     const runId = await newRun()
 
-    const outcome = await executeRun(runId, PDF_BYTES, undefined, {
+    const outcome = await executeRun(runId, PDF_BYTES, {
       controller: new GeminiController(script.adapter),
     })
 
@@ -522,7 +522,7 @@ describe('stop reasons (§1.3)', () => {
     )
     const runId = await newRun()
 
-    const outcome = await executeRun(runId, PDF_BYTES, undefined, {
+    const outcome = await executeRun(runId, PDF_BYTES, {
       controller: new GeminiController(script.adapter),
     })
 
@@ -539,7 +539,7 @@ describe('stop reasons (§1.3)', () => {
     script.push({ ok: false, kind: 'wrong-key', httpStatus: 400 })
     const runId = await newRun()
 
-    const outcome = await executeRun(runId, PDF_BYTES, undefined, {
+    const outcome = await executeRun(runId, PDF_BYTES, {
       controller: new GeminiController(script.adapter),
     })
 
@@ -557,7 +557,7 @@ describe('stop reasons (§1.3)', () => {
     })
     const runId = await newRun()
 
-    const outcome = await executeRun(runId, PDF_BYTES, undefined, {
+    const outcome = await executeRun(runId, PDF_BYTES, {
       controller: new GeminiController(script.adapter),
     })
 
@@ -584,7 +584,7 @@ describe('stop reasons (§1.3)', () => {
     script.push(ok(JSON.stringify(blueprint)), ok(workerResponse(blueprint)), ok(AUDIT_PASS))
     const runId = await newRun()
 
-    const outcome = await executeRun(runId, PDF_BYTES, undefined, {
+    const outcome = await executeRun(runId, PDF_BYTES, {
       controller: new GeminiController(script.adapter),
     })
 
@@ -613,7 +613,7 @@ describe('stop reasons (§1.3)', () => {
     script.push(overloaded, overloaded, overloaded, overloaded)
     const runId = await newRun()
 
-    const outcome = await executeRun(runId, PDF_BYTES, undefined, {
+    const outcome = await executeRun(runId, PDF_BYTES, {
       controller: new GeminiController(script.adapter),
     })
 
@@ -644,7 +644,7 @@ describe('quota pause', () => {
     const events: string[] = []
     controller.subscribe((event) => events.push(event.type))
 
-    const outcome = await executeRun(runId, PDF_BYTES, undefined, { controller })
+    const outcome = await executeRun(runId, PDF_BYTES, { controller })
 
     expect(outcome.status).toBe('done')
     expect(events).toContain('paused')
@@ -661,10 +661,10 @@ describe('resume (the checkpoint matrix)', () => {
     secondScript: Scripted,
   ): Promise<{ runId: string; second: Awaited<ReturnType<typeof executeRun>> }> {
     const runId = await newRun()
-    await executeRun(runId, PDF_BYTES, undefined, {
+    await executeRun(runId, PDF_BYTES, {
       controller: new GeminiController(firstScript.adapter),
     }).catch(() => undefined)
-    const second = await executeRun(runId, PDF_BYTES, undefined, {
+    const second = await executeRun(runId, PDF_BYTES, {
       controller: new GeminiController(secondScript.adapter),
     })
     return { runId, second }
@@ -746,7 +746,7 @@ describe('resume (the checkpoint matrix)', () => {
     first.push(ok(JSON.stringify(blueprint)), { ok: false, kind: 'aborted' })
     const runId = await newRun()
 
-    const outcome = await executeRun(runId, PDF_BYTES, undefined, {
+    const outcome = await executeRun(runId, PDF_BYTES, {
       controller: new GeminiController(first.adapter),
     })
 
@@ -758,63 +758,15 @@ describe('resume (the checkpoint matrix)', () => {
     // …and it resumes cleanly from the blueprint.
     const second = scriptedAdapter()
     second.push(ok(workerResponse(blueprint)), ok(AUDIT_PASS))
-    const resumed = await executeRun(runId, PDF_BYTES, undefined, {
+    const resumed = await executeRun(runId, PDF_BYTES, {
       controller: new GeminiController(second.adapter),
     })
     expect(resumed.status).toBe('done')
   })
 })
 
-describe('declaration cross-check', () => {
-  it('flags every row when the user said answers exist but the planner found none', async () => {
-    const blueprint = makeBlueprint() // policy: no_answer_key
-    const script = scriptedAdapter()
-    script.push(ok(JSON.stringify(blueprint)), ok(workerResponse(blueprint)), ok(AUDIT_PASS))
-    const runId = await newRun()
-
-    const outcome = await executeRun(runId, PDF_BYTES, 'inside', {
-      controller: new GeminiController(script.adapter),
-    })
-
-    expect(outcome.status).toBe('done')
-    if (outcome.status === 'done') expect(outcome.flaggedRows).toBe(2)
-    const run = await getRun(runId)
-    expect(run?.wrongDeclaration).toBe(true)
-    const [merged] = await getArtifacts(runId, 'merged-rows')
-    for (const row of merged.json as Array<{ correct_index: string; needs_review: string }>) {
-      expect(row.correct_index).toBe('')
-      expect(row.needs_review).toBe('wrong_declaration')
-    }
-  })
-
-  it('the declaration never reaches the prompts that read the document', async () => {
-    const blueprint = makeBlueprint()
-    const script = scriptedAdapter()
-    script.push(ok(JSON.stringify(blueprint)), ok(workerResponse(blueprint)), ok(AUDIT_PASS))
-    const runId = await newRun()
-
-    await executeRun(runId, PDF_BYTES, 'key-file', {
-      controller: new GeminiController(script.adapter),
-    })
-
-    // The planner must discover the answer policy from the pages alone
-    // (§2 usage notes: no document-specific hints, ever) and the worker
-    // follows the planner. Neither may learn what the user declared.
-    const [planner, worker] = script.calls
-    for (const sent of [planner, worker]) {
-      expect(sent.prompt.toLowerCase()).not.toContain('declaration')
-      expect(sent.prompt.toLowerCase()).not.toContain('the user says')
-    }
-    // The declaration value itself appears in no prompt at all. (The audit
-    // does see the merged rows, whose code-set needs_review reason may read
-    // "wrong_declaration" — that is engine output being audited, not a hint
-    // about the document.)
-    for (const sent of script.calls) {
-      expect(sent.prompt).not.toContain('key-file')
-    }
-  })
-
-  it('a matching declaration leaves extracted answers intact', async () => {
+describe('evidence-backed answers', () => {
+  it('answers the planner grounded in evidence survive to the CSV unflagged', async () => {
     const blueprint = makeEvidenceBlueprint() // policy: inline_marks
     const script = scriptedAdapter()
     script.push(
@@ -824,29 +776,11 @@ describe('declaration cross-check', () => {
     )
     const runId = await newRun()
 
-    const outcome = await executeRun(runId, PDF_BYTES, 'inside', {
+    const outcome = await executeRun(runId, PDF_BYTES, {
       controller: new GeminiController(script.adapter),
     })
 
     expect(outcome.status).toBe('done')
     if (outcome.status === 'done') expect(outcome.flaggedRows).toBe(0)
-    expect((await getRun(runId))?.wrongDeclaration).toBeFalsy()
-  })
-
-  it('declarationContradictsPolicy covers the matrix', () => {
-    const noKey = makeBlueprint()
-    const evidence = makeEvidenceBlueprint()
-
-    expect(declarationContradictsPolicy('inside', noKey)).toBe(true)
-    expect(declarationContradictsPolicy('key-file', noKey)).toBe(true)
-    expect(declarationContradictsPolicy('none', noKey)).toBe(false)
-
-    expect(declarationContradictsPolicy('inside', evidence)).toBe(false)
-    expect(declarationContradictsPolicy('key-file', evidence)).toBe(false)
-    expect(declarationContradictsPolicy('none', evidence)).toBe(true)
-
-    // No declaration → nothing to contradict.
-    expect(declarationContradictsPolicy(undefined, noKey)).toBe(false)
-    expect(declarationContradictsPolicy(undefined, evidence)).toBe(false)
   })
 })

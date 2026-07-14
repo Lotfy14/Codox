@@ -66,13 +66,11 @@ published to app stores.
 | Rule | Meaning |
 |---|---|
 | **COST-ZERO** | $0 recurring cost to the developer. Free hosting, no stores, no signing certificates, no paid dependencies, no developer-paid API usage. Anything with a price must be flagged to the human and worked around by default. |
-| **NEVER-GUESS** | Never emit a guessed `correct_index`. Any ambiguity → blank value + `needs_review` flag. A confidently wrong medical answer shown to a student is strictly worse than a blank one. This rule has teeth at every layer: prompts forbid it, deterministic code enforces it, and the audit gate checks it. |
+| **NEVER-GUESS** | Never emit a guessed `correct_index`. Any ambiguity → blank value + `needs_review` flag. A confidently wrong medical answer shown to a student is strictly worse than a blank one. This rule has teeth at every layer: prompts forbid it, deterministic code enforces it, and the audit gate checks it. *Sole exception (owner-approved 2026-07-13):* the opt-in **"Export with AI answers"** export mode answers from model knowledge at export time only — outside the engine path, never modifying `merged-rows`, with every AI-touched row provenance-flagged (`ai_answered` / `ai_unsure` / `ai_disagrees`). |
 | **PRIVACY-TOLD** | The user's PDF pages go **directly from their device to Google Gemini** using **their own Gemini API key** — never through a Codox-operated server. The consent notice states plainly that full page images are sent to Gemini and that its free tier may train on the data. The one key is stored only on that user's device, and every request consumes only that user's Gemini quota. |
 
 Derived invariants that must also survive:
 
-- A wrong user input (e.g. declaring "answers inside the PDF" when there are
-  none) must never produce a wrong CSV — it degrades to "everything flagged."
 - One bad page never crashes a job — it flags and continues.
 - `id` is unique per PDF, not globally; batch imports must namespace per file.
 - Image references are **relative paths** into the bundle's `images/` folder
@@ -80,8 +78,11 @@ Derived invariants that must also survive:
 
 ## 4. The input space (what the engine must handle)
 
-Four **answer forms**, declared by the user at upload (the engine never has to
-guess the form, but a wrong declaration must degrade safely):
+Four **answer forms**, detected by the planner from document evidence alone
+(changed 2026-07-13, owner-approved: the upload-time declaration question was
+removed — the planner's evidence-based `answer_policy` is the sole authority;
+a separate answer-key PDF may optionally be attached and is always read when
+present):
 
 1. **Separate answer grid/key** — printed key pages at the end of the PDF,
    joined to questions by (section, question number).
@@ -136,12 +137,12 @@ change the surface but must keep the reason satisfied:
    this audience. Ask for exactly one user-supplied Gemini key. The user may
    replace or remove it later, but Codox does not accept additional provider
    keys or provide any shared key.
-2. **Upload** — one drop zone (1..n PDFs) plus a single declaration question:
-   *Where are the answers?* (inside the PDF / in a separate file → second drop
-   zone appears / there are no answers). *Intent:* the declaration routes the
-   engine's prompts and resolve path so the engine never guesses the answer
-   form; smaller single-job prompts are cheaper and more accurate. A wrong
-   declaration must never produce a wrong CSV.
+2. **Upload** — one drop zone (1..n PDFs) plus an always-visible, optional
+   answer-key drop zone (changed 2026-07-13, owner-approved: the "Where are
+   the answers?" declaration question was removed). *Intent:* the planner
+   detects the answer form from the pages themselves, so the tutor never has
+   to characterize a document; a supplied key PDF is always attached and read
+   alongside the exam pages.
 3. **Progress** — per-file and overall progress, quota-aware pacing,
    pause/resume. *Intent:* free-tier quota exhaustion mid-PDF must read as
    "paused, resumes when quota allows," never as "the app broke." A dropped

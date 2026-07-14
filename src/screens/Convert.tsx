@@ -6,12 +6,12 @@ import {
   FileRow,
   GlassPanel,
   ProgressBar,
-  Select,
+  SplitButton,
   StatusChip,
   Toggle,
   TypewriterLine,
 } from '../design/components'
-import type { SelectOption, StatusChipStatus } from '../design/components'
+import type { StatusChipStatus } from '../design/components'
 import { sillySentences } from '../design/silly-sentences'
 import {
   convertMessages,
@@ -21,17 +21,21 @@ import {
   uploadMessages,
 } from '../copy/messages'
 import { batchProgress, isBatchRunning, runProgress } from '../engine/progress'
-import { exportableRuns, exportRuns } from '../export/exporter'
+import {
+  exportableRuns,
+  exportRuns,
+  type ExportMode,
+  type ExportOutcome,
+} from '../export/exporter'
+import { AiExportDialog } from './AiExportDialog'
 import {
   addStoredPdf,
   putAnswerKeyPdf,
   removeStoredPdf,
-  setPdfAnswerSource,
   useJobPdfs,
 } from '../state/files'
-import type { AnswerSource, RunState } from '../state/types'
+import type { RunState } from '../state/types'
 import { CURRENT_JOB_ID, useCurrentJob } from '../state/useCurrentJob'
-import { needsAnswerKeyFile } from './convert-logic'
 import { useConversion } from './useConversion'
 import { archiveCurrentJobAndReset, clearCurrentDraft } from '../state/jobs'
 import { useUnresolvedCounts } from './review-data'
@@ -40,35 +44,6 @@ import type { ControllerStatus } from '../providers/controller'
 import { useGeminiCredential } from '../state/credentials'
 
 type ConversionStatus = ControllerStatus
-
-const batchSourceOptions: readonly SelectOption<AnswerSource>[] = [
-  { id: 'inside', label: uploadMessages.insidePdfs },
-  { id: 'key-file', label: uploadMessages.inSeparateKeyFile },
-  { id: 'none', label: uploadMessages.noAnswers },
-]
-
-const fileAnswerSourceLabels = {
-  'batch-default': uploadMessages.batchDefault,
-  inside: uploadMessages.insideThisPdf,
-  'key-file': uploadMessages.separateKeyFile,
-  none: uploadMessages.noAnswersProvided,
-} as const
-
-const answersShort: Record<AnswerSource, string> = {
-  inside: uploadMessages.answersShortInside,
-  'key-file': uploadMessages.answersShortKeyFile,
-  none: uploadMessages.answersShortNone,
-}
-
-/** Pill text resolves "batch default" to the batch's actual declaration. */
-function answersPillLabels(batchSource: AnswerSource) {
-  return {
-    'batch-default': uploadMessages.answersPill(answersShort[batchSource]),
-    inside: uploadMessages.answersPill(answersShort.inside),
-    'key-file': uploadMessages.answersPill(answersShort['key-file']),
-    none: uploadMessages.answersPill(answersShort.none),
-  } as const
-}
 
 /** The hatched marker: the whole job happens on this one screen. */
 function InplaceHint() {
@@ -111,6 +86,7 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
   const [busy, setBusy] = useState(false)
   const [reviewRunId, setReviewRunId] = useState<string | null>(null)
   const [exportBusy, setExportBusy] = useState(false)
+  const [aiExportOpen, setAiExportOpen] = useState(false)
   const [exportNotice, setExportNotice] = useState<{
     text: string
     tone: 'info' | 'danger' | 'working'
@@ -124,28 +100,28 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
 
   const exams = pdfs.filter((file) => file.kind === 'exam')
   const answerKey = pdfs.find((file) => file.kind === 'answer-key')
-  const batchSource = job.batchAnswerSource ?? 'inside'
   const keepOriginal = job.keepOriginal ?? false
   const totalPages = exams.reduce((sum, file) => sum + file.pageCount, 0)
-  const needsKeyFile = needsAnswerKeyFile(batchSource, exams)
-  const keyFileMissing = needsKeyFile && answerKey === undefined
   const keyReady = credential?.lastValidation?.status === 'working'
 
   const runs = conversion.runs ?? []
   const hasRuns = runs.length > 0
   const running = isBatchRunning(runs) || conversion.isDriving
 
-  const handleExport = async () => {
+  const noticeForOutcome = (outcome: ExportOutcome) => {
+    if (outcome === 'cancelled') {
+      setExportNotice({ text: exportMessages.cancelled, tone: 'info' })
+    } else if (outcome === 'nothing') {
+      setExportNotice({ text: exportMessages.nothingToExport, tone: 'info' })
+    }
+  }
+
+  const handleExport = async (mode: ExportMode = 'with-answers') => {
     if (exportBusy) return
     setExportBusy(true)
     setExportNotice(null)
     try {
-      const outcome = await exportRuns(runs)
-      if (outcome === 'cancelled') {
-        setExportNotice({ text: exportMessages.cancelled, tone: 'info' })
-      } else if (outcome === 'nothing') {
-        setExportNotice({ text: exportMessages.nothingToExport, tone: 'info' })
-      }
+      noticeForOutcome(await exportRuns(runs, { mode }))
     } catch {
       setExportNotice({ text: exportMessages.failed, tone: 'danger' })
     } finally {
@@ -161,7 +137,7 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
     }
     setStartBusy(true)
     try {
-      await conversion.start(exams, answerKey, batchSource)
+      await conversion.start(exams, answerKey)
     } catch {
       setNotes([convertMessages.startFailed])
     } finally {
@@ -286,8 +262,9 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
           <DoneStage
             exportBusy={exportBusy}
             exported={exported}
+            onAiExport={() => setAiExportOpen(true)}
             onConvertAnother={() => void startFreshConversion()}
-            onExport={() => void handleExport()}
+            onExport={(mode) => void handleExport(mode)}
             onOpenReview={setReviewRunId}
             onRequestApiKey={onRequestApiKey}
             onRetry={(runIds) => void conversion.retry(runIds)}
@@ -295,6 +272,12 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
             runs={runs}
           />
         )}
+        <AiExportDialog
+          isOpen={aiExportOpen}
+          onExported={noticeForOutcome}
+          onOpenChange={setAiExportOpen}
+          runs={runs}
+        />
       </section>
     )
   }
@@ -323,23 +306,15 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
           <GlassPanel aria-label={convertMessages.batchPanelLabel} as="section" padding="compact">
             <div className="ds-panel-head">
               <strong>{convertMessages.filesReady(exams.length)}</strong>
-              <span>{convertMessages.batchOverrideHint}</span>
             </div>
             {inlineNotes}
             <div className="ds-row-list" role="list">
               {exams.map((file) => (
                 <FileRow
-                  answerSource={file.answerSource}
-                  answerSourceLabel={uploadMessages.answerSourceLabel}
-                  answerSourceOptionLabels={fileAnswerSourceLabels}
-                  answerSourceValueLabels={answersPillLabels(batchSource)}
                   flagLabel={uploadMessages.flagLabel}
                   isDisabled={busy}
                   key={file.id}
                   name={file.name}
-                  onAnswerSourceChange={(source) =>
-                    void setPdfAnswerSource(file.id, source)
-                  }
                   onRemove={() => void removeStoredPdf(file.id)}
                   pageCountLabel={uploadMessages.pageCount(file.pageCount)}
                   removeLabel={uploadMessages.removeFile(file.name)}
@@ -370,45 +345,32 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
 
           <GlassPanel aria-label={convertMessages.optionsPanelLabel} as="section" padding="default">
             <div className="ds-field-stack">
-              <Select
-                description={uploadMessages.declarationHelp}
-                label={uploadMessages.declarationQuestion}
-                onChange={(source) => {
-                  if (source !== null) {
-                    void updateJob({ batchAnswerSource: source })
-                  }
-                }}
-                options={batchSourceOptions}
-                value={batchSource}
-              />
-              {needsKeyFile ? (
-                <div className="ds-key-file-slot">
-                  <p className="ds-inline-note ds-inline-note--info">
-                    {uploadMessages.needsKeyFile}
+              <div className="ds-key-file-slot">
+                <p className="ds-inline-note ds-inline-note--info">
+                  {uploadMessages.keyFileOptional}
+                </p>
+                {answerKey !== undefined ? (
+                  <p className="ds-key-file-added" role="status">
+                    ✓ {convertMessages.answerKeyAdded(answerKey.name)}{' '}
+                    <Button
+                      onPress={() => void removeStoredPdf(answerKey.id)}
+                      variant="quiet"
+                    >
+                      {convertMessages.remove}
+                    </Button>
                   </p>
-                  {answerKey !== undefined ? (
-                    <p className="ds-key-file-added" role="status">
-                      ✓ {convertMessages.answerKeyAdded(answerKey.name)}{' '}
-                      <Button
-                        onPress={() => void removeStoredPdf(answerKey.id)}
-                        variant="quiet"
-                      >
-                        {convertMessages.remove}
-                      </Button>
-                    </p>
-                  ) : (
-                    <FileDropZone
-                      allowsMultiple={false}
-                      chooseLabel={uploadMessages.chooseFiles}
-                      description={convertMessages.keyDropHint}
-                      isDisabled={busy}
-                      label={convertMessages.keyDropTitle}
-                      onFiles={(files) => void intake(files, 'answer-key')}
-                      onRejected={rejectFiles}
-                    />
-                  )}
-                </div>
-              ) : null}
+                ) : (
+                  <FileDropZone
+                    allowsMultiple={false}
+                    chooseLabel={uploadMessages.chooseFiles}
+                    description={convertMessages.keyDropHint}
+                    isDisabled={busy}
+                    label={convertMessages.keyDropTitle}
+                    onFiles={(files) => void intake(files, 'answer-key')}
+                    onRejected={rejectFiles}
+                  />
+                )}
+              </div>
               <Toggle
                 description={convertMessages.keepOriginalHint}
                 isSelected={keepOriginal}
@@ -418,7 +380,7 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
             </div>
             <div className="ds-start-row">
               <Button
-                isDisabled={busy || startBusy || keyFileMissing}
+                isDisabled={busy || startBusy}
                 isPending={startBusy}
                 onPress={() => void startConversion()}
               >
@@ -428,11 +390,7 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
                 {uploadMessages.pageCount(totalPages)}
               </span>
             </div>
-            {keyFileMissing ? (
-              <p className="ds-muted ds-phase-note">
-                {uploadMessages.needsKeyFile}
-              </p>
-            ) : !keyReady ? (
+            {!keyReady ? (
               <p className="ds-muted ds-phase-note">
                 {convertMessages.apiKeyRequired}
               </p>
@@ -475,7 +433,6 @@ function RunningStage({
   const status = chipStatus(providerStatus)
   const healthy = status === 'working'
   const badPageRun = runs.find((run) => (run.badPages?.length ?? 0) > 0)
-  const wrongDeclarationRun = runs.find((run) => run.wrongDeclaration === true)
 
   const seriousLine =
     status === 'quota-paused'
@@ -517,11 +474,6 @@ function RunningStage({
               )}
             </p>
           ) : null}
-          {wrongDeclarationRun !== undefined ? (
-            <p className="ds-inline-note ds-inline-note--info">
-              {progressMessages.wrongDeclaration(wrongDeclarationRun.fileName)}
-            </p>
-          ) : null}
         </div>
 
         <div className="ds-row-list" role="list">
@@ -553,9 +505,24 @@ function RunningStage({
  * primary and prominent; the only nag is the quiet "Not exported yet"
  * badge.
  */
+/** The variant entries behind the export split button's chevron. */
+const exportMenuItems = [
+  {
+    id: 'no-answers',
+    label: exportMessages.withoutAnswers,
+    description: exportMessages.withoutAnswersHint,
+  },
+  {
+    id: 'ai-answers',
+    label: exportMessages.withAiAnswers,
+    description: exportMessages.withAiAnswersHint,
+  },
+] as const
+
 function DoneStage({
   exportBusy,
   exported,
+  onAiExport,
   onConvertAnother,
   onExport,
   onOpenReview,
@@ -566,8 +533,9 @@ function DoneStage({
 }: {
   exportBusy: boolean
   exported: boolean
+  onAiExport: () => void
   onConvertAnother: () => void
-  onExport: () => void
+  onExport: (mode: ExportMode) => void
   onOpenReview: (runId: string) => void
   onRequestApiKey: () => void
   onRetry: (runIds: readonly string[]) => void
@@ -668,21 +636,31 @@ function DoneStage({
                   done.length > 1 ? firstFlagged.fileName : undefined,
                 )}
               </Button>
-              <Button
+              <SplitButton
                 isDisabled={exportBusy || done.length === 0}
-                onPress={onExport}
+                items={exportMenuItems}
+                menuLabel={exportMessages.menuLabel}
+                onAction={(id) =>
+                  id === 'ai-answers' ? onAiExport() : onExport('no-answers')
+                }
+                onPress={() => onExport('with-answers')}
                 variant="secondary"
               >
                 {exported ? convertMessages.exportAgain : convertMessages.exportAsIs}
-              </Button>
+              </SplitButton>
             </>
           ) : (
-            <Button
+            <SplitButton
               isDisabled={exportBusy || done.length === 0}
-              onPress={onExport}
+              items={exportMenuItems}
+              menuLabel={exportMessages.menuLabel}
+              onAction={(id) =>
+                id === 'ai-answers' ? onAiExport() : onExport('no-answers')
+              }
+              onPress={() => onExport('with-answers')}
             >
               {exported ? convertMessages.exportAgain : convertMessages.exportBundle}
-            </Button>
+            </SplitButton>
           )}
           <Button
             isPending={resetBusy}

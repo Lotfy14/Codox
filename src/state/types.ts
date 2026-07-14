@@ -1,17 +1,9 @@
 export type AppStep = 'setup' | 'upload' | 'progress' | 'review' | 'export'
 
-/**
- * Where the correct answers live for a PDF — the one declaration question
- * on Upload. Mirrors `FileAnswerSource` in the design components.
- */
-export type AnswerSource = 'inside' | 'key-file' | 'none'
-
 export interface JobState {
   id: string
   createdAt: number
   step: AppStep
-  /** Batch-level answer declaration; per-file overrides live on StoredPdf. */
-  batchAnswerSource?: AnswerSource
   /** Keep the original PDF stored after conversion (History re-runs). */
   keepOriginal?: boolean
 }
@@ -29,8 +21,6 @@ export interface StoredPdf {
   size: number
   pageCount: number
   addedAt: number
-  /** Per-file override of the batch declaration; undefined = batch default. */
-  answerSource?: AnswerSource
   blob: Blob
 }
 
@@ -62,8 +52,6 @@ export interface RunState {
   pagesRendered?: number
   chunkCount?: number
   chunksDone?: number
-  /** True when the user's declaration contradicted the planner's policy. */
-  wrongDeclaration?: boolean
   /** Rows whose correct_index is blank + flagged at the end of the run. */
   flaggedRows?: number
   /** Quota burn: every Gemini request this run made, and its token totals. */
@@ -93,6 +81,7 @@ export type RunArtifactKind =
   | 'csv'
   | 'audit-report'
   | 'review-resolutions'
+  | 'ai-answers'
 
 export interface RunArtifact {
   id: string

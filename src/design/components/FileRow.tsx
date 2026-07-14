@@ -1,29 +1,17 @@
 import type { HTMLAttributes, ReactNode } from 'react';
-import type { SelectOption } from './Select';
-import { Select } from './Select';
-
-export type FileAnswerSource = 'inside' | 'key-file' | 'none';
-
-type FileAnswerSourceSelection = 'batch-default' | FileAnswerSource;
 
 export interface FileRowProps
   extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
-  answerSource?: FileAnswerSource;
-  answerSourceLabel: string;
-  answerSourceOptionLabels: Record<FileAnswerSourceSelection, string>;
   children?: ReactNode;
   flagLabel: string;
   flagged?: boolean;
   isDisabled?: boolean;
   name: string;
-  onAnswerSourceChange?: (answerSource: FileAnswerSource | undefined) => void;
   onRemove?: () => void;
   /** Shown before the size, e.g. "14 pages". */
   pageCountLabel?: string;
   removeLabel: string;
   size: number | string;
-  /** Compact trigger text per selection, e.g. "Answers: inside". */
-  answerSourceValueLabels?: Record<FileAnswerSourceSelection, string>;
 }
 
 const fileSizeFormatter = new Intl.NumberFormat('en', {
@@ -48,27 +36,14 @@ function formatFileSize(size: number | string) {
   return `${fileSizeFormatter.format(value)} ${units[unitIndex]}`;
 }
 
-function toAnswerSource(selection: FileAnswerSourceSelection | null) {
-  return selection === 'inside' ||
-    selection === 'key-file' ||
-    selection === 'none'
-    ? selection
-    : undefined;
-}
-
-/** A solid PDF row with an accessible per-file answer declaration override. */
+/** A solid PDF row: type badge, name, size, optional flag and remove. */
 export function FileRow({
-  answerSource,
-  answerSourceLabel,
-  answerSourceOptionLabels,
-  answerSourceValueLabels,
   children,
   className,
   flagLabel,
   flagged = false,
   isDisabled = false,
   name,
-  onAnswerSourceChange,
   onRemove,
   pageCountLabel,
   removeLabel,
@@ -82,17 +57,6 @@ export function FileRow({
   ]
     .filter(Boolean)
     .join(' ');
-
-  const selectAnswerSource = (selection: FileAnswerSourceSelection | null) => {
-    const nextAnswerSource = toAnswerSource(selection);
-    onAnswerSourceChange?.(nextAnswerSource);
-  };
-  const answerSourceOptions: readonly SelectOption<FileAnswerSourceSelection>[] = [
-    { id: 'batch-default', label: answerSourceOptionLabels['batch-default'] },
-    { id: 'inside', label: answerSourceOptionLabels.inside },
-    { id: 'key-file', label: answerSourceOptionLabels['key-file'] },
-    { id: 'none', label: answerSourceOptionLabels.none },
-  ];
 
   return (
     <div {...divProps} className={classes} data-flagged={flagged || undefined}>
@@ -110,16 +74,6 @@ export function FileRow({
       {flagged ? (
         <span className="ds-file-row__flag">{flagLabel}</span>
       ) : null}
-      <Select<FileAnswerSourceSelection>
-        aria-label={`${answerSourceLabel} for ${name}`}
-        className="ds-file-row__answer-source ds-select--pill"
-        isDisabled={isDisabled}
-        label={answerSourceLabel}
-        onChange={selectAnswerSource}
-        options={answerSourceOptions}
-        value={answerSource ?? 'batch-default'}
-        valueLabel={answerSourceValueLabels?.[answerSource ?? 'batch-default']}
-      />
       {children !== undefined ? (
         <div className="ds-file-row__extra">{children}</div>
       ) : null}

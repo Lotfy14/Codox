@@ -371,6 +371,94 @@
   font-weight: var(--font-weight-label);
 }
 
+/* Split button: one primary action + a chevron menu of variants. The two
+   halves read as one control — shared radius outside, a hairline between. */
+.ds-split-button {
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.ds-split-button .ds-split-button__primary {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.ds-split-button__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left: 1px solid color-mix(in srgb, currentcolor 28%, transparent);
+  padding: var(--space-2) var(--space-3);
+}
+
+.ds-split-button__toggle[data-focus-visible] {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.ds-split-button__chevron {
+  width: 1rem;
+  height: 1rem;
+  transition: transform var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.ds-split-button__toggle[aria-expanded='true'] .ds-split-button__chevron {
+  transform: rotate(180deg);
+}
+
+/* The variants menu reuses the select popover's look. */
+.ds-menu__popover {
+  z-index: 50;
+  min-width: 16rem;
+  max-height: min(22rem, var(--available-height));
+  overflow: auto;
+  border: 1px solid var(--color-outline);
+  border-radius: var(--radius-card);
+  padding: var(--space-2);
+  background: var(--color-surface-elevated);
+  box-shadow: var(--shadow-dialog);
+}
+
+.ds-menu {
+  display: grid;
+  gap: var(--space-1);
+  outline: none;
+}
+
+.ds-menu__item {
+  display: grid;
+  gap: var(--space-1);
+  min-height: var(--touch-target-min);
+  align-content: center;
+  border-radius: var(--radius-input);
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text-strong);
+  cursor: default;
+  outline: none;
+}
+
+.ds-menu__item[data-hovered],
+.ds-menu__item[data-focused] {
+  background: var(--color-row-hover);
+}
+
+.ds-menu__item[data-focus-visible] {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: calc(-1 * var(--focus-ring-width));
+}
+
+.ds-menu__item-label {
+  font-weight: var(--font-weight-medium);
+}
+
+.ds-menu__item-description {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
 /* Label reads left, switch sits at the row's right edge (the mockup's
    toggle row); DOM keeps track-then-label for the switch pattern. */
 .ds-toggle__control {
@@ -745,6 +833,67 @@
   justify-content: flex-end;
   gap: var(--space-2);
   margin-top: var(--space-6);
+}
+
+.ds-dialog-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Card-style radio choices (dialog option groups). */
+.ds-choice-group {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.ds-choice-group__legend {
+  margin: 0;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-strong);
+}
+
+.ds-choice-group__options {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.ds-choice {
+  display: grid;
+  gap: var(--space-1);
+  min-height: var(--touch-target-min);
+  border: 1px solid var(--color-outline);
+  border-radius: var(--radius-input);
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  color: var(--color-text-strong);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.ds-choice:hover {
+  background: var(--color-row-hover);
+}
+
+.ds-choice:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.ds-choice[aria-checked='true'] {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.ds-choice__label {
+  font-weight: var(--font-weight-medium);
+}
+
+.ds-choice__hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
 }
 
 .ds-tab-nav {
@@ -2130,12 +2279,22 @@
     margin-top: var(--space-4);
   }
 
-  .ds-done-actions .ds-button:first-child {
+  .ds-done-actions > .ds-button:first-child,
+  .ds-done-actions > .ds-split-button:first-child {
     grid-column: 1 / -1;
   }
 
   .ds-done-actions .ds-button {
     min-width: 0;
+  }
+
+  /* The split button's wide half stretches; the chevron keeps its size. */
+  .ds-done-actions .ds-split-button {
+    min-width: 0;
+  }
+
+  .ds-done-actions .ds-split-button .ds-split-button__primary {
+    flex: 1 1 auto;
   }
 
   .ds-phase-note {

@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from './db'
-import type { AnswerSource, StoredPdf } from './types'
+import type { StoredPdf } from './types'
 
 type NewStoredPdf = Omit<StoredPdf, 'id' | 'addedAt'>
 
@@ -35,14 +35,6 @@ export async function removeStoredPdf(id: string): Promise<void> {
 
 export async function clearJobPdfs(jobId: string): Promise<void> {
   await db.files.where('jobId').equals(jobId).delete()
-}
-
-/** Set or clear (undefined = batch default) a per-file declaration override. */
-export async function setPdfAnswerSource(
-  id: string,
-  answerSource: AnswerSource | undefined,
-): Promise<void> {
-  await db.files.update(id, { answerSource })
 }
 
 /** Live view of a job's stored PDFs, oldest first. undefined while loading. */

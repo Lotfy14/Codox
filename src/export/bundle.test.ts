@@ -41,6 +41,18 @@ describe('exportArchiveName', () => {
       'Cardiology +1 more Cx.zip',
     )
   })
+
+  it('marks variant exports on the zip name only', () => {
+    expect(exportArchiveName(['Exam.pdf'], 'no answers')).toBe(
+      'Exam Cx (no answers).zip',
+    )
+    expect(exportArchiveName(['Cardiology.pdf', 'Renal.pdf'], 'AI answers')).toBe(
+      'Cardiology +1 more Cx (AI answers).zip',
+    )
+    expect(exportArchiveName([], 'no answers')).toBe(
+      'Codox export Cx (no answers).zip',
+    )
+  })
 })
 
 describe('uniqueBundleNames', () => {
