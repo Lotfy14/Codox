@@ -1,9 +1,15 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import pkg from './package.json' with { type: 'json' }
 
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    // CI stamps VERSION (0.0.<run>) into the build so the Android banner can
+    // compare it against the newest GitHub release; package.json for dev.
+    __APP_VERSION__: JSON.stringify(process.env.VERSION ?? pkg.version),
+  },
   plugins: [
     react(),
     VitePWA({

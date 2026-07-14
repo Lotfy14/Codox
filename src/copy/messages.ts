@@ -92,6 +92,14 @@ export const appMessages = {
   themeDark: 'Dark theme',
 } as const
 
+export const updateMessages = {
+  available: (version: string) => `Codox ${version} is available.`,
+  download: 'Download update',
+  restart: 'Restart & update',
+  installing: 'Updating…',
+  dismiss: 'Dismiss update notice',
+} as const
+
 export const privacyMessages = {
   local: 'Your API key, PDFs, and results are stored on this device.',
   processing:

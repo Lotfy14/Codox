@@ -21,6 +21,7 @@ import {
   useApiCoachmarkDismissed,
 } from './state/settings'
 import { useStorageEstimate } from './state/storage'
+import { UpdateBanner } from './UpdateBanner.tsx'
 
 type OpenDialog = 'api' | 'help' | 'privacy' | null
 type MobileNavItem = AppTab | Exclude<OpenDialog, null | 'privacy'>
@@ -123,6 +124,7 @@ function App() {
 
   return (
     <div className={`ds-stage${showCoachmark ? ' app--coachmark' : ''}`}>
+      <UpdateBanner />
       <div className="ds-frame">
         <aside className="ds-sidebar">
           <div className="ds-brand">
