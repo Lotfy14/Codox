@@ -214,6 +214,42 @@ export const convertMessages = {
 } as const
 
 export const reviewMessages = {
+  questionCount: (count: number) =>
+    `${count} question${count === 1 ? '' : 's'}`,
+  searchLabel: 'Find a question',
+  searchPlaceholder: 'Question number or words',
+  searchNoMatches: 'No questions match this search.',
+  jumpHiddenByFilter:
+    'That question is hidden by the needs-review filter. Show all questions to open it.',
+  needsReviewFilter: (count: number) => `Needs review (${count})`,
+  showAllFilter: 'Show all questions',
+  fileSwitcherLabel: 'Choose a converted file',
+  answerBlank: '—',
+  backToList: 'Back to questions',
+  questionPosition: (current: number, total: number) =>
+    `Question ${current} of ${total}`,
+  listPanelLabel: 'Converted questions',
+  confirm: 'Confirm answer (Enter)',
+  previous: 'Previous (←)',
+  next: 'Next (→)',
+  viewSource: 'View source (V)',
+  backToAnswer: 'Back to answer (V)',
+  wholePage: 'Show whole page (W)',
+  questionArea: 'Back to the question area (W)',
+  pickAnswer: 'Pick the correct answer',
+  keyboardHint: (optionCount: number) =>
+    `Keyboard: 1–${optionCount} pick an answer · Enter confirm · ← → move between questions · V flip to the page · W whole page. Unsure? Skip it — unresolved answers export blank and marked for review, never guessed.`,
+  sourceUnavailable: 'No source image is stored for this question.',
+  sourceUnavailableLabel: 'Source unavailable',
+  sourceAlt: (questionNumber: number) =>
+    `Scanned source for question ${questionNumber}`,
+  pageCaption: (page: number, fileName: string, wholePage: boolean) =>
+    `Page ${page} · ${fileName}${wholePage ? ' · whole page' : ''}`,
+  reviewHeading: (fileName: string) => `Review · ${fileName}`,
+  pagePosition: (questionNumber: number, pageIndex: number | null) =>
+    `Question ${questionNumber}${pageIndex === null ? '' : `, page ${pageIndex + 1}`}`,
+  backToResults: 'Back to results',
+  flagsResolved: 'Flags resolved',
   whyFlagged: {
     'blank-answer':
       'No answer found — Codox never guesses, so this one is yours.',
@@ -308,6 +344,8 @@ export const historyMessages = {
   deleteFailed:
     'Codox could not delete this run. It is still saved on this device.',
   useAgainAction: 'Use PDF again',
+  reviewAction: 'Review answers',
+  backToHistory: 'Back to history',
   exportAction: 'Export bundle',
   exportAgainAction: 'Export again',
   exportComplete: 'Bundle saved outside Codox.',

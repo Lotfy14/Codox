@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Badge, Button, Dialog, GlassPanel, SplitButton } from '../design/components'
 import type { BadgeTone } from '../design/components'
 import { appMessages, exportMessages, historyMessages } from '../copy/messages'
@@ -10,6 +10,8 @@ import {
   useHistoryRuns,
 } from '../state/history'
 import type { RunState } from '../state/types'
+import { ReviewExperience } from './ReviewExperience'
+import { useReviewSession } from './useReviewSession'
 
 function statusTone(status: RunState['status']): BadgeTone {
   switch (status) {
@@ -41,6 +43,7 @@ export function History({ onOpenConvert }: HistoryProps) {
   const [deleteBusy, setDeleteBusy] = useState(false)
   const [actionBusyId, setActionBusyId] = useState<string | null>(null)
   const [aiExportRunId, setAiExportRunId] = useState<string | null>(null)
+  const [reviewRunId, setReviewRunId] = useState<string | null>(null)
   const [notice, setNotice] = useState<{
     runId: string
     text: string
@@ -50,6 +53,9 @@ export function History({ onOpenConvert }: HistoryProps) {
   const aiExportRun = entries?.find(
     (entry) => entry.run.id === aiExportRunId,
   )?.run
+  const reviewRun = entries?.find((entry) => entry.run.id === reviewRunId)?.run
+  const reviewRuns = useMemo(() => reviewRun === undefined ? [] : [reviewRun], [reviewRun])
+  const reviewSession = useReviewSession(reviewRuns)
 
   const confirmDelete = async () => {
     if (deleteRunId === null || deleteBusy) return
@@ -137,7 +143,20 @@ export function History({ onOpenConvert }: HistoryProps) {
         <p>{historyMessages.retentionNote}</p>
       </header>
 
-      {entries === undefined ? null : entries.length === 0 ? (
+      {reviewRun !== undefined ? (
+        <div className="ds-stack">
+          <div>
+            <Button onPress={() => setReviewRunId(null)} variant="quiet">
+              {historyMessages.backToHistory}
+            </Button>
+          </div>
+          <ReviewExperience
+            onExport={() => void exportRun(reviewRun, 'with-answers')}
+            runs={reviewRuns}
+            session={reviewSession}
+          />
+        </div>
+      ) : entries === undefined ? null : entries.length === 0 ? (
         <GlassPanel as="div" padding="default">
           <div className="ds-empty-state">
             <h2>{historyMessages.emptyTitle}</h2>
@@ -197,33 +216,38 @@ export function History({ onOpenConvert }: HistoryProps) {
 
               <div className="history-card__actions">
                 {run.status === 'done' ? (
-                  <SplitButton
-                    isPending={actionBusyId === run.id}
-                    items={[
-                      {
-                        id: 'no-answers',
-                        label: exportMessages.withoutAnswers,
-                        description: exportMessages.withoutAnswersHint,
-                      },
-                      {
-                        id: 'ai-answers',
-                        label: exportMessages.withAiAnswers,
-                        description: exportMessages.withAiAnswersHint,
-                      },
-                    ]}
-                    menuLabel={exportMessages.menuLabel}
-                    onAction={(id) =>
-                      id === 'ai-answers'
-                        ? setAiExportRunId(run.id)
-                        : void exportRun(run, 'no-answers')
-                    }
-                    onPress={() => void exportRun(run, 'with-answers')}
-                    variant="secondary"
-                  >
-                    {run.exportedAt === undefined
-                      ? historyMessages.exportAction
-                      : historyMessages.exportAgainAction}
-                  </SplitButton>
+                  <>
+                    <Button onPress={() => setReviewRunId(run.id)} variant="quiet">
+                      {historyMessages.reviewAction}
+                    </Button>
+                    <SplitButton
+                      isPending={actionBusyId === run.id}
+                      items={[
+                        {
+                          id: 'no-answers',
+                          label: exportMessages.withoutAnswers,
+                          description: exportMessages.withoutAnswersHint,
+                        },
+                        {
+                          id: 'ai-answers',
+                          label: exportMessages.withAiAnswers,
+                          description: exportMessages.withAiAnswersHint,
+                        },
+                      ]}
+                      menuLabel={exportMessages.menuLabel}
+                      onAction={(id) =>
+                        id === 'ai-answers'
+                          ? setAiExportRunId(run.id)
+                          : void exportRun(run, 'no-answers')
+                      }
+                      onPress={() => void exportRun(run, 'with-answers')}
+                      variant="secondary"
+                    >
+                      {run.exportedAt === undefined
+                        ? historyMessages.exportAction
+                        : historyMessages.exportAgainAction}
+                    </SplitButton>
+                  </>
                 ) : null}
                 {!isCurrent && originalKept ? (
                   <Button

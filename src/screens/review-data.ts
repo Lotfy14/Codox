@@ -6,7 +6,7 @@
  * blank `correct_index`.
  */
 import { useLiveQuery } from 'dexie-react-hooks'
-import type { Blueprint, Box2d, MergedRow } from '../engine/types'
+import type { Blueprint, Box2d, MergedRow, PlannedRow } from '../engine/types'
 import { db } from '../state/db'
 import { getArtifact, putArtifact } from '../state/runs'
 
@@ -17,11 +17,11 @@ export type FlagCategory =
   | 'length-mismatch'
   | 'low-confidence'
 
-export interface ReviewFlag {
+export interface ReviewRow {
   row: MergedRow
   /** 1-based position among the run's rows — the tutor's question number. */
   questionNumber: number
-  category: FlagCategory
+  category: FlagCategory | null
   /** 0-based page index of the row's source region, if the planner had one. */
   pageIndex: number | null
   /** Union of the row's regions on that page (normalized 0–1000), padded. */
@@ -30,7 +30,11 @@ export interface ReviewFlag {
 
 export interface ReviewData {
   rows: MergedRow[]
-  flags: ReviewFlag[]
+  reviewRows: ReviewRow[]
+}
+
+export function flaggedRows(data: ReviewData): ReviewRow[] {
+  return data.reviewRows.filter((row) => row.category !== null)
 }
 
 /**
@@ -65,10 +69,10 @@ export function isFlagged(row: MergedRow): boolean {
 
 /** Union of the row's planner regions that sit on one page, padded ~3%. */
 function sourceRegion(
-  blueprint: Blueprint | undefined,
+  plannedRows: ReadonlyMap<string, PlannedRow>,
   rowId: string,
 ): { pageIndex: number | null; box: Box2d | null } {
-  const planned = blueprint?.planned_rows.find((row) => row.id === rowId)
+  const planned = plannedRows.get(rowId)
   if (planned === undefined) return { pageIndex: null, box: null }
   const regions = [
     planned.regions.question_prompt,
@@ -98,30 +102,55 @@ function sourceRegion(
   }
 }
 
-/** Loads a finished run's rows and its flagged subset with source regions. */
+/** Loads a finished run's rows and a review row for every question. */
 export async function loadReviewData(runId: string): Promise<ReviewData> {
   const merged = await getArtifact(runId, 'merged-rows')
   const blueprintArtifact = await getArtifact(runId, 'blueprint-valid')
   const rows = (merged?.json as MergedRow[] | undefined) ?? []
   const blueprint = blueprintArtifact?.json as Blueprint | undefined
-  const flags = rows.flatMap((row, index) => {
-    if (!isFlagged(row)) return []
-    const { pageIndex, box } = sourceRegion(blueprint, row.id)
-    return [
-      {
-        row,
-        questionNumber: index + 1,
-        category: flagCategory(row.needs_review, row.correct_index),
-        pageIndex,
-        box,
-      },
-    ]
+  const plannedRows = new Map(
+    (blueprint?.planned_rows ?? []).map((row) => [row.id, row]),
+  )
+  const reviewRows = rows.map((row, index) => {
+    const { pageIndex, box } = sourceRegion(plannedRows, row.id)
+    return {
+      row,
+      questionNumber: index + 1,
+      category: isFlagged(row)
+        ? flagCategory(row.needs_review, row.correct_index)
+        : null,
+      pageIndex,
+      box,
+    }
   })
-  return { rows, flags }
+  return { rows, reviewRows }
 }
 
 /** rowId → the option index the tutor confirmed. */
 export type Resolutions = Readonly<Record<string, number>>
+
+/** The visible answer after applying a valid explicit human override. */
+export function effectiveAnswer(
+  row: ReviewRow,
+  resolutions: Resolutions,
+): number | null {
+  const pick = resolutions[row.row.id]
+  if (
+    pick !== undefined &&
+    Number.isInteger(pick) &&
+    pick >= 0 &&
+    pick < row.row.options.length
+  ) {
+    return pick
+  }
+  const enginePick = Number(row.row.correct_index)
+  return row.row.correct_index !== '' &&
+    Number.isInteger(enginePick) &&
+    enginePick >= 0 &&
+    enginePick < row.row.options.length
+    ? enginePick
+    : null
+}
 
 export async function getResolutions(runId: string): Promise<Resolutions> {
   const artifact = await getArtifact(runId, 'review-resolutions')

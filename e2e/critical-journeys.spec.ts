@@ -18,7 +18,7 @@ const BLUEPRINT = {
   csv_schema: CSV_SCHEMA,
   document_profile: {
     page_count: 2,
-    question_count: 1,
+    question_count: 30,
     group_count: 1,
     question_pages: [1],
     answer_policy: {
@@ -29,9 +29,9 @@ const BLUEPRINT = {
     },
   },
   assets: [],
-  planned_rows: [
-    {
-      id: '1',
+  planned_rows: Array.from({ length: 30 }, (_, index) =>
+    ({
+      id: String(index + 1),
       group_id: 'group1',
       topic: '',
       subtopic: '',
@@ -65,8 +65,8 @@ const BLUEPRINT = {
         read_regions_only: false,
         must_follow_planner_structure: true,
       },
-    },
-  ],
+    }),
+  ),
   worker_constraints: {
     may_add_rows: false,
     may_remove_rows: false,
@@ -78,20 +78,20 @@ const BLUEPRINT = {
 }
 
 const WORKER_RESPONSE = {
-  rows: [
-    {
-      id: '1',
+  rows: Array.from({ length: 30 }, (_, index) =>
+    ({
+      id: String(index + 1),
       group_id: 'group1',
       topic: '',
       subtopic: '',
       year: '',
-      question: 'What is two plus two?',
+      question: `Question ${index + 1}: What is two plus two?`,
       options: ['Three', 'Four'],
       correct_index: '',
       image_urls: [],
       needs_review: '',
-    },
-  ],
+    }),
+  ),
 }
 
 const AUDIT_RESPONSE = {
@@ -151,7 +151,18 @@ async function mockGemini(page: Page) {
         plannerImageCount = parts.filter((part) => part.inlineData !== undefined).length
         await fulfillJson(route, geminiBody(JSON.stringify(BLUEPRINT)))
       } else if (prompt.startsWith('You are the WORKER')) {
-        await fulfillJson(route, geminiBody(JSON.stringify(WORKER_RESPONSE)))
+        const marker = 'CHUNK PACKAGE:\n'
+        const packageText = prompt
+          .slice(prompt.indexOf(marker) + marker.length)
+          .split('\n\nYour previous response')[0]
+        const reduced = JSON.parse(packageText) as { planned_rows: Array<{ id: string }> }
+        const ids = new Set(reduced.planned_rows.map((row) => row.id))
+        await fulfillJson(
+          route,
+          geminiBody(JSON.stringify({
+            rows: WORKER_RESPONSE.rows.filter((row) => ids.has(row.id)),
+          })),
+        )
       } else if (prompt.startsWith('You are the AUDIT model')) {
         await fulfillJson(route, geminiBody(JSON.stringify(AUDIT_RESPONSE)))
       } else {
@@ -205,7 +216,7 @@ async function openApiSettings(page: Page) {
   await expect(page.getByRole('dialog', { name: 'Gemini API key' })).toBeVisible()
 }
 
-test('critical journey: answer-key PDF → review → named export → History restore', async ({
+test('critical journey: answer-key PDF → review list/detail → named export → History review/restore', async ({
   page,
 }) => {
   const gemini = await mockGemini(page)
@@ -243,14 +254,33 @@ test('critical journey: answer-key PDF → review → named export → History r
   await expect(page.getByRole('switch', { name: 'Keep original PDFs' })).toBeChecked()
 
   await page.getByRole('button', { name: 'Start converting' }).click()
-  const reviewButton = page.getByRole('button', { name: /Review 1 flag/ })
+  const reviewButton = page.getByRole('button', { name: /Review 30 flags/ })
   await expect(reviewButton).toBeVisible({ timeout: 90_000 })
   expect(gemini.plannerImageCount()).toBe(2)
 
-  await reviewButton.click()
+  // Every finished row is browsable below the summary. A numeric search jumps
+  // and highlights without filtering the list, then detail writes only after
+  // an explicit human pick and Confirm.
+  await expect(page.getByText('30 questions', { exact: true })).toBeVisible()
+  const search = page.getByRole('searchbox', { name: 'Find a question' })
+  await search.fill('20')
+  const highlightedRow = page.locator('.review-list-row--highlight')
+  await expect(highlightedRow).toContainText('Question 20: What is two plus two?')
+  const reviewViewport = page.locator('.review-list__viewport')
+  await expect.poll(() => reviewViewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
+  const scrollBeforeDetail = await reviewViewport.evaluate((element) => element.scrollTop)
+  await highlightedRow.click()
   await page.getByRole('radio', { name: /Four/ }).click()
   await page.getByRole('button', { name: 'Confirm answer (Enter)' }).click()
-  await expect(page.getByText('All flags resolved. Your answers are in')).toBeVisible()
+  await page.getByRole('button', { name: 'Back to questions' }).click()
+  await expect(search).toHaveValue('20')
+  await expect(
+    page.locator('.review-list-row').filter({ hasText: 'Question 20:' })
+      .locator('.review-list-row__answer'),
+  ).toHaveText('B')
+  await expect(page.getByRole('button', { name: 'Needs review (29)' })).toBeVisible()
+  const scrollAfterBack = await reviewViewport.evaluate((element) => element.scrollTop)
+  expect(Math.abs(scrollAfterBack - scrollBeforeDetail)).toBeLessThan(65)
 
   // Desktop export opens a Save-As picker. The native dialog cannot be
   // automated, so stub it to capture what gets written to the picked file —
@@ -272,7 +302,7 @@ test('critical journey: answer-key PDF → review → named export → History r
       }
     }
   })
-  await page.getByRole('button', { name: 'Export bundle' }).click()
+  await page.getByRole('button', { name: 'Export as-is' }).click()
   await expect(page.getByText(/lives safely outside Codox/)).toBeVisible()
   const savedFile = await page.evaluate(
     () =>
@@ -289,7 +319,6 @@ test('critical journey: answer-key PDF → review → named export → History r
   expect(csv).toContain('What is two plus two?')
   expect(csv).toContain('"[""Three"",""Four""]",1,[],')
 
-  await page.getByRole('button', { name: 'Back to results' }).click()
   await page.getByRole('button', { name: 'Convert another' }).click()
   await expect(page.getByText('Drop PDFs here')).toBeVisible()
 
@@ -300,6 +329,15 @@ test('critical journey: answer-key PDF → review → named export → History r
   await expect(page.getByRole('heading', { name: 'Critical Exam.pdf' })).toBeVisible()
   await expect(page.getByText('Exported')).toBeVisible()
   await expect(page.getByText('Original PDF kept')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Review answers' }).click()
+  await expect(page.getByText('30 questions', { exact: true })).toBeVisible()
+  await page.locator('.review-list-row').filter({
+    hasText: 'Question 1: What is two plus two?',
+  }).click()
+  await expect(page.getByAltText('Scanned source for question 1')).toBeVisible()
+  await page.getByRole('button', { name: 'Back to questions' }).click()
+  await page.getByRole('button', { name: 'Back to history' }).click()
 
   await page.getByRole('button', { name: 'Use PDF again' }).click()
   await expect(page.getByRole('heading', { name: 'Convert' })).toBeVisible()

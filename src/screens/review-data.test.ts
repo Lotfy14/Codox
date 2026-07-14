@@ -5,7 +5,9 @@ import { db } from '../state/db'
 import { getArtifact, putArtifact } from '../state/runs'
 import {
   applyResolutions,
+  effectiveAnswer,
   flagCategory,
+  flaggedRows,
   getResolutions,
   isFlagged,
   loadReviewData,
@@ -120,7 +122,7 @@ describe('loadReviewData', () => {
     ],
   }
 
-  it('returns flagged rows with question numbers and padded regions', async () => {
+  it('returns every row with question numbers and padded regions', async () => {
     const rows = [
       makeRow({ id: '1', correct_index: '0', needs_review: '' }),
       makeRow({ id: '2' }),
@@ -130,8 +132,9 @@ describe('loadReviewData', () => {
 
     const data = await loadReviewData('run1')
     expect(data.rows).toHaveLength(2)
-    expect(data.flags).toHaveLength(1)
-    const flag = data.flags[0]
+    expect(data.reviewRows).toHaveLength(2)
+    expect(data.reviewRows[0].category).toBeNull()
+    const flag = data.reviewRows[1]
     expect(flag.row.id).toBe('2')
     expect(flag.questionNumber).toBe(2)
     expect(flag.category).toBe('blank-answer')
@@ -140,17 +143,48 @@ describe('loadReviewData', () => {
     // Union of the two page-2 regions, padded, clamped to 0–1000; the
     // page-3 answer_evidence region is not unioned across pages.
     expect(flag.box).toEqual([70, 20, 530, 930])
+    expect(flaggedRows(data)).toEqual([flag])
   })
 
   it('flags rows without a blueprint region as page-less', async () => {
     await putArtifact({ runId: 'run2', kind: 'merged-rows', json: [makeRow()] })
     const data = await loadReviewData('run2')
-    expect(data.flags[0].pageIndex).toBeNull()
-    expect(data.flags[0].box).toBeNull()
+    expect(data.reviewRows[0].pageIndex).toBeNull()
+    expect(data.reviewRows[0].box).toBeNull()
   })
 
   it('isFlagged matches blank answers and recorded reasons only', () => {
     expect(isFlagged(makeRow())).toBe(true)
     expect(isFlagged(makeRow({ correct_index: '1', needs_review: '' }))).toBe(false)
+  })
+
+  it('keeps real source regions on unflagged rows', async () => {
+    const row = makeRow({ id: '2', correct_index: '0', needs_review: '' })
+    await putArtifact({ runId: 'run3', kind: 'merged-rows', json: [row] })
+    await putArtifact({ runId: 'run3', kind: 'blueprint-valid', json: blueprint })
+    const reviewRow = (await loadReviewData('run3')).reviewRows[0]
+    expect(reviewRow.category).toBeNull()
+    expect(reviewRow.pageIndex).toBe(1)
+    expect(reviewRow.box).toEqual([70, 20, 530, 930])
+  })
+})
+
+describe('effectiveAnswer', () => {
+  const reviewRow = {
+    row: makeRow({ correct_index: '1', needs_review: '' }),
+    questionNumber: 1,
+    category: null,
+    pageIndex: null,
+    box: null,
+  }
+
+  it('uses a valid resolution before the engine answer', () => {
+    expect(effectiveAnswer(reviewRow, { '1': 2 })).toBe(2)
+    expect(effectiveAnswer(reviewRow, {})).toBe(1)
+  })
+
+  it('ignores invalid resolutions and validates the engine answer', () => {
+    expect(effectiveAnswer(reviewRow, { '1': 9 })).toBe(1)
+    expect(effectiveAnswer({ ...reviewRow, row: makeRow({ correct_index: '9' }) }, {})).toBeNull()
   })
 })

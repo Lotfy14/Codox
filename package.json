@@ -19,6 +19,7 @@
     "@fontsource/inter": "^5.2.8",
     "@fontsource/plus-jakarta-sans": "^5.2.8",
     "@hyzyla/pdfium": "^2.1.13",
+    "@tanstack/react-virtual": "^3.14.6",
     "@tauri-apps/plugin-process": "^2.3.1",
     "@tauri-apps/plugin-updater": "^2.10.1",
     "browser-fs-access": "^0.38.0",

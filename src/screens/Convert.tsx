@@ -39,7 +39,8 @@ import { CURRENT_JOB_ID, useCurrentJob } from '../state/useCurrentJob'
 import { useConversion } from './useConversion'
 import { archiveCurrentJobAndReset, clearCurrentDraft } from '../state/jobs'
 import { useUnresolvedCounts } from './review-data'
-import { ReviewStage } from './ReviewStage'
+import { ReviewExperience } from './ReviewExperience'
+import { useReviewSession } from './useReviewSession'
 import type { ControllerStatus } from '../providers/controller'
 import { useGeminiCredential } from '../state/credentials'
 
@@ -84,7 +85,6 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
   const conversion = useConversion(CURRENT_JOB_ID)
   const [notes, setNotes] = useState<readonly string[]>([])
   const [busy, setBusy] = useState(false)
-  const [reviewRunId, setReviewRunId] = useState<string | null>(null)
   const [exportBusy, setExportBusy] = useState(false)
   const [aiExportOpen, setAiExportOpen] = useState(false)
   const [exportNotice, setExportNotice] = useState<{
@@ -95,6 +95,8 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
   const [resetBusy, setResetBusy] = useState(false)
   const sectionRef = useRef<HTMLElement | null>(null)
   const credential = useGeminiCredential()
+  const runs = conversion.runs ?? []
+  const reviewSession = useReviewSession(runs)
 
   if (job === undefined || pdfs === undefined) return null
 
@@ -104,7 +106,6 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
   const totalPages = exams.reduce((sum, file) => sum + file.pageCount, 0)
   const keyReady = credential?.lastValidation?.status === 'working'
 
-  const runs = conversion.runs ?? []
   const hasRuns = runs.length > 0
   const running = isBatchRunning(runs) || conversion.isDriving
 
@@ -156,12 +157,6 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
     } finally {
       setResetBusy(false)
     }
-  }
-
-  const closeReview = () => {
-    setReviewRunId(null)
-    // Focus returns to the work column, mirroring the mockup's hand-off.
-    window.setTimeout(() => sectionRef.current?.focus(), 0)
   }
 
   const intake = async (files: File[], kind: 'exam' | 'answer-key') => {
@@ -224,7 +219,6 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
   )
 
   if (hasRuns) {
-    const reviewRun = runs.find((run) => run.id === reviewRunId)
     const exportable = exportableRuns(runs)
     const exported =
       exportable.length > 0 &&
@@ -254,26 +248,32 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
             providerStatus={conversion.providerStatus}
             runs={runs}
           />
-        ) : reviewRun !== undefined ? (
-          <ReviewStage
-            exported={exported}
-            onClose={closeReview}
+        ) : reviewSession.view.kind === 'detail' ? (
+          <ReviewExperience
             onExport={() => void handleExport()}
-            run={reviewRun}
+            runs={runs}
+            session={reviewSession}
           />
         ) : (
-          <DoneStage
-            exportBusy={exportBusy}
-            exported={exported}
-            onAiExport={() => setAiExportOpen(true)}
-            onConvertAnother={() => void startFreshConversion()}
-            onExport={(mode) => void handleExport(mode)}
-            onOpenReview={setReviewRunId}
-            onRequestApiKey={onRequestApiKey}
-            onRetry={(runIds) => void conversion.retry(runIds)}
-            resetBusy={resetBusy}
-            runs={runs}
-          />
+          <>
+            <DoneStage
+              exportBusy={exportBusy}
+              exported={exported}
+              onAiExport={() => setAiExportOpen(true)}
+              onConvertAnother={() => void startFreshConversion()}
+              onExport={(mode) => void handleExport(mode)}
+              onOpenReview={reviewSession.openNeedsReview}
+              onRequestApiKey={onRequestApiKey}
+              onRetry={(runIds) => void conversion.retry(runIds)}
+              resetBusy={resetBusy}
+              runs={runs}
+            />
+            <ReviewExperience
+              onExport={() => void handleExport()}
+              runs={runs}
+              session={reviewSession}
+            />
+          </>
         )}
         <AiExportDialog
           isOpen={aiExportOpen}

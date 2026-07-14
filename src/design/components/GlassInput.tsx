@@ -46,8 +46,10 @@ export interface GlassInputProps
   inputRef?: Ref<HTMLInputElement>;
   isInvalid?: boolean;
   label: ReactNode;
+  placeholder?: string;
   status?: GlassInputStatus;
   successMessage?: ReactNode;
+  type?: AriaInputProps['type'];
   /** Icon buttons rendered inside the field's right edge (show/copy…). */
   trailing?: ReactNode;
 }
@@ -62,9 +64,11 @@ export function GlassInput({
   inputRef,
   isInvalid: isInvalidProp = false,
   label,
+  placeholder,
   status = 'default',
   successMessage,
   trailing,
+  type,
   ...textFieldProps
 }: GlassInputProps) {
   const isInvalid = isInvalidProp || status === 'error';
@@ -95,7 +99,9 @@ export function GlassInput({
         <div className="ds-glass-input__row">
           <AriaInput
             {...inputProps}
+            placeholder={placeholder}
             ref={inputRef}
+            type={type}
             className={controlClasses}
           />
           <span className="ds-glass-input__trailing">{trailing}</span>
@@ -103,7 +109,9 @@ export function GlassInput({
       ) : (
         <AriaInput
           {...inputProps}
+          placeholder={placeholder}
           ref={inputRef}
+          type={type}
           className={controlClasses}
         />
       )}
