@@ -198,6 +198,8 @@ export const convertMessages = {
       planner_unparseable: 'Gemini did not return a readable question plan.',
       planner_invalid_after_repair:
         'Gemini could not produce a valid question plan after a repair attempt.',
+      planner_underextracted:
+        'Gemini kept missing questions it had counted on the page, so Codox stopped rather than export an incomplete set.',
       worker_chunk_invalid:
         'Gemini could not return a valid question set after a repair attempt.',
       merge_validation_failed:

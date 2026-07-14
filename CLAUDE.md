@@ -56,6 +56,17 @@ the no-fallback rule are untouched — the engine still never swaps a role's
 model at runtime. Open cost: Flash-Lite's bounding boxes are weaker, so crop
 quality is unverified until the gold gate is re-run.
 
+*Question count is code-owned (owner-approved 2026-07-14):* CODOX_MIGRATION
+§1.6's rule "`planned_rows` count equals `document_profile.question_count`" no
+longer runs as a validation rule. `question_count` must still BE a number (the
+contract shape), but deterministic code emits `rows.length` — the rows are the
+product, the count is a number the planner wrote beside them. Only a
+**shortfall** is a real signal, and `isUnderExtracted` owns it: fewer rows than
+the planner counted skips the repair round entirely (the cheapest way to comply
+is to lower the count) and splits the page window instead. The surplus direction
+is not an error — rejecting it threw away 17 fully-specified rows over a
+profile field that read 15, and stopped a real 30-page run.
+
 *Export projection (owner-approved 2026-07-14):* exported CSVs are a
 column projection of the pinned format (`src/export/export-csv.ts`,
 CODOX_MIGRATION §3.1): `id`/`group_id` never leave the device;

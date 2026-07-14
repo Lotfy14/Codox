@@ -4,6 +4,7 @@ import {
   buildReducedBlueprint,
   chunkPages,
   chunkPlannedRows,
+  isUnderExtracted,
   rewriteAssetPaths,
   validateBlueprint,
 } from './blueprint'
@@ -41,6 +42,48 @@ describe('validateBlueprint — accepts a good blueprint', () => {
   })
 })
 
+/**
+ * The count is planner-declared evidence; the rows are the product. A real
+ * 30-page run stopped with `planner_invalid_after_repair` because a repaired
+ * blueprint emitted 17 fully-specified rows and wrote `question_count: 15`
+ * beside them. Code owns the count now; only a SHORTFALL is a real signal, and
+ * `isUnderExtracted` — which every caller runs first — is what owns it.
+ */
+describe('the question count is code-owned, not negotiated', () => {
+  it('accepts a blueprint that emits more rows than it counted', () => {
+    const blueprint = makeBlueprint()
+    blueprint.document_profile.question_count = 1 // counted 1, emitted 2
+    const result = validateBlueprint(respond(blueprint), PAGES)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.blueprint.planned_rows).toHaveLength(2)
+      // The rows we carry, never the number written next to them.
+      expect(result.blueprint.document_profile.question_count).toBe(2)
+    }
+  })
+
+  it('still requires question_count to BE a number', () => {
+    const blueprint = makeBlueprint()
+    const raw = JSON.parse(respond(blueprint))
+    delete raw.document_profile.question_count
+    expectInvalid(JSON.stringify(raw), 'question_count must be a number')
+  })
+
+  it('isUnderExtracted catches a shortfall, and only a shortfall', () => {
+    const short = makeBlueprint()
+    short.document_profile.question_count = 99 // counted 99, emitted 2
+    expect(isUnderExtracted(respond(short))).toBe(true)
+
+    const surplus = makeBlueprint()
+    surplus.document_profile.question_count = 1 // counted 1, emitted 2
+    expect(isUnderExtracted(respond(surplus))).toBe(false)
+
+    expect(isUnderExtracted(respond(makeBlueprint()))).toBe(false)
+    // An unparseable response declares nothing: the parse gate owns it.
+    expect(isUnderExtracted('not json at all')).toBe(false)
+  })
+})
+
 describe('validateBlueprint — §1.6 rules', () => {
   it('rejects unparseable JSON', () => {
     expectInvalid('not json at all', 'not valid JSON')
@@ -50,12 +93,6 @@ describe('validateBlueprint — §1.6 rules', () => {
     const blueprint = makeBlueprint()
     blueprint.csv_schema = ['id', 'question', 'options']
     expectInvalid(respond(blueprint), 'csv_schema must equal exactly')
-  })
-
-  it('rejects planned_rows count ≠ document_profile.question_count', () => {
-    const blueprint = makeBlueprint()
-    blueprint.document_profile.question_count = 5
-    expectInvalid(respond(blueprint), 'question_count is 5')
   })
 
   it('rejects duplicate row IDs', () => {

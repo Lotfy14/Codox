@@ -232,13 +232,20 @@ export function readDeclaredCounts(responseText: string): {
 /**
  * True when the planner counted more questions than it emitted rows for.
  *
- * This is the failure that silently shipped a 3-row CSV for a 108-question
- * exam: the planner reported `question_count: 108` with 3 rows, the count rule
- * below rejected it, and the repair round "fixed" the mismatch by rewriting
- * the count down to 3 — destroying the only evidence that anything was wrong.
- * A shortfall must never be repaired away: the count is what the planner SAW,
- * not a field to be talked down until the rows agree. The caller splits the
- * page window and re-plans instead.
+ * A SHORTFALL is the dangerous direction, and this is the only guard on it.
+ * It is the failure that silently shipped a 3-row CSV for a 108-question exam:
+ * the planner reported `question_count: 108` with 3 rows. A shortfall must
+ * never be repaired away — the cheapest way for a model to make the numbers
+ * agree is to rewrite the count down to 3, destroying the only evidence that
+ * anything was wrong. The caller splits the page window and re-plans instead.
+ *
+ * The OTHER direction is harmless, which is why `validateBlueprint` has no
+ * count-equality rule: a planner that emits 17 fully-specified rows and writes
+ * `question_count: 15` next to them has done its job — the rows are the
+ * product, the count is a profile number it guessed at. Rejecting that threw
+ * away 17 good rows and stopped a real 30-page run with
+ * `planner_invalid_after_repair`. Code owns the count (see `validateBlueprint`
+ * and `stitchBlueprints`, which both emit `rows.length`).
  */
 export function isUnderExtracted(responseText: string): boolean {
   const { questionCount, rowCount } = readDeclaredCounts(responseText)
@@ -252,6 +259,11 @@ export function isUnderExtracted(responseText: string): boolean {
 /**
  * The §1.6 rule list over a raw planner response. `renderedPages` is the
  * set of 1-based page numbers that actually rendered.
+ *
+ * `document_profile.question_count` must be a number (the contract shape), but
+ * it is never compared to the row count: the shortfall direction belongs to
+ * `isUnderExtracted`, which every caller runs BEFORE this, and the surplus
+ * direction is not an error. The emitted profile carries `rows.length`.
  */
 export function validateBlueprint(
   responseText: string,
@@ -279,13 +291,10 @@ export function validateBlueprint(
   // Document profile + answer policy.
   const profile = raw.document_profile
   let policyType: AnswerPolicyType | undefined
-  let questionCount = -1
   if (!isRecord(profile)) {
     errors.push('document_profile must be an object')
   } else {
-    if (typeof profile.question_count === 'number') {
-      questionCount = profile.question_count
-    } else {
+    if (typeof profile.question_count !== 'number') {
       errors.push('document_profile.question_count must be a number')
     }
     const policy = profile.answer_policy
@@ -320,12 +329,6 @@ export function validateBlueprint(
       const row = narrowRow(value, index, renderedPages, errors)
       if (row !== undefined) rows.push(row)
     })
-    // planned_rows count equals document_profile.question_count.
-    if (questionCount >= 0 && raw.planned_rows.length !== questionCount) {
-      errors.push(
-        `planned_rows has ${raw.planned_rows.length} rows but document_profile.question_count is ${questionCount}`,
-      )
-    }
   }
 
   // Row IDs unique.
@@ -389,7 +392,9 @@ export function validateBlueprint(
           typeof profileRecord.page_count === 'number'
             ? profileRecord.page_count
             : renderedPages.size,
-        question_count: questionCount,
+        // Deterministic truth: the rows we actually carry, never the number the
+        // planner wrote next to them (see the count-rule note above).
+        question_count: rows.length,
         group_count:
           typeof profileRecord.group_count === 'number'
             ? profileRecord.group_count
