@@ -170,14 +170,6 @@ function App() {
           </div>
         </aside>
 
-        <button
-          className="ds-frame__privacy"
-          onClick={() => setOpenDialog('privacy')}
-          type="button"
-        >
-          {appMessages.railPrivacy}
-        </button>
-
         <TabNav<MobileNavItem>
           activeTab={activeTab}
           ariaLabel={appMessages.navLabel}
