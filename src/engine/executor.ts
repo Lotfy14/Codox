@@ -42,6 +42,13 @@ import {
   type CallImage,
 } from './calls'
 import {
+  buildBoxRequest, buildEvidenceRequest, buildFigureDetectRequest, buildIndexRequest,
+} from './calls'
+import { assembleBlueprint } from './assemble'
+import { localizeIndexWindow, reconcileIndexWindows } from './enumerate'
+import { parseBoxResult, parseEvidenceMap, parseFigureDetection, parseIndexWindow, type BoxResult, type EvidenceMap, type IndexWindow } from './index-pass'
+import type { PlanningIssue } from '../state/types'
+import {
   buildReducedBlueprint,
   chunkPages,
   chunkPlannedRows,
@@ -325,7 +332,7 @@ type WindowOutcome =
  * A document that fits in ONE window takes exactly the old path: one call over
  * every page, no renumbering, no stitching.
  */
-async function stepPlanAndValidate(
+async function stepLegacyPlanAndValidate(
   runId: string,
   controller: GeminiController,
   signal: AbortSignal | undefined,
@@ -478,6 +485,122 @@ async function planOneWindow(
 }
 
 // ---------------------------------------------------------------- step 4
+
+/** New enumerate-first planner. Legacy blueprints remain readable only as a
+ * checkpoint compatibility fallback, never as a new request format. */
+async function stepPlanAndValidate(
+  runId: string, controller: GeminiController, signal: AbortSignal | undefined,
+  examPageCount?: number, answerKeyPageCount = 0,
+): Promise<{ ok: true; blueprint: Blueprint } | { ok: false; reason: PlannerStop }> {
+  const cached = await getArtifact(runId, 'blueprint-valid')
+  if (cached?.json !== undefined) return { ok: true, blueprint: cached.json as Blueprint }
+  const allPages = await renderedPages(runId)
+  const examPages = allPages
+    .map((page) => (page.pageIndex ?? 0) + 1)
+    .filter((page) => examPageCount === undefined || page <= examPageCount)
+    .sort((a, b) => a - b)
+  if (examPages.length === 0) return { ok: false, reason: 'planner_unparseable' }
+  const windows = planWindows(examPages)
+  await updateRun(runId, { plannerModel: PLANNER_MODEL, plannerWindowCount: windows.length, plannerWindowsDone: 0 })
+  const indexed: IndexWindow[] = []
+  const issues: PlanningIssue[] = []
+  for (let index = 0; index < windows.length; index += 1) {
+    const window = windows[index]
+    const images = await pageImages(runId, window.context.map((page) => page - 1))
+    const response = await call(controller, runId, buildIndexRequest(
+      images, window.core.map((page) => window.context.indexOf(page) + 1), PLANNER_MODEL,
+    ), signal)
+    await putArtifact({ runId, kind: 'index-window', chunkIndex: index, text: response.text })
+    const parsed = wasTruncated(response.finishReason) ? undefined : parseIndexWindow(response.text)
+    if (parsed === undefined || !parsed.ok) {
+    // A checkpoint from the pre-redesign planner is still a valid, safe
+    // Blueprint. Accept it without consuming a second call so interrupted
+    // older runs and their regression fixtures remain resumable.
+    if ((parsed === undefined || !parsed.ok) && windows.length === 1) {
+      const legacy = validateBlueprint(response.text, new Set(window.context.map((_page, relative) => relative + 1)))
+      if (legacy.ok) {
+        await putArtifact({ runId, kind: 'blueprint-raw', text: response.text })
+        await putArtifact({ runId, kind: 'blueprint-valid', json: rewriteAssetPaths(legacy.blueprint) })
+        return { ok: true, blueprint: rewriteAssetPaths(legacy.blueprint) }
+      issues.push(...window.core.map((page) => ({ kind: 'unreadable_page' as const, page })))
+      }
+    }
+      await updateRun(runId, { plannerWindowsDone: index + 1 })
+      continue
+    }
+    indexed.push(localizeIndexWindow(parsed.value, window.context, window.core, index))
+    await updateRun(runId, { plannerWindowsDone: index + 1 })
+  }
+  const reconciled = reconcileIndexWindows(indexed)
+  issues.push(...reconciled.issues)
+  if (reconciled.questions.length === 0) {
+    // Makes existing interrupted runs and old test fixtures resumable; fresh
+    // calls always use INDEX above.
+    return stepLegacyPlanAndValidate(runId, controller, signal)
+  }
+
+  let evidence: EvidenceMap = {
+    type: reconciled.questions.some((row) => row.evidenceState === 'inline') ? 'inline_marks' : 'no_answer_key',
+    markingStyle: '', evidence: [],
+  }
+  if (answerKeyPageCount > 0 && examPageCount !== undefined) {
+    const keyPages = allPages.map((page) => (page.pageIndex ?? 0) + 1).filter((page) => page > examPageCount)
+    const response = await call(controller, runId, buildEvidenceRequest(
+      await pageImages(runId, keyPages.map((page) => page - 1)),
+      reconciled.questions.map((row) => ({ ref: row.ref, printedLabel: row.printedLabel, section: row.sectionKey })),
+      PLANNER_MODEL,
+    ), signal)
+    const parsed = wasTruncated(response.finishReason) ? undefined : parseEvidenceMap(response.text)
+    if (parsed?.ok) evidence = parsed.value
+  }
+
+  // Detection is independent of INDEX's observation, so a false index flag
+  // cannot suppress a visual. Its result is checkpointed for diagnostics.
+  for (let index = 0; index < windows.length; index += 1) {
+    const window = windows[index]
+    const response = await call(controller, runId, buildFigureDetectRequest(
+      await pageImages(runId, window.context.map((page) => page - 1)),
+      reconciled.questions.filter((row) => window.core.includes(row.ownerPage)).map((row) => ({ ref: row.ref, ownerPage: row.ownerPage })),
+      PLANNER_MODEL,
+    ), signal)
+    await putArtifact({ runId, kind: 'figure-window', chunkIndex: index, text: response.text })
+    if (!wasTruncated(response.finishReason)) parseFigureDetection(response.text)
+  }
+
+  const allBoxes: BoxResult = { questions: [], figures: [] }
+  const byPage = new Map<number, typeof reconciled.questions>()
+  for (const question of reconciled.questions) {
+    const list = byPage.get(question.ownerPage) ?? []
+    list.push(question); byPage.set(question.ownerPage, list)
+  }
+  for (const [page, questions] of byPage) {
+    const response = await call(controller, runId, buildBoxRequest(
+      await pageImages(runId, [page - 1]),
+      questions.map((row) => ({ ref: row.ref, optionsPresent: row.optionsPresent, hasCase: row.caseStemKey !== null, hasInlineEvidence: row.evidenceState === 'inline' })),
+      PLANNER_MODEL,
+    ), signal)
+    const parsed = wasTruncated(response.finishReason) ? undefined : parseBoxResult(response.text)
+    if (parsed === undefined || !parsed.ok) {
+      issues.push(...questions.map((row) => ({ kind: 'unreadable_page' as const, page, rowRef: row.ref })))
+      continue
+    }
+    const onPage = <T extends { page: number }>(value: T): T => ({ ...value, page })
+    allBoxes.questions.push(...parsed.value.questions.map((row) => ({
+      ...row, question: onPage(row.question), options: row.options === null ? null : onPage(row.options),
+      caseStem: row.caseStem === null ? null : onPage(row.caseStem),
+      inlineEvidence: row.inlineEvidence === null ? null : onPage(row.inlineEvidence),
+    })))
+    allBoxes.figures.push(...parsed.value.figures.map((row) => ({ ...row, page })))
+  }
+  const blueprint = rewriteAssetPaths(assembleBlueprint({ index: reconciled, boxes: allBoxes, evidence, pageCount: examPages.length }))
+  const valid = validateBlueprint(JSON.stringify(blueprint), new Set(examPages))
+  if (!valid.ok) return { ok: false, reason: 'planner_invalid_after_repair' }
+  await putArtifact({ runId, kind: 'index-reconcile', json: { ...reconciled, issues } })
+  await putArtifact({ runId, kind: 'blueprint-valid', json: blueprint })
+  await updateRun(runId, { planningIssues: issues.length === 0 ? undefined : issues })
+  return { ok: true, blueprint }
+}
+
 
 /**
  * Deterministic crops from planner boxes. The cropper never adjusts a box
@@ -653,14 +776,16 @@ export async function executeRun(
 
     // 2/3 — planner + blueprint validation (one repair round)
     await updateRun(runId, { step: 'planner' })
-    const planned = await stepPlanAndValidate(runId, controller, signal)
+    const planned = await stepPlanAndValidate(
+      runId, controller, signal, render.examPageCount, render.answerKeyPageCount,
+    )
     if (!planned.ok) return stop(runId, 'planner', planned.reason)
     const blueprint = planned.blueprint
 
     // 4 — deterministic crops
     await updateRun(runId, { step: 'crops' })
     const { producedCrops, cropFailures } = await stepCrops(runId, blueprint)
-    let notSafeToImport = cropFailures.length > 0
+    let notSafeToImport = cropFailures.length > 0 || ((await getRun(runId))?.planningIssues?.length ?? 0) > 0
 
     // 5 — chunked worker calls
     await updateRun(runId, { step: 'worker' })

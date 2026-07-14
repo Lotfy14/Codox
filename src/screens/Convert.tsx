@@ -722,6 +722,7 @@ function DoneStage({
       ? undefined
       : done.find((run) => (counts[run.id] ?? 0) > 0)
   const hadFlags = done.some((run) => (run.flaggedRows ?? 0) > 0)
+  const planningIssueCount = done.reduce((sum, run) => sum + (run.planningIssues?.length ?? 0), 0)
 
   if (remaining === undefined) return null
 
@@ -739,6 +740,12 @@ function DoneStage({
       <GlassPanel aria-label={convertMessages.finishedPanelLabel} as="section" padding="spacious">
         <h2>{heading}</h2>
 
+        {planningIssueCount > 0 ? (
+          <p className="ds-inline-note ds-inline-note--danger" role="status">
+            {progressMessages.planningIssue(planningIssueCount)}
+          </p>
+
+        ) : null}
         {stopped.map((run) => (
           <p
             className="ds-inline-note ds-inline-note--danger"

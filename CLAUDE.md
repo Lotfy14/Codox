@@ -68,6 +68,12 @@ is not an error — rejecting it threw away 17 fully-specified rows over a
 profile field that read 15, and stopped a real 30-page run.
 
 *Export projection (owner-approved 2026-07-14):* exported CSVs are a
+*Planner redesign (owner-approved 2026-07-14):* the single Planner prompt is
+replaced by INDEX, EVIDENCE / KEY MAP, FIGURE DETECT, and BOX prompts. INDEX
+enumerates exam-page question slots without geometry; deterministic code
+reconciles identities and assembles the pinned Blueprint. Evidence and figures
+are observed separately, and an unresolved page is a visible non-fatal planning
+issue rather than a reason to discard clean rows.
 column projection of the pinned format (`src/export/export-csv.ts`,
 CODOX_MIGRATION §3.1): `id`/`group_id` never leave the device;
 `topic`/`subtopic`/`year` are conditional per the Customizations settings.

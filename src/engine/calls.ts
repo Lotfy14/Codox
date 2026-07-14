@@ -8,6 +8,7 @@
  */
 import { DEFAULT_GEMINI_VISION_MODEL } from '../providers/gemini'
 import type { VisionRequest } from '../providers/types'
+import { BOX_PROMPT, EVIDENCE_PROMPT, FIGURE_DETECT_PROMPT, INDEX_PROMPT } from './prompts'
 import { AUDIT_PROMPT, PLANNER_PROMPT, WORKER_PROMPT } from './prompts'
 import type { AuditReport, Blueprint, MergedRow, ReducedBlueprint } from './types'
 
@@ -166,4 +167,106 @@ export function auditUnavailableReport(reason: string): AuditReport {
     crop_failures: [],
     notes: [],
   }
+}
+
+const REGION_SCHEMA = {
+  type: 'OBJECT',
+  nullable: true,
+  properties: {
+    page: { type: 'INTEGER' },
+    box_2d: { type: 'ARRAY', items: { type: 'NUMBER' }, minItems: 4, maxItems: 4 },
+    anchor: { type: 'STRING' },
+  },
+}
+
+function structuredPlannerRequest(
+  prompt: string,
+  pages: readonly CallImage[],
+  responseSchema: Record<string, unknown>,
+  plannerModel = PLANNER_MODEL,
+): VisionRequest {
+  return {
+    prompt,
+    images: pages,
+    modelId: plannerModel,
+    generationConfig: {
+      temperature: 0,
+      maxOutputTokens: PLANNER_MAX_TOKENS,
+      responseMimeType: JSON_ONLY,
+      responseSchema,
+    },
+  }
+}
+
+export function buildIndexRequest(
+  pages: readonly CallImage[],
+  coreRelativePages: readonly number[],
+  plannerModel = PLANNER_MODEL,
+): VisionRequest {
+  const prompt = INDEX_PROMPT + '\n\nCORE PAGES: ' + JSON.stringify(coreRelativePages)
+  return structuredPlannerRequest(prompt, pages, {
+    type: 'OBJECT',
+    properties: {
+      questions: { type: 'ARRAY', items: { type: 'OBJECT', properties: {
+        ref: { type: 'STRING' }, printed_label: { type: 'STRING' }, owner_page: { type: 'INTEGER' },
+        source_pages: { type: 'ARRAY', items: { type: 'INTEGER' } }, anchor: { type: 'STRING' },
+        options_present: { type: 'BOOLEAN' }, case_stem_key: { type: 'STRING', nullable: true },
+        section_hint: { type: 'STRING' }, visible_year: { type: 'STRING' },
+        evidence_state: { type: 'STRING', enum: ['none', 'inline', 'separate', 'ambiguous', 'illegible'] },
+      }, required: ['ref','printed_label','owner_page','source_pages','anchor','options_present','case_stem_key','section_hint','visible_year','evidence_state'] } },
+      pages: { type: 'ARRAY', items: { type: 'OBJECT', properties: {
+        page: { type: 'INTEGER' }, contains_question_start: { type: 'BOOLEAN' },
+        first_printed_label: { type: 'STRING' }, last_printed_label: { type: 'STRING' }, section_hint: { type: 'STRING' },
+      }, required: ['page','contains_question_start','first_printed_label','last_printed_label','section_hint'] } },
+    },
+    required: ['questions', 'pages'],
+  }, plannerModel)
+}
+
+export function buildEvidenceRequest(
+  pages: readonly CallImage[], refs: readonly { ref: string; printedLabel: string; section: string }[],
+  plannerModel = PLANNER_MODEL,
+): VisionRequest {
+  const prompt = EVIDENCE_PROMPT + '\n\nQUESTION REFERENCES:\n' + JSON.stringify(refs)
+  return structuredPlannerRequest(prompt, pages, {
+    type: 'OBJECT', properties: {
+      type: { type: 'STRING', enum: ['no_answer_key','separate_key','inline_marks','mixed','uncertain'] },
+      marking_style: { type: 'STRING' },
+      evidence: { type: 'ARRAY', items: { type: 'OBJECT', properties: {
+        ref: { type: 'STRING' }, state: { type: 'STRING', enum: ['none','inline','separate','ambiguous','illegible'] },
+        region: REGION_SCHEMA,
+      }, required: ['ref','state','region'] } },
+    }, required: ['type','marking_style','evidence'],
+  }, plannerModel)
+}
+
+export function buildFigureDetectRequest(
+  pages: readonly CallImage[], refs: readonly { ref: string; ownerPage: number }[],
+  plannerModel = PLANNER_MODEL,
+): VisionRequest {
+  return structuredPlannerRequest(FIGURE_DETECT_PROMPT + '\n\nQUESTION REFERENCES:\n' + JSON.stringify(refs), pages, {
+    type: 'OBJECT', properties: {
+      figures: { type: 'ARRAY', items: { type: 'OBJECT', properties: {
+        page: { type: 'INTEGER' }, linked_refs: { type: 'ARRAY', items: { type: 'STRING' } }, anchor: { type: 'STRING' },
+      }, required: ['page','linked_refs','anchor'] } },
+    }, required: ['figures'],
+  }, plannerModel)
+}
+
+export function buildBoxRequest(
+  pages: readonly CallImage[], refs: readonly { ref: string; optionsPresent: boolean; hasCase: boolean; hasInlineEvidence: boolean }[],
+  plannerModel = PLANNER_MODEL,
+): VisionRequest {
+  return structuredPlannerRequest(BOX_PROMPT + '\n\nPAGE TASKS:\n' + JSON.stringify(refs), pages, {
+    type: 'OBJECT', properties: {
+      questions: { type: 'ARRAY', items: { type: 'OBJECT', properties: {
+        ref: { type: 'STRING' }, question: REGION_SCHEMA, options: REGION_SCHEMA,
+        case_stem: REGION_SCHEMA, inline_evidence: REGION_SCHEMA,
+      }, required: ['ref','question','options','case_stem','inline_evidence'] } },
+      figures: { type: 'ARRAY', items: { type: 'OBJECT', properties: {
+        page: { type: 'INTEGER' }, linked_refs: { type: 'ARRAY', items: { type: 'STRING' } },
+        box_2d: { type: 'ARRAY', items: { type: 'NUMBER' }, minItems: 4, maxItems: 4 }, anchor: { type: 'STRING' },
+      }, required: ['page','linked_refs','box_2d','anchor'] } },
+    }, required: ['questions','figures'],
+  }, plannerModel)
 }

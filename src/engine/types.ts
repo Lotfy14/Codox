@@ -112,6 +112,9 @@ export interface PlannedRow {
   image_urls: string[]
   correct_index_policy: CorrectIndexPolicy
   worker_task: WorkerTask
+  /** Internal planning sidecar: pages the worker must receive for this row.
+   * It never leaves the device and legacy blueprints may omit it. */
+  source_pages?: number[]
 }
 
 export interface WorkerConstraints {

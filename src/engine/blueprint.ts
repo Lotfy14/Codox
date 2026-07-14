@@ -496,6 +496,9 @@ export function buildReducedBlueprint(
 export function chunkPages(reduced: ReducedBlueprint): number[] {
   const pages = new Set<number>()
   for (const row of reduced.planned_rows) {
+    for (const page of row.source_pages ?? []) {
+      pages.add(page)
+    }
     for (const region of Object.values(row.regions)) {
       if (region !== null) pages.add(region.page)
     }

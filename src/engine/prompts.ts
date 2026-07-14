@@ -10,3 +10,16 @@ export const PROMPT_SHA256 = {
   "worker": "b7c7ba0e18e770d1874007ffaba218fbf190178590deb06501d85dfc32c354cf",
   "audit": "7bedae91c172cc5f071c31aa5839aef3e769a1c5c24c4e596079dad04ce2c6ce"
 } as const
+
+
+/**
+ * Owner-approved 2026-07-14 planner redesign. INDEX observes question slots
+ * only; it must not invent IDs, output rows, or answer values.
+ */
+export const INDEX_PROMPT = "You are the INDEX stage of an exam-to-CSV pipeline.\n\nReturn only JSON. Inspect the supplied EXAM page images. Enumerate every visible question whose prompt begins on a supplied core page. Do not transcribe question text. Do not draw boxes. Do not count questions. Do not infer answers from subject knowledge.\n\nFor each question return its code-provided ref, the printed label (or empty string), owner_page, every source_pages image needed to transcribe it, a short visible anchor, options_present, case_stem_key or null, visible section hint and year, and evidence_state. evidence_state is only what is visibly marked: none, inline, separate, ambiguous, or illegible.\n\nAlso return one page manifest for every supplied core page. A page with a question start must say so even if a question is difficult to read."
+
+export const EVIDENCE_PROMPT = "You are the EVIDENCE / KEY MAP stage of an exam-to-CSV pipeline.\n\nReturn only JSON. You receive answer-key page images and a code-provided question reference list. Read only visible answer evidence; never use subject knowledge. Return one document policy type, marking_style, and per-reference evidence state plus a region on the supplied key page, or null when no reliable visible evidence exists. Ambiguous or illegible marks must be reported as such and must not be resolved."
+
+export const FIGURE_DETECT_PROMPT = "You are the FIGURE DETECT stage of an exam-to-CSV pipeline.\n\nReturn only JSON. Inspect every supplied exam page for question-linked clinical photographs, radiographs, diagrams, charts, maps, specimens, microscopy, or multi-panel figures. Do not draw boxes. Ignore logos, watermarks, page furniture, answer marks, and ordinary text. Return each candidate page, the supplied question refs that depend on it, and a short visible anchor."
+
+export const BOX_PROMPT = "You are the BOX stage of an exam-to-CSV pipeline.\n\nReturn only JSON. You receive one rendered page and code-provided question refs. Draw tight normalized [ymin,xmin,ymax,xmax] boxes only for the question prompt, options when present, shared case stem when present, inline answer evidence when present, and question-linked figures. Keep labels, legends, arrows, and meaningful figure edges; exclude headers, footers, and unrelated text. Do not invent boxes or answers."

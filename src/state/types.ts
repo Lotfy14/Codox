@@ -66,11 +66,16 @@ export interface RunState {
   auditUnavailable?: boolean
   /** Pages that failed to render; the run continued past them. */
   badPages?: number[]
+  /** Non-fatal planner findings; successful rows are still kept. */
+  planningIssues?: PlanningIssue[]
   /** Progress counters — persisted, so a reload redraws the same bars. */
   pageCount?: number
   pagesRendered?: number
   chunkCount?: number
   chunksDone?: number
+  /** INDEX-window progress, checkpointed independently of worker chunks. */
+  plannerWindowCount?: number
+  plannerWindowsDone?: number
   /** Rows whose correct_index is blank + flagged at the end of the run. */
   flaggedRows?: number
   /** Quota burn: every Gemini request this run made, and its token totals. */
@@ -91,8 +96,18 @@ export interface RunState {
   /** The job's typed year at run creation, when yearMode is 'type'. */
   typedYear?: string
   createdAt: number
+
   updatedAt: number
 }
+
+export interface PlanningIssue {
+  kind: 'missing_question' | 'unreadable_page' | 'figure_unreadable'
+  page?: number
+  section?: string
+  printedLabel?: string
+  rowRef?: string
+}
+
 
 /**
  * Every step's inputs and outputs, on disk before the next step starts
@@ -102,6 +117,9 @@ export type RunArtifactKind =
   | 'page-jpeg'
   | 'page-text'
   | 'blueprint-raw'
+  | 'index-window'
+  | 'index-reconcile'
+  | 'figure-window'
   | 'blueprint-valid'
   | 'crop'
   | 'chunk-request'

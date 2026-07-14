@@ -71,6 +71,8 @@ export interface GenerationConfig {
   maxOutputTokens?: number
   /** `application/json` gets clean JSON out of Gemini. */
   responseMimeType?: string
+  /** Gemini GenerateContent structured-output schema, passed through verbatim. */
+  responseSchema?: Record<string, unknown>
 }
 
 /** One page image plus the text prompt that should accompany it. */
