@@ -210,7 +210,7 @@ export const convertMessages = {
     'Convert another moves these statuses to History and opens a clean converter. Original PDFs are removed unless you chose Keep original PDFs.',
   startingFresh: 'Starting fresh…',
   exportDeviceNote:
-    'On a phone this opens the share sheet; on desktop it downloads a zip.',
+    'On a phone this opens the share sheet; on desktop it asks where to save the zip.',
 } as const
 
 export const reviewMessages = {
@@ -235,6 +235,8 @@ export const exportMessages = {
   notExportedYet: 'Not exported yet',
   exported: 'Exported',
   cancelled: 'Export cancelled. Your finished work is still saved in Codox.',
+  downloadedToFolder:
+    'The zip went to your browser’s Downloads folder — look for it there.',
   nothingToExport: 'There is no finished bundle to export yet.',
   failed:
     'Codox could not create the bundle. Your finished work is still saved.',
@@ -309,6 +311,8 @@ export const historyMessages = {
   exportAction: 'Export bundle',
   exportAgainAction: 'Export again',
   exportComplete: 'Bundle saved outside Codox.',
+  exportDownloaded:
+    'Bundle saved to your browser’s Downloads folder.',
   exportCancelled: 'Export cancelled. This run is still saved in History.',
   exportUnavailable: 'This run does not have a finished bundle to export.',
   exportFailed: 'Codox could not create this bundle. The saved run was not changed.',

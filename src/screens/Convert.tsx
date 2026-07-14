@@ -113,6 +113,9 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
       setExportNotice({ text: exportMessages.cancelled, tone: 'info' })
     } else if (outcome === 'nothing') {
       setExportNotice({ text: exportMessages.nothingToExport, tone: 'info' })
+    } else if (outcome === 'downloaded') {
+      // No save dialog appeared — say where the browser put the zip.
+      setExportNotice({ text: exportMessages.downloadedToFolder, tone: 'info' })
     }
   }
 

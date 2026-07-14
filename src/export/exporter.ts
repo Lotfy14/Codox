@@ -3,12 +3,14 @@
  * confirmed answers out of IndexedDB, compose the final CSVs
  * deterministically, zip the bundles, and hand the zip to the platform —
  * native share sheet in the Android shell, `navigator.share` on phones,
- * a plain download on desktop.
+ * a Save-As picker on desktop (`browser-fs-access` falls back to a plain
+ * download where the picker API is missing).
  *
  * Export-early law: a successful hand-off stamps `exportedAt` on every
- * exported run; a cancelled share sheet does not.
+ * exported run; a cancelled share sheet or save dialog does not.
  */
 import { Capacitor } from '@capacitor/core'
+import { fileSave } from 'browser-fs-access'
 import { emitCsv } from '../engine/csv'
 import { applyAiAnswers, readAiAnswers } from '../engine/solver'
 import type { MergedRow } from '../engine/types'
@@ -25,7 +27,17 @@ import {
   type BundleInput,
 } from './bundle'
 
-export type ExportOutcome = 'shared' | 'downloaded' | 'cancelled' | 'nothing'
+/**
+ * `saved` — the user picked a location in a Save-As dialog.
+ * `downloaded` — no dialog was possible; the browser dropped the zip into
+ * its Downloads folder, so the UI must say where it went.
+ */
+export type ExportOutcome =
+  | 'shared'
+  | 'saved'
+  | 'downloaded'
+  | 'cancelled'
+  | 'nothing'
 
 /**
  * What the exported CSVs carry in `correct_index`:
@@ -97,20 +109,6 @@ async function buildBundleInputs(
   return bundles
 }
 
-function downloadZip(bytes: Uint8Array, fileName: string): void {
-  const blob = new Blob([bytes as Uint8Array<ArrayBuffer>], {
-    type: 'application/zip',
-  })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = fileName
-  document.body.append(link)
-  link.click()
-  link.remove()
-  URL.revokeObjectURL(url)
-}
-
 /** True on devices where the share sheet is the natural "save this". */
 function preferShareSheet(): boolean {
   return window.matchMedia('(pointer: coarse)').matches
@@ -158,12 +156,24 @@ async function deliverZip(
       if (error instanceof DOMException && error.name === 'AbortError') {
         return 'cancelled'
       }
-      // Share failed for a non-cancel reason — fall through to download
-      // so the export never silently dies.
+      // Share failed for a non-cancel reason — fall through to the save
+      // path so the export never silently dies.
     }
   }
-  downloadZip(bytes, fileName)
-  return 'downloaded'
+  try {
+    const handle = await fileSave(file, {
+      fileName,
+      extensions: ['.zip'],
+    })
+    // A handle means the Save-As picker ran; null means the legacy
+    // anchor-download fallback fired (Firefox/Safari).
+    return handle === null ? 'downloaded' : 'saved'
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      return 'cancelled'
+    }
+    throw error
+  }
 }
 
 /**
@@ -184,7 +194,7 @@ export async function exportRuns(
     VARIANT_SUFFIX[mode],
   )
   const outcome = await deliverZip(zipped, fileName)
-  if (outcome === 'shared' || outcome === 'downloaded') {
+  if (outcome === 'shared' || outcome === 'saved' || outcome === 'downloaded') {
     const stamp = Date.now()
     for (const run of exportable) {
       await updateRun(run.id, { exportedAt: stamp })
