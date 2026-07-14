@@ -76,7 +76,9 @@ export function History({ onOpenConvert }: HistoryProps) {
           ? historyMessages.exportCancelled
           : outcome === 'nothing'
             ? historyMessages.exportUnavailable
-            : historyMessages.exportComplete,
+            : outcome === 'downloaded'
+              ? historyMessages.exportDownloaded
+              : historyMessages.exportComplete,
       tone:
         outcome === 'cancelled' || outcome === 'nothing' ? 'info' : 'working',
     })
