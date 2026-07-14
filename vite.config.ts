@@ -5,6 +5,11 @@ import pkg from './package.json' with { type: 'json' }
 
 // https://vite.dev/config/
 export default defineConfig({
+  // The pdf.js worker wrapper (src/pdf/pdfjsWorker.ts) uses top-level await +
+  // dynamic import to polyfill Promise.try before loading pdf.js's worker, so
+  // it must build as an ES module. pdf.js also always creates its worker with
+  // { type: 'module' }, so this is the format it expects.
+  worker: { format: 'es' },
   define: {
     // CI stamps VERSION (0.0.<run>) into the build so the Android banner can
     // compare it against the newest GitHub release; package.json for dev.

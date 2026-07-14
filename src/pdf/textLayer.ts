@@ -5,9 +5,18 @@
  * the images, and the text never replaces them.
  */
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist'
-import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
+// A polyfilling wrapper around pdf.js's real worker — see pdfjsWorker.ts.
+import pdfjsWorkerUrl from './pdfjsWorker?worker&url'
 
 GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl
+
+/**
+ * A crashed or genuinely stuck pdf.js worker must never freeze the run. The
+ * text layer is only a hint — Gemini reads the page images regardless — so if
+ * extraction has not finished within this budget we abandon it and return no
+ * text rather than hang the render step at 0%.
+ */
+const TEXT_LAYER_TIMEOUT_MS = 30_000
 
 /**
  * One string per page; empty string when the page has no text layer
@@ -18,7 +27,11 @@ export async function extractTextLayers(bytes: Uint8Array): Promise<string[]> {
   // pdf.js transfers the buffer to its worker — hand it a copy so the
   // caller's bytes stay usable for pdfium.
   const task = getDocument({ data: bytes.slice() })
-  try {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<string[]>((resolve) => {
+    timer = setTimeout(() => resolve([]), TEXT_LAYER_TIMEOUT_MS)
+  })
+  const extraction = (async () => {
     const document = await task.promise
     const texts: string[] = []
     for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber++) {
@@ -35,9 +48,16 @@ export async function extractTextLayers(bytes: Uint8Array): Promise<string[]> {
       page.cleanup()
     }
     return texts
+  })()
+  try {
+    // Whichever settles first: a clean extraction, or the timeout's empty
+    // result. A dead worker leaves `extraction` pending forever — the
+    // timeout is what unblocks the render step.
+    return await Promise.race([extraction, timeout])
   } catch {
     return []
   } finally {
+    if (timer !== undefined) clearTimeout(timer)
     await task.destroy()
   }
 }
