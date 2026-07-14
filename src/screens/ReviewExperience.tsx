@@ -52,10 +52,8 @@ export function ReviewExperience({
         filter={session.controls.filter}
         filteredRows={session.filteredRows}
         focusRowId={session.focusRowId}
-        initialScrollTop={session.scrollTop}
         onFilterChange={session.setFilter}
         onOpenRow={session.openRow}
-        onScrollTopChange={session.saveScrollTop}
         onSearchChange={session.setSearch}
         resolutions={session.resolutions}
         reviewRows={session.data.reviewRows}

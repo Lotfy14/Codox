@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { RunState } from '../state/types'
 import {
   loadReviewData,
@@ -30,9 +30,6 @@ export function useReviewSession(runs: readonly RunState[]) {
   const [view, setView] = useState<ReviewView>({ kind: 'list' })
   const [focusRowId, setFocusRowId] = useState<string | null>(null)
   const [pendingNeedsReview, setPendingNeedsReview] = useState<string | null>(null)
-  const scrollStateRef = useRef(new Map<string, number>())
-  const scrollFrameRef = useRef<number | undefined>(undefined)
-  const pendingScrollRef = useRef<{ runId: string; top: number } | null>(null)
 
   useEffect(() => {
     if (!doneRuns.some((run) => run.id === activeRunId)) {
@@ -49,8 +46,6 @@ export function useReviewSession(runs: readonly RunState[]) {
     })
     return () => { cancelled = true }
   }, [activeRunId, dataCache])
-
-  useEffect(() => () => window.cancelAnimationFrame(scrollFrameRef.current ?? 0), [])
 
   const activeRun = doneRuns.find((run) => run.id === activeRunId) ?? doneRuns[0]
   const data = activeRun === undefined ? undefined : dataCache[activeRun.id]
@@ -141,17 +136,6 @@ export function useReviewSession(runs: readonly RunState[]) {
     setView({ kind: 'detail', rowId: first.row.id, pinnedIndex: index })
   }, [activeRunId, data, pendingNeedsReview, resolutions])
 
-  const saveScrollTop = useCallback((top: number) => {
-    if (activeRunId === '') return
-    pendingScrollRef.current = { runId: activeRunId, top }
-    if (scrollFrameRef.current !== undefined) return
-    scrollFrameRef.current = window.requestAnimationFrame(() => {
-      const pending = pendingScrollRef.current
-      if (pending !== null) scrollStateRef.current.set(pending.runId, pending.top)
-      scrollFrameRef.current = undefined
-    })
-  }, [activeRunId])
-
   return {
     activeRun,
     activeRunId,
@@ -165,8 +149,6 @@ export function useReviewSession(runs: readonly RunState[]) {
     openRow,
     orderedRowsForDetail,
     resolutions,
-    saveScrollTop,
-    scrollTop: scrollStateRef.current.get(activeRunId) ?? 0,
     selectRun,
     setFilter: (filter: ReviewFilter) => updateControls({ filter }),
     setSearch: (search: string) => updateControls({ search }),

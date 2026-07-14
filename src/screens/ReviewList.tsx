@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Badge, Button, GlassInput, GlassPanel } from '../design/components'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Badge, Button, GlassInput } from '../design/components'
 import { reviewMessages } from '../copy/messages'
 import { effectiveAnswer, type Resolutions, type ReviewRow } from './review-data'
 import {
@@ -8,9 +8,7 @@ import {
   parseSearch,
   type ReviewFilter,
 } from './review-filter'
-import { useVirtualWindow } from './review-virtual'
 
-const rowHeight = 64
 const answerLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 export interface ReviewListProps {
@@ -22,8 +20,6 @@ export interface ReviewListProps {
   onFilterChange: (filter: ReviewFilter) => void
   onSearchChange: (search: string) => void
   onOpenRow: (rowId: string) => void
-  initialScrollTop: number
-  onScrollTopChange: (scrollTop: number) => void
   focusRowId: string | null
 }
 
@@ -36,11 +32,8 @@ export function ReviewList({
   onFilterChange,
   onSearchChange,
   onOpenRow,
-  initialScrollTop,
-  onScrollTopChange,
   focusRowId,
 }: ReviewListProps) {
-  const scrollRef = useRef<HTMLDivElement>(null)
   const rowRefs = useRef(new Map<string, HTMLButtonElement>())
   const [highlightedRowId, setHighlightedRowId] = useState<string | null>(null)
   const [jumpHint, setJumpHint] = useState('')
@@ -48,17 +41,6 @@ export function ReviewList({
   const unresolvedCount = reviewRows.filter((row) =>
     isUnresolvedFlag(row, resolutions),
   ).length
-  const virtual = useVirtualWindow({
-    scrollRef,
-    count: filteredRows.length,
-    rowHeight,
-  })
-  const { scrollToIndex } = virtual
-
-  useLayoutEffect(() => {
-    if (scrollRef.current !== null) scrollRef.current.scrollTop = initialScrollTop
-  }, [initialScrollTop])
-
   useEffect(() => {
     if (parsedSearch.kind !== 'jump') {
       setJumpHint('')
@@ -77,32 +59,27 @@ export function ReviewList({
     const rowId = filteredRows[index].row.id
     setJumpHint('')
     setHighlightedRowId(rowId)
-    scrollToIndex(index, 'center')
+    rowRefs.current.get(rowId)?.scrollIntoView({ block: 'center' })
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const timer = window.setTimeout(
       () => setHighlightedRowId((current) => current === rowId ? null : current),
       reduced ? 0 : 1800,
     )
     return () => window.clearTimeout(timer)
-  }, [filter, filteredRows, parsedSearch, reviewRows, scrollToIndex])
+  }, [filter, filteredRows, parsedSearch, reviewRows])
 
   useEffect(() => {
     if (focusRowId === null) return
-    const index = filteredRows.findIndex((row) => row.row.id === focusRowId)
-    if (index === -1) return
-    scrollToIndex(index, 'center')
-    let secondFrame = 0
-    const firstFrame = window.requestAnimationFrame(() => {
-      secondFrame = window.requestAnimationFrame(() => rowRefs.current.get(focusRowId)?.focus())
+    const frame = window.requestAnimationFrame(() => {
+      const row = rowRefs.current.get(focusRowId)
+      row?.focus({ preventScroll: true })
+      row?.scrollIntoView({ block: 'center' })
     })
-    return () => {
-      window.cancelAnimationFrame(firstFrame)
-      window.cancelAnimationFrame(secondFrame)
-    }
-  }, [filteredRows, focusRowId, scrollToIndex])
+    return () => window.cancelAnimationFrame(frame)
+  }, [filteredRows, focusRowId])
 
   return (
-    <GlassPanel aria-label={reviewMessages.listPanelLabel} as="section" className="review-list" padding="default">
+    <section aria-label={reviewMessages.listPanelLabel} className="review-list">
       <header className="review-list__header">
         <p className="review-list__count">{reviewMessages.questionCount(reviewRows.length)}</p>
         <div className="review-list__tools">
@@ -131,20 +108,13 @@ export function ReviewList({
       {filteredRows.length === 0 ? (
         <p className="ds-muted review-list__empty">{reviewMessages.searchNoMatches}</p>
       ) : (
-        <div
-          className="review-list__viewport"
-          onScroll={(event) => onScrollTopChange(event.currentTarget.scrollTop)}
-          ref={scrollRef}
-        >
-          <div className="review-list__spacer" role="list" style={{ height: virtual.totalHeight }}>
-            {virtual.items.map((item) => {
-              const reviewRow = filteredRows[item.index]
-              if (reviewRow === undefined) return null
-              const answer = effectiveAnswer(reviewRow, resolutions)
-              const flagged = isUnresolvedFlag(reviewRow, resolutions)
-              return (
-                <button
-                  aria-posinset={item.index + 1}
+        <div className="review-list__rows" role="list">
+          {filteredRows.map((reviewRow, index) => {
+            const answer = effectiveAnswer(reviewRow, resolutions)
+            const flagged = isUnresolvedFlag(reviewRow, resolutions)
+            return (
+              <button
+                  aria-posinset={index + 1}
                   aria-setsize={filteredRows.length}
                   className={[
                     'review-list-row',
@@ -158,7 +128,6 @@ export function ReviewList({
                     else rowRefs.current.set(reviewRow.row.id, element)
                   }}
                   role="listitem"
-                  style={{ height: rowHeight, transform: `translateY(${item.offsetTop}px)` }}
                   type="button"
                 >
                   <span className="review-list-row__num">{reviewRow.questionNumber}</span>
@@ -167,12 +136,11 @@ export function ReviewList({
                   <span className="review-list-row__answer">
                     {answer === null ? reviewMessages.answerBlank : (answerLetters[answer] ?? answer + 1)}
                   </span>
-                </button>
-              )
-            })}
-          </div>
+              </button>
+            )
+          })}
         </div>
       )}
-    </GlassPanel>
+    </section>
   )
 }

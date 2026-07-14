@@ -266,9 +266,10 @@ test('critical journey: answer-key PDF → review list/detail → named export �
   await search.fill('20')
   const highlightedRow = page.locator('.review-list-row--highlight')
   await expect(highlightedRow).toContainText('Question 20: What is two plus two?')
-  const reviewViewport = page.locator('.review-list__viewport')
-  await expect.poll(() => reviewViewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
-  const scrollBeforeDetail = await reviewViewport.evaluate((element) => element.scrollTop)
+  await expect(page.locator('.review-list__viewport')).toHaveCount(0)
+  const centralConsole = page.locator('.ds-work')
+  await expect.poll(() => centralConsole.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
+  const scrollBeforeDetail = await centralConsole.evaluate((element) => element.scrollTop)
   await highlightedRow.click()
   await page.getByRole('radio', { name: /Four/ }).click()
   await page.getByRole('button', { name: 'Confirm answer (Enter)' }).click()
@@ -279,7 +280,7 @@ test('critical journey: answer-key PDF → review list/detail → named export �
       .locator('.review-list-row__answer'),
   ).toHaveText('B')
   await expect(page.getByRole('button', { name: 'Needs review (29)' })).toBeVisible()
-  const scrollAfterBack = await reviewViewport.evaluate((element) => element.scrollTop)
+  const scrollAfterBack = await centralConsole.evaluate((element) => element.scrollTop)
   expect(Math.abs(scrollAfterBack - scrollBeforeDetail)).toBeLessThan(65)
 
   // Desktop export opens a Save-As picker. The native dialog cannot be
