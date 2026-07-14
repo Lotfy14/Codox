@@ -191,6 +191,12 @@ export type StopReason =
   | 'planner_invalid_after_repair'
   | 'worker_chunk_invalid'
   | 'merge_validation_failed'
+  /**
+   * The planner counted more questions than it emitted rows for, and even a
+   * single-page window could not close the gap. Never silently accept the
+   * shortfall: a CSV missing most of the exam is worse than an honest stop.
+   */
+  | 'planner_underextracted'
 
 /** Names of the executor's checkpointed steps, in order. */
 export const RUN_STEPS = [

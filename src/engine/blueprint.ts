@@ -209,6 +209,47 @@ function rowForcesBlank(row: PlannedRow): boolean {
 }
 
 /**
+ * The counts a raw planner response DECLARES, without validating anything
+ * else. `question_count` is document evidence — what the planner says it SAW.
+ */
+export function readDeclaredCounts(responseText: string): {
+  questionCount?: number
+  rowCount?: number
+} {
+  const parsed = parseModelJson(responseText)
+  if (parsed.error !== undefined || !isRecord(parsed.value)) return {}
+  const raw = parsed.value
+  const profile = isRecord(raw.document_profile) ? raw.document_profile : undefined
+  return {
+    questionCount:
+      typeof profile?.question_count === 'number'
+        ? profile.question_count
+        : undefined,
+    rowCount: Array.isArray(raw.planned_rows) ? raw.planned_rows.length : undefined,
+  }
+}
+
+/**
+ * True when the planner counted more questions than it emitted rows for.
+ *
+ * This is the failure that silently shipped a 3-row CSV for a 108-question
+ * exam: the planner reported `question_count: 108` with 3 rows, the count rule
+ * below rejected it, and the repair round "fixed" the mismatch by rewriting
+ * the count down to 3 — destroying the only evidence that anything was wrong.
+ * A shortfall must never be repaired away: the count is what the planner SAW,
+ * not a field to be talked down until the rows agree. The caller splits the
+ * page window and re-plans instead.
+ */
+export function isUnderExtracted(responseText: string): boolean {
+  const { questionCount, rowCount } = readDeclaredCounts(responseText)
+  return (
+    questionCount !== undefined &&
+    rowCount !== undefined &&
+    rowCount < questionCount
+  )
+}
+
+/**
  * The §1.6 rule list over a raw planner response. `renderedPages` is the
  * set of 1-based page numbers that actually rendered.
  */

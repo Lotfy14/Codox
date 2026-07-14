@@ -6,7 +6,12 @@ import { db } from '../state/db'
 import { createRun, getArtifacts, getRun } from '../state/runs'
 import type { GeminiAdapter, VisionResult } from '../providers/types'
 import { executeRun } from './executor'
-import { makeBlueprint, makeEvidenceBlueprint, makePlannedRow } from './fixtures'
+import {
+  makeBlueprint,
+  makeEvidenceBlueprint,
+  makePlannedRow,
+  makeRegion,
+} from './fixtures'
 import type { Blueprint, WorkerRow } from './types'
 
 /**
@@ -398,7 +403,11 @@ describe('stop reasons (§1.3)', () => {
 
   it('one repair round fixes an invalid blueprint and the run continues', async () => {
     const broken = makeBlueprint()
-    broken.document_profile.question_count = 99 // count ≠ planned_rows
+    // A content error the repair round may legitimately fix. Deliberately NOT
+    // a row shortfall: a planner that emits fewer rows than it counted is
+    // under-extraction, which must never be repaired away — see the
+    // planner_underextracted tests below.
+    broken.planned_rows[0].question_assembly.final_format = 'WRONG'
     const fixed = makeBlueprint()
     const script = scriptedAdapter()
     script.push(
@@ -416,14 +425,14 @@ describe('stop reasons (§1.3)', () => {
     expect(outcome.status).toBe('done')
     // The repair call carried the errors and the invalid blueprint.
     expect(script.calls[1].prompt).toContain('VALIDATION ERRORS:')
-    expect(script.calls[1].prompt).toContain('question_count is 99')
+    expect(script.calls[1].prompt).toContain('final_format')
     expect(script.calls[1].prompt.startsWith('You are the PLANNER')).toBe(true)
     expect(script.calls[1].modelId).toBe('gemini-3.5-flash') // same planner model
   })
 
   it('planner_invalid_after_repair stops BEFORE any worker call', async () => {
     const broken = makeBlueprint()
-    broken.document_profile.question_count = 99
+    broken.planned_rows[0].question_assembly.final_format = 'WRONG'
     const script = scriptedAdapter()
     script.push(ok(JSON.stringify(broken)), ok(JSON.stringify(broken)))
     const runId = await newRun()
@@ -438,6 +447,166 @@ describe('stop reasons (§1.3)', () => {
     })
     expect(script.calls).toHaveLength(2) // planner + exactly one repair
     expect(await getArtifacts(runId, 'chunk-request')).toHaveLength(0)
+  })
+
+  // The bug this guards: on a real 30-page, four-exam scan the planner
+  // reported question_count 108 and emitted 3 rows. The count rule rejected
+  // it, and the repair round "fixed" the mismatch by rewriting the count down
+  // to 3 — so a 108-question exam shipped as a green "Done" with 3 rows.
+  it('a planner shortfall is NEVER repaired away — it stops the run', async () => {
+    const short = makeBlueprint()
+    short.document_profile.question_count = 99 // counted 99, emitted 2
+    const script = scriptedAdapter()
+    script.push(ok(JSON.stringify(short)), ok(JSON.stringify(short)))
+    const runId = await newRun()
+
+    const outcome = await executeRun(runId, PDF_BYTES, {
+      controller: new GeminiController(script.adapter),
+    })
+
+    expect(outcome).toMatchObject({
+      status: 'stopped',
+      reason: 'planner_underextracted',
+    })
+    // No repair round: the shortfall must not even be offered to the model,
+    // because the cheapest way for it to comply is to lower the count.
+    expect(script.calls).toHaveLength(1)
+    expect(await getArtifacts(runId, 'chunk-request')).toHaveLength(0)
+  })
+
+  it('a repair may not talk question_count DOWN to match its rows', async () => {
+    // Invalid for an unrelated reason, so the repair round legitimately runs…
+    const broken = makeBlueprint()
+    broken.planned_rows[0].question_assembly.final_format = 'WRONG'
+    // …but the repair "fixes" it by dropping a row and lowering the count.
+    const lowered = makeBlueprint({
+      planned_rows: [makePlannedRow('1')],
+    })
+    lowered.document_profile.question_count = 1
+    const script = scriptedAdapter()
+    script.push(ok(JSON.stringify(broken)), ok(JSON.stringify(lowered)))
+    const runId = await newRun()
+
+    const outcome = await executeRun(runId, PDF_BYTES, {
+      controller: new GeminiController(script.adapter),
+    })
+
+    expect(outcome).toMatchObject({
+      status: 'stopped',
+      reason: 'planner_underextracted',
+    })
+    expect(await getArtifacts(runId, 'chunk-request')).toHaveLength(0)
+  })
+
+  it('plans a long document in windows, and a straddling question survives exactly once', async () => {
+    pdfState.pages = 12 // > one window (10) → two planner calls
+
+    // Window 1 owns pages 1-10 and SEES 1-11 (relative 1..11).
+    // Row "2" straddles the boundary: prompt on page 10, options on page 11.
+    const window1 = makeBlueprint({
+      planned_rows: [
+        makePlannedRow('1', {
+          regions: {
+            case_stem: null,
+            question_prompt: makeRegion(1),
+            options: makeRegion(1),
+            answer_evidence: null,
+          },
+        }),
+        makePlannedRow('2', {
+          regions: {
+            case_stem: null,
+            question_prompt: makeRegion(10), // absolute page 10 — owned here
+            options: makeRegion(11), // absolute page 11 — the next window's core
+            answer_evidence: null,
+          },
+        }),
+      ],
+    })
+    window1.document_profile.question_count = 2
+
+    // Window 2 owns pages 11-12 and SEES 10-12 (relative 1=p10, 2=p11, 3=p12).
+    // It ALSO plans the straddling question (it can see page 10) — that
+    // duplicate must be dropped, because window 2 does not own page 10.
+    const window2 = makeBlueprint({
+      planned_rows: [
+        makePlannedRow('2', {
+          regions: {
+            case_stem: null,
+            question_prompt: makeRegion(1), // absolute page 10 — NOT owned here
+            options: makeRegion(2),
+            answer_evidence: null,
+          },
+        }),
+        makePlannedRow('3', {
+          regions: {
+            case_stem: null,
+            question_prompt: makeRegion(2), // absolute page 11
+            options: makeRegion(2),
+            answer_evidence: null,
+          },
+        }),
+        makePlannedRow('4', {
+          regions: {
+            case_stem: null,
+            question_prompt: makeRegion(3), // absolute page 12
+            options: makeRegion(3),
+            answer_evidence: null,
+          },
+        }),
+      ],
+    })
+    window2.document_profile.question_count = 3
+
+    // What the stitch should produce: 4 rows, the straddler kept once.
+    const stitched = makeBlueprint({
+      planned_rows: [
+        makePlannedRow('1', { group_id: 'group01' }),
+        makePlannedRow('2', { group_id: 'group02' }),
+        makePlannedRow('3', { group_id: 'group03' }),
+        makePlannedRow('4', { group_id: 'group04' }),
+      ],
+    })
+
+    const script = scriptedAdapter()
+    script.push(
+      ok(JSON.stringify(window1)),
+      ok(JSON.stringify(window2)),
+      ok(workerResponse(stitched)),
+      ok(AUDIT_PASS),
+    )
+    const runId = await newRun()
+
+    const outcome = await executeRun(runId, PDF_BYTES, {
+      controller: new GeminiController(script.adapter),
+    })
+
+    expect(outcome.status).toBe('done')
+
+    // Two planner calls, each carrying only its own window's pages.
+    expect(script.calls[0].imageCount).toBe(11) // pages 1-11 (core + lookahead)
+    expect(script.calls[1].imageCount).toBe(3) // pages 10-12 (lookbehind + core)
+
+    const blueprint = (await getArtifacts(runId, 'blueprint-valid'))[0]
+      .json as Blueprint
+    // The straddler appears once, not twice.
+    expect(blueprint.planned_rows).toHaveLength(4)
+    expect(blueprint.document_profile.question_count).toBe(4)
+    expect(blueprint.planned_rows.map((row) => row.id)).toEqual([
+      '1',
+      '2',
+      '3',
+      '4',
+    ])
+    // Absolute page numbers, and the straddler still reaches across into
+    // page 11 for its options.
+    const straddler = blueprint.planned_rows[1]
+    expect(straddler.regions.question_prompt?.page).toBe(10)
+    expect(straddler.regions.options?.page).toBe(11)
+    // Later windows' pages were offset back to absolute, not left relative.
+    expect(
+      blueprint.planned_rows.map((row) => row.regions.question_prompt?.page),
+    ).toEqual([1, 10, 11, 12])
   })
 
   it('one chunk retry fixes an invalid chunk and the run continues', async () => {
