@@ -1,5 +1,14 @@
 {
   "style-sentry.rules.no-unused-classes.enabled": false,
+  "java.jdt.ls.java.home": "C:\\Program Files\\Android\\Android Studio\\jbr",
+  "java.import.gradle.java.home": "C:\\Program Files\\Android\\Android Studio\\jbr",
+  "java.configuration.runtimes": [
+    {
+      "name": "JavaSE-21",
+      "path": "C:\\Program Files\\Android\\Android Studio\\jbr",
+      "default": true
+    }
+  ],
   "java.server.launchMode": "LightWeight",
   "java.configuration.updateBuildConfiguration": "automatic",
   "java.jdt.ls.androidSupport.enabled": "off",
