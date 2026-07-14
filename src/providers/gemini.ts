@@ -26,15 +26,21 @@ import type {
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
 
 /**
- * Default free-tier vision-capable model. The Phase-2 spike round-tripped
- * `gemini-3.5-flash` from both installed shells on 2026-07-11.
+ * Default free-tier vision-capable model.
+ *
+ * Owner decision (2026-07-14): every role runs on `gemini-3.1-flash-lite`.
+ * `gemini-3.5-flash`'s free-tier per-minute ceiling is low enough that a
+ * multi-page planner call 429s on its own, stalling real conversions behind
+ * minutes of back-off. Flash-Lite's higher free-tier headroom is worth more
+ * than its weaker bounding boxes. Accepted cost: crop quality drops, so
+ * re-run the gold gate (CodoxSandbox) before treating this as permanent.
  */
-export const DEFAULT_GEMINI_VISION_MODEL = 'gemini-3.5-flash'
+export const DEFAULT_GEMINI_VISION_MODEL = 'gemini-3.1-flash-lite'
 
 /**
  * Cheap model used only to prove that a key can generate content. This is
- * the engine's worker/audit model, so a passing check means the key can run
- * a real conversion; a lite-tier model keeps the manual check near-free.
+ * the model every engine role uses, so a passing check means the key can run
+ * a real conversion.
  * (The previous check model, gemini-2.5-flash-lite, is deprecated and now
  * rejects newer free-tier keys with a billing error — a false negative.)
  */

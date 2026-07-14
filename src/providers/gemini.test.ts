@@ -100,7 +100,9 @@ describe('live key validation', () => {
       RequestInit,
     ]
     expect(GEMINI_KEY_CHECK_MODEL).toBe('gemini-3.1-flash-lite')
-    expect(GEMINI_KEY_CHECK_MODEL).not.toBe(DEFAULT_GEMINI_VISION_MODEL)
+    // The check now runs the same model every engine role runs, so a passing
+    // check proves the key can actually run a conversion.
+    expect(GEMINI_KEY_CHECK_MODEL).toBe(DEFAULT_GEMINI_VISION_MODEL)
     expect(url).toContain('gemini-3.1-flash-lite:generateContent')
     expect(url).not.toContain('gemini-3.5-flash')
     expect(init.method).toBe('POST')

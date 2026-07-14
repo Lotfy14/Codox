@@ -208,7 +208,7 @@ describe('happy path', () => {
 
     const [planner, worker, audit] = script.calls
     expect(planner.imageCount).toBe(2) // all rendered pages
-    expect(planner.modelId).toBe('gemini-3.5-flash')
+    expect(planner.modelId).toBe('gemini-3.1-flash-lite')
     expect(planner.prompt.startsWith('You are the PLANNER')).toBe(true)
     // Both fixture rows sit on page 1 → the worker gets one page image.
     expect(worker.imageCount).toBe(1)
@@ -250,9 +250,9 @@ describe('happy path', () => {
     expect(script.calls.at(-1)?.imageCount).toBe(4)
   })
 
-  it('keeps the bbox planner on 3.5 even when model listing omits it', async () => {
+  it('pins every role to flash-lite whatever the model listing offers', async () => {
     const blueprint = makeBlueprint()
-    const script = scriptedAdapter(['gemini-3.1-flash-lite'])
+    const script = scriptedAdapter(['gemini-3.5-flash'])
     script.push(ok(JSON.stringify(blueprint)), ok(workerResponse(blueprint)), ok(AUDIT_PASS))
     const runId = await newRun()
 
@@ -261,11 +261,11 @@ describe('happy path', () => {
     })
 
     expect(script.calls.map((call) => call.modelId)).toEqual([
-      'gemini-3.5-flash',
+      'gemini-3.1-flash-lite',
       'gemini-3.1-flash-lite',
       'gemini-3.1-flash-lite',
     ])
-    expect((await getRun(runId))?.plannerModel).toBe('gemini-3.5-flash')
+    expect((await getRun(runId))?.plannerModel).toBe('gemini-3.1-flash-lite')
     expect(script.calls.map((call) => call.prompt.startsWith('You are the'))).toEqual([
       true,
       true,
@@ -427,7 +427,7 @@ describe('stop reasons (§1.3)', () => {
     expect(script.calls[1].prompt).toContain('VALIDATION ERRORS:')
     expect(script.calls[1].prompt).toContain('final_format')
     expect(script.calls[1].prompt.startsWith('You are the PLANNER')).toBe(true)
-    expect(script.calls[1].modelId).toBe('gemini-3.5-flash') // same planner model
+    expect(script.calls[1].modelId).toBe('gemini-3.1-flash-lite') // same planner model
   })
 
   it('planner_invalid_after_repair stops BEFORE any worker call', async () => {
@@ -738,7 +738,7 @@ describe('stop reasons (§1.3)', () => {
     expect((await getRun(runId))?.stopReason).toBe('invalid-request')
   })
 
-  it('a planner that stays 5xx never silently downgrades bbox detection', async () => {
+  it('a planner that stays 5xx never silently swaps its model', async () => {
     const script = scriptedAdapter()
     const overloaded: VisionResult = {
       ok: false,
@@ -748,7 +748,7 @@ describe('stop reasons (§1.3)', () => {
       retryAfterSeconds: 0,
     }
     // The controller's own transient retries (initial + 3) all fail. The
-    // engine stops honestly instead of accepting lower-quality boxes.
+    // engine stops honestly instead of reaching for a different model.
     script.push(overloaded, overloaded, overloaded, overloaded)
     const runId = await newRun()
 
@@ -761,16 +761,16 @@ describe('stop reasons (§1.3)', () => {
       .filter((call) => call.prompt.startsWith('You are the PLANNER'))
       .map((call) => call.modelId)
     expect(plannerModels).toEqual([
-      'gemini-3.5-flash',
-      'gemini-3.5-flash',
-      'gemini-3.5-flash',
-      'gemini-3.5-flash',
+      'gemini-3.1-flash-lite',
+      'gemini-3.1-flash-lite',
+      'gemini-3.1-flash-lite',
+      'gemini-3.1-flash-lite',
     ])
-    expect((await getRun(runId))?.plannerModel).toBe('gemini-3.5-flash')
+    expect((await getRun(runId))?.plannerModel).toBe('gemini-3.1-flash-lite')
   })
 
-  it('does not choose flash-lite when only flash-lite appears in model listing', async () => {
-    const script = scriptedAdapter(['gemini-3.1-flash-lite'])
+  it('does not swap the planner model when the listing offers another one', async () => {
+    const script = scriptedAdapter(['gemini-3.5-flash'])
     const overloaded: VisionResult = {
       ok: false,
       kind: 'provider-error',
@@ -790,7 +790,9 @@ describe('stop reasons (§1.3)', () => {
       kind: 'provider-error',
     })
     expect((await getRun(runId))?.stopReason).toBe('temporarily-unavailable')
-    expect(script.calls.every((call) => call.modelId === 'gemini-3.5-flash')).toBe(true)
+    expect(script.calls.every((call) => call.modelId === 'gemini-3.1-flash-lite')).toBe(
+      true,
+    )
     expect(script.calls).toHaveLength(4)
   })
 })

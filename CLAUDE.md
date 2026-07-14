@@ -47,6 +47,15 @@ Correctness is graded externally in the CodoxSandbox repo (gold gate:
 appendicitis 127/127 exact rows); do not build or duplicate a test harness
 for engine output here.
 
+*Model assignment (owner-approved 2026-07-14):* all three roles now run
+`gemini-3.1-flash-lite`, deviating from CODOX_MIGRATION §1.2's
+`gemini-3.5-flash` planner. Reason: 3.5-flash's free-tier per-minute ceiling
+made a single multi-page planner call 429 on its own, stalling real
+conversions behind minutes of back-off. The prompts, the output contract, and
+the no-fallback rule are untouched — the engine still never swaps a role's
+model at runtime. Open cost: Flash-Lite's bounding boxes are weaker, so crop
+quality is unverified until the gold gate is re-run.
+
 *Export projection (owner-approved 2026-07-14):* exported CSVs are a
 column projection of the pinned format (`src/export/export-csv.ts`,
 CODOX_MIGRATION §3.1): `id`/`group_id` never leave the device;

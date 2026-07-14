@@ -338,8 +338,8 @@ async function stepPlanAndValidate(
   }
 
   const pages = await renderedPages(runId)
-  // Bounding-box quality is a correctness requirement. Never silently
-  // downgrade this role to Flash Lite because a model-list request failed.
+  // The role's model is fixed in calls.ts. Never let a model-list result or a
+  // provider failure swap it at runtime — retry the same model, or stop.
   const plannerModel = PLANNER_MODEL
   await updateRun(runId, { plannerModel })
 
