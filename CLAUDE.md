@@ -47,6 +47,23 @@ Correctness is graded externally in the CodoxSandbox repo (gold gate:
 appendicitis 127/127 exact rows); do not build or duplicate a test harness
 for engine output here.
 
+## Ship everywhere or nowhere (non-negotiable)
+
+A fix is not done until it is **committed and pushed to `main`** — that one
+push is what ships every channel (auto-release.yml deploys the web app and
+cuts the GitHub release the Windows auto-updater feeds from). Channels
+update at different speeds: web is automatic within minutes, Windows
+auto-updates on launch, but **Android has no updater — an installed APK is
+frozen** until the user manually installs a fresh one from
+`/releases/latest`. Any "works on web, broken on phone" report is almost
+always a stale APK, not a code fork. Never deliver
+a fix as a local-only `wrangler deploy`, a hot edit on one machine, or a
+change to one device's stored data: that repairs a single installation and
+leaves every other device broken. If a fix genuinely cannot ship through
+`main` (e.g. it requires clearing per-device state like the service-worker
+cache or IndexedDB), say so explicitly and list which devices remain
+affected and what the user must do on each.
+
 ## Search before build
 
 Before implementing any non-trivial functionality from scratch, dispatch a
