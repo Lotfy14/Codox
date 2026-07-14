@@ -729,12 +729,19 @@
 .ds-dialog__close {
   display: inline-grid;
   place-items: center;
-  min-width: var(--touch-target-min);
-  min-height: var(--touch-target-min);
   border: 0;
   border-radius: var(--radius-full);
   background: transparent;
   color: var(--color-text-muted);
+}
+
+.ds-file-row__remove {
+  grid-column: -1;
+  justify-self: end;
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: 1.5rem;
+  line-height: 1;
 }
 
 .ds-dialog__close {
