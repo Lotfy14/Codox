@@ -20,7 +20,7 @@ import {
 } from '../state/runs'
 import { bytesToBase64 } from '../providers/base64'
 import { applyResolutions, getResolutions } from '../screens/review-data'
-import { PLANNER_FALLBACK_MODEL, PLANNER_MODEL, wasTruncated } from './calls'
+import { wasTruncated } from './calls'
 import { isRecord, parseModelJson } from './json'
 import { SOLVER_PROMPT } from './solver-prompt'
 import type { MergedRow } from './types'
@@ -53,6 +53,7 @@ export interface SolveOptions {
 
 const DEFAULT_CHUNK_SIZE = 10
 const SOLVER_MAX_TOKENS = 8_192
+export const SOLVER_MODEL = 'gemini-3.1-flash-lite'
 
 // ---------------------------------------------------------------- reading
 
@@ -115,7 +116,7 @@ export function estimateSolverRequests(
 function buildSolverRequest(
   rows: readonly MergedRow[],
   images: VisionRequest['images'],
-  modelId: string,
+  imagePaths: readonly string[],
   previousError?: string,
 ): VisionRequest {
   const parts = [
@@ -127,9 +128,18 @@ function buildSolverRequest(
         id: row.id,
         question: row.question,
         options: row.options,
+        image_urls: row.image_urls,
       })),
     }),
   ]
+  if (imagePaths.length > 0) {
+    parts.push(
+      '',
+      'ATTACHED IMAGE ORDER:',
+      JSON.stringify(imagePaths),
+      'The attached cropped images follow this order. Match each path to the question image_urls field.',
+    )
+  }
   if (previousError !== undefined) {
     parts.push(
       '',
@@ -142,7 +152,7 @@ function buildSolverRequest(
   return {
     prompt: parts.join('\n'),
     images,
-    modelId,
+    modelId: SOLVER_MODEL,
     generationConfig: {
       temperature: 0,
       maxOutputTokens: SOLVER_MAX_TOKENS,
@@ -151,19 +161,21 @@ function buildSolverRequest(
   }
 }
 
-/** Chunk rows' figure crops, deduped, in row order. */
+/** Chunk rows' referenced figure crops, deduped and attached in listed order. */
 async function chunkImages(
   runId: string,
   rows: readonly MergedRow[],
-): Promise<VisionRequest['images']> {
-  const paths = [...new Set(rows.flatMap((row) => row.image_urls))]
+): Promise<{ images: VisionRequest['images']; paths: string[] }> {
+  const requestedPaths = [...new Set(rows.flatMap((row) => row.image_urls))]
   const images: Array<{ mimeType: string; base64Data: string }> = []
-  for (const path of paths) {
+  const paths: string[] = []
+  for (const path of requestedPaths) {
     const crop = await getCropByPath(runId, path)
     if (crop?.bytes === undefined) continue
+    paths.push(path)
     images.push({ mimeType: 'image/jpeg', base64Data: bytesToBase64(crop.bytes) })
   }
-  return images
+  return { images, paths }
 }
 
 interface ChunkValidation {
@@ -247,8 +259,9 @@ async function saveAnswers(
 /**
  * Solves the run's pending target rows in chunks, caching each chunk as it
  * lands (an abort keeps everything already answered). Quota, rate-limit and
- * offline pauses are absorbed by the controller exactly like engine calls;
- * a primary-model 503 spell falls back to the configured fallback model.
+ * offline pauses are absorbed by the controller exactly like engine calls.
+ * Every request contains formatted question text, includes any referenced
+ * image crops, and is pinned to the low-cost solver model.
  */
 export async function solveRun(
   runId: string,
@@ -270,33 +283,20 @@ export async function solveRun(
       chunkIndex * chunkSize,
       (chunkIndex + 1) * chunkSize,
     )
-    const images = await chunkImages(runId, chunkRows)
-
+    const attached = await chunkImages(runId, chunkRows)
     let previousError: string | undefined
     let accepted: Record<string, AiAnswer> | undefined
-    let modelId = PLANNER_MODEL
     // Exactly one retry, consumed only by INVALID CONTENT (worker idiom).
     for (let attempt = 0; attempt < 2 && accepted === undefined; attempt += 1) {
-      let result = await controller.runGeminiRequest(
-        buildSolverRequest(chunkRows, images, modelId, previousError),
+      const result = await controller.runGeminiRequest(
+        buildSolverRequest(
+          chunkRows,
+          attached.images,
+          attached.paths,
+          previousError,
+        ),
         { signal },
       )
-      // An overloaded primary model gets one fresh attempt on the fallback
-      // (mirrors the planner's 5xx fallback in the executor).
-      if (
-        !result.ok &&
-        result.kind === 'provider-error' &&
-        result.code === 'temporarily-unavailable' &&
-        modelId !== PLANNER_FALLBACK_MODEL
-      ) {
-        await recordRequestUsage(runId)
-        requestsMade += 1
-        modelId = PLANNER_FALLBACK_MODEL
-        result = await controller.runGeminiRequest(
-          buildSolverRequest(chunkRows, images, modelId, previousError),
-          { signal },
-        )
-      }
       if (!result.ok) {
         await recordRequestUsage(runId)
         return { ok: false, failure: result }

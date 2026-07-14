@@ -12,6 +12,7 @@ import {
   pendingRows,
   readAiAnswers,
   solveRun,
+  SOLVER_MODEL,
   validateSolverChunk,
   type AiAnswersArtifact,
 } from './solver'
@@ -123,7 +124,8 @@ describe('solveRun', () => {
 
     expect(outcome).toEqual({ ok: true, requestsMade: 1 })
     expect(script.calls).toHaveLength(1)
-    expect(script.calls[0].modelId).toBe('gemini-3.5-flash')
+    expect(script.calls[0].modelId).toBe('gemini-3.1-flash-lite')
+    expect(script.calls[0].modelId).toBe(SOLVER_MODEL)
     expect(script.calls[0].prompt.startsWith('You are answering multiple-choice')).toBe(true)
     // Only the two blank rows were sent.
     expect(script.calls[0].prompt).toContain('Question 2?')
@@ -136,7 +138,7 @@ describe('solveRun', () => {
     expect((await getRun(runId))?.requestCount).toBe(1)
   })
 
-  it('attaches the chunk rows’ figure crops', async () => {
+  it('sends formatted question text with its referenced image crops', async () => {
     const runId = await seedRun([row('1', { image_urls: ['images/q1.jpg'] })])
     await putArtifact({
       runId,
@@ -152,6 +154,37 @@ describe('solveRun', () => {
     })
 
     expect(script.calls[0].imageCount).toBe(1)
+    expect(script.calls[0].prompt).toContain('Question 1?')
+    expect(script.calls[0].prompt).toContain('Alpha')
+    expect(script.calls[0].prompt).toContain('images/q1.jpg')
+  })
+
+  it('sends every selected question across flash-lite chunks', async () => {
+    const rows = Array.from({ length: 12 }, (_, index) => row(String(index + 1)))
+    const runId = await seedRun(rows)
+    const script = scriptedAdapter()
+    script.push(
+      ok(answersJson(rows.slice(0, 10).map((entry) => ({
+        id: entry.id,
+        index: 0,
+        confidence: 'certain',
+      })))),
+      ok(answersJson(rows.slice(10).map((entry) => ({
+        id: entry.id,
+        index: 1,
+        confidence: 'likely',
+      })))),
+    )
+
+    await solveRun(runId, SETTINGS, {
+      controller: new GeminiController(script.adapter),
+    })
+
+    expect(script.calls).toHaveLength(2)
+    expect(script.calls.every((call) => call.modelId === SOLVER_MODEL)).toBe(true)
+    expect(script.calls.every((call) => call.imageCount === 0)).toBe(true)
+    const prompts = script.calls.map((call) => call.prompt).join('\n')
+    for (const entry of rows) expect(prompts).toContain(entry.question)
   })
 
   it('one repair retry on invalid content; still invalid → honest unsure', async () => {
@@ -220,32 +253,6 @@ describe('solveRun', () => {
     expect(Object.keys((await readAiAnswers(runId))?.answers ?? {})).toHaveLength(10)
   })
 
-  it('an overloaded primary model falls back to flash-lite for the chunk', async () => {
-    const runId = await seedRun([row('1')])
-    const script = scriptedAdapter()
-    const overloaded: VisionResult = {
-      ok: false,
-      kind: 'provider-error',
-      code: 'temporarily-unavailable',
-      httpStatus: 503,
-      retryAfterSeconds: 0,
-    }
-    // Controller's own transient retries (initial + 3) on the primary…
-    script.push(overloaded, overloaded, overloaded, overloaded)
-    // …then the fallback model answers.
-    script.push(ok(answersJson([{ id: '1', index: 1, confidence: 'certain' }])))
-
-    const outcome = await solveRun(runId, SETTINGS, {
-      controller: new GeminiController(script.adapter),
-    })
-
-    expect(outcome.ok).toBe(true)
-    expect(script.calls.at(-1)?.modelId).toBe('gemini-3.1-flash-lite')
-    expect((await readAiAnswers(runId))?.answers['1']).toEqual({
-      index: 1,
-      confidence: 'certain',
-    })
-  })
 })
 
 describe('validateSolverChunk', () => {
