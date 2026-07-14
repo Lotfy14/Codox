@@ -6,6 +6,7 @@ dist-ssr/
 *.local
 *.keystore
 *.jks
+*.p12
 android/keystore.properties
 src-tauri/target/
 logs

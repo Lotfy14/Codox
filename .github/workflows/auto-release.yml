@@ -163,13 +163,35 @@ jobs:
           sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/" android/app/build.gradle
           sed -i "s/versionName \"1.0\"/versionName \"$VERSION\"/" android/app/build.gradle
 
+      # Android refuses to upgrade a package whose signing certificate changed,
+      # so every release MUST be signed with the one keystore held in secrets.
+      # A debug build would be signed with a keystore Gradle invents per runner,
+      # which is what made every APK conflict with the installed one.
+      - name: Restore release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 is not set — an APK signed with any other key cannot upgrade an installed Codox."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/codox-release.p12
+          cat > android/keystore.properties <<EOF
+          storeFile=codox-release.p12
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEYSTORE_PASSWORD
+          EOF
+
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Build debug APK
+      - name: Build signed release APK
         run: |
           chmod +x android/gradlew
-          cd android && ./gradlew assembleDebug
+          cd android && ./gradlew assembleRelease
 
       - name: Enable Android emulator acceleration
         run: |
@@ -194,7 +216,23 @@ jobs:
             android/app/build/outputs/androidTest-results
 
       - name: Rename APK
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk "codox-$VERSION.apk"
+        run: cp android/app/build/outputs/apk/release/app-release.apk "codox-$VERSION.apk"
+
+      # The whole point of the keystore is that this fingerprint never changes:
+      # the day it does, every installed Codox stops being upgradable. Fail the
+      # release rather than ship an APK nobody can install over the old one.
+      - name: Verify APK signing certificate
+        env:
+          EXPECTED: 01c6562aba5f587c3983ae2aaab8528c4689284131f7d71b71fa236d667b5765
+        run: |
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort | tail -1)
+          ACTUAL=$("$APKSIGNER" verify --print-certs "codox-$VERSION.apk" \
+            | sed -n 's/.*SHA-256 digest: \([0-9a-f]*\).*/\1/p' | head -1)
+          echo "certificate SHA-256: $ACTUAL"
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::APK is signed with an unexpected certificate — it could not upgrade an installed Codox."
+            exit 1
+          fi
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -248,4 +286,4 @@ jobs:
 
             - **Web app (always latest):** https://codox.eriksonlegend1.workers.dev
             - **Windows:** download the `*-setup.exe`. From this version on, the app updates itself on launch. The installer is unsigned, so SmartScreen will warn — choose "More info → Run anyway".
-            - **Android:** download `codox-*.apk` and allow "install from unknown sources" once, or just use the web app.
+            - **Android:** download `codox-*.apk` and allow "install from unknown sources" once, or just use the web app. From this version on, the update banner installs new versions for you. **Coming from an APK built before v0.0.51 you must uninstall Codox first** — those builds were signed with a throwaway key, so Android refuses to upgrade over them ("package conflicts with an existing package"). Uninstalling clears that phone's saved key and history; export anything you still need.

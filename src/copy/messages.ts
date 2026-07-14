@@ -95,8 +95,13 @@ export const appMessages = {
 export const updateMessages = {
   available: (version: string) => `Codox ${version} is available.`,
   download: 'Download update',
+  update: 'Update',
   restart: 'Restart & update',
   installing: 'Updating…',
+  downloading: 'Downloading…',
+  // Android only: the installer was refused (usually "unknown sources" was
+  // declined), so fall back to handing them the file.
+  failed: 'Codox could not install the update itself.',
   dismiss: 'Dismiss update notice',
 } as const
 

@@ -32,4 +32,8 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Lets the in-app update banner hand a downloaded APK straight to Android's
+         package installer. There is no updater for a sideloaded app, so without
+         this the user has to hunt the file down in Files. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 </manifest>
