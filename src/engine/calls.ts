@@ -11,7 +11,14 @@ import type { VisionRequest } from '../providers/types'
 import { AUDIT_PROMPT, PLANNER_PROMPT, WORKER_PROMPT } from './prompts'
 import type { AuditReport, Blueprint, MergedRow, ReducedBlueprint } from './types'
 
-/** Model assignments (§1.2). The planner primary is availability-checked. */
+/**
+ * Fixed model assignments (§1.2) — no fallback, ever. The planner is always
+ * gemini-3.5-flash (bounding-box quality is a correctness requirement); the
+ * worker and audit are always gemini-3.1-flash-lite. The engine never swaps a
+ * role's model — not on a 5xx, not from a model-listing result. It retries the
+ * same model, then stops honestly (see executor.test.ts). There is no second
+ * provider and no fallback key (CLAUDE.md: Gemini only).
+ */
 export const PLANNER_MODEL = DEFAULT_GEMINI_VISION_MODEL // gemini-3.5-flash
 export const AUDIT_MODEL = 'gemini-3.1-flash-lite'
 export const WORKER_MODEL = AUDIT_MODEL
