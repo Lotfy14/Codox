@@ -20,7 +20,7 @@ import {
   reviewMessages,
   uploadMessages,
 } from '../copy/messages'
-import { batchProgress, isBatchRunning, runProgress } from '../engine/progress'
+import { isBatchRunning, runProgress } from '../engine/progress'
 import {
   exportableRuns,
   exportRuns,
@@ -454,12 +454,14 @@ function RunningStage({
           <StatusChip status={status} />
         </div>
 
-        <ProgressBar
-          label={convertMessages.allPages}
-          max={100}
-          showFraction={false}
-          value={Math.round(batchProgress(runs) * 100)}
-        />
+        {runs.length === 1 ? (
+          <ProgressBar
+            label={runs[0].fileName}
+            max={100}
+            showFraction={false}
+            value={Math.round(runProgress(runs[0]) * 100)}
+          />
+        ) : null}
 
         <div className="ds-progress-status" role="status">
           {healthy ? (
@@ -479,18 +481,20 @@ function RunningStage({
           ) : null}
         </div>
 
-        <div className="ds-row-list" role="list">
-          {runs.map((run) => (
-            <div className="ds-run-row" key={run.id} role="listitem">
-              <ProgressBar
-                label={run.fileName}
-                max={100}
-                showFraction={false}
-                value={Math.round(runProgress(run) * 100)}
-              />
-            </div>
-          ))}
-        </div>
+        {runs.length > 1 ? (
+          <div className="ds-run-list" role="list">
+            {runs.map((run) => (
+              <div className="ds-run-row" key={run.id} role="listitem">
+                <ProgressBar
+                  label={run.fileName}
+                  max={100}
+                  showFraction={false}
+                  value={Math.round(runProgress(run) * 100)}
+                />
+              </div>
+            ))}
+          </div>
+        ) : null}
 
         <div className="ds-done-actions">
           <Button onPress={onStop} variant="quiet">

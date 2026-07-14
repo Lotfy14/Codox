@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { HTMLAttributes } from 'react';
 
 export interface TypewriterLineProps
@@ -12,6 +12,8 @@ interface SentenceDeck {
   current: string;
   remaining: string[];
 }
+
+type AnimationPhase = 'typing' | 'holding' | 'deleting';
 
 const reducedMotionQuery = '(prefers-reduced-motion: reduce)';
 
@@ -91,56 +93,83 @@ function TypewriterContent({
   const [visibleCharacterCount, setVisibleCharacterCount] = useState(() =>
     prefersReducedMotion ? characters.length : 0,
   );
+  const [phase, setPhase] = useState<AnimationPhase>(() =>
+    prefersReducedMotion ? 'holding' : 'typing',
+  );
   const safeRotationInterval = normalizeDelay(rotationInterval, 8_000);
   const safeTypingInterval = normalizeDelay(typingInterval, 40);
   const classes = ['ds-typewriter-line', className].filter(Boolean).join(' ');
 
-  useEffect(() => {
-    if (sentences.length <= 1) {
-      return;
-    }
-
-    const intervalId = window.setInterval(() => {
-      setDeck((previousDeck) => {
-        const nextDeck =
-          previousDeck.remaining.length === 0
-            ? createDeck(sentences, previousDeck.current)
-            : {
-                current: previousDeck.remaining[0] as string,
-                remaining: previousDeck.remaining.slice(1),
-              };
-
-        return nextDeck;
-      });
-    }, safeRotationInterval);
-
-    return () => window.clearInterval(intervalId);
-  }, [safeRotationInterval, sentences]);
+  const advanceDeck = useCallback(() => {
+    setDeck((previousDeck) =>
+      previousDeck.remaining.length === 0
+        ? createDeck(sentences, previousDeck.current)
+        : {
+            current: previousDeck.remaining[0] as string,
+            remaining: previousDeck.remaining.slice(1),
+          },
+    );
+  }, [sentences]);
 
   useEffect(() => {
     if (prefersReducedMotion) {
       setVisibleCharacterCount(characters.length);
-      return;
+      setPhase('holding');
+
+      if (sentences.length <= 1) return;
+
+      const timeoutId = window.setTimeout(advanceDeck, safeRotationInterval);
+      return () => window.clearTimeout(timeoutId);
     }
 
-    setVisibleCharacterCount(0);
-
-    if (characters.length === 0) {
-      return;
-    }
-
-    let nextCharacterCount = 0;
-    const intervalId = window.setInterval(() => {
-      nextCharacterCount += 1;
-      setVisibleCharacterCount(Math.min(nextCharacterCount, characters.length));
-
-      if (nextCharacterCount >= characters.length) {
-        window.clearInterval(intervalId);
+    if (phase === 'typing') {
+      if (visibleCharacterCount < characters.length) {
+        const timeoutId = window.setTimeout(
+          () => setVisibleCharacterCount((count) => count + 1),
+          safeTypingInterval,
+        );
+        return () => window.clearTimeout(timeoutId);
       }
-    }, safeTypingInterval);
 
-    return () => window.clearInterval(intervalId);
-  }, [characters, prefersReducedMotion, safeTypingInterval]);
+      setPhase('holding');
+      return;
+    }
+
+    if (phase === 'holding') {
+      if (sentences.length <= 1) return;
+
+      const timeoutId = window.setTimeout(
+        () => setPhase('deleting'),
+        safeRotationInterval,
+      );
+      return () => window.clearTimeout(timeoutId);
+    }
+
+    if (visibleCharacterCount > 0) {
+      const timeoutId = window.setTimeout(
+        () => setVisibleCharacterCount((count) => count - 1),
+        safeTypingInterval,
+      );
+      return () => window.clearTimeout(timeoutId);
+    }
+
+    advanceDeck();
+    setPhase('typing');
+  }, [
+    advanceDeck,
+    characters.length,
+    phase,
+    prefersReducedMotion,
+    safeRotationInterval,
+    safeTypingInterval,
+    sentences.length,
+    visibleCharacterCount,
+  ]);
+
+  useEffect(() => {
+    setVisibleCharacterCount(prefersReducedMotion ? characters.length : 0);
+    setPhase(prefersReducedMotion ? 'holding' : 'typing');
+  }, [characters, prefersReducedMotion]);
 
   return (
     <p

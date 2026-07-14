@@ -489,13 +489,14 @@
 
 .ds-toggle__thumb {
   position: absolute;
-  top: 3px;
+  top: 50%;
   left: 3px;
   width: 1.25rem;
   height: 1.25rem;
   border-radius: var(--radius-full);
   background: var(--color-text-muted);
   box-shadow: 0 2px 7px rgb(0 0 0 / 24%);
+  transform: translateY(-50%);
   transition: transform var(--motion-duration-standard)
     var(--motion-ease-emphasized);
 }
@@ -513,7 +514,7 @@
 }
 
 .ds-toggle[data-selected] .ds-toggle__thumb {
-  transform: translateX(1.125rem);
+  transform: translate(1.125rem, -50%);
   background: var(--color-surface-elevated);
 }
 
@@ -655,10 +656,17 @@
   margin-left: 3px;
   background: var(--color-primary);
   vertical-align: -0.12em;
+  animation: ds-typewriter-caret 800ms steps(1, end) infinite;
 }
 
 .ds-typewriter-line[data-reduced-motion] .ds-typewriter-line__visible::after {
   display: none;
+}
+
+@keyframes ds-typewriter-caret {
+  50% {
+    opacity: 0;
+  }
 }
 
 .ds-file-row {
@@ -1679,8 +1687,16 @@
   gap: var(--space-2);
 }
 
+.ds-run-list {
+  display: grid;
+  gap: var(--space-3);
+}
+
 .ds-run-row {
-  padding: var(--space-2) 0;
+  padding: var(--space-3);
+  border: 1px solid var(--color-row-border);
+  border-radius: var(--radius-input);
+  background: var(--color-surface-elevated);
 }
 
 .ds-done-actions {
