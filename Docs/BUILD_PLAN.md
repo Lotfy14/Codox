@@ -386,7 +386,7 @@ for the third is recorded in CLAUDE.md hard rule 2 and CODOX_CONTEXT §3.
 - [x] **AI answers (fourth model call, opt-in).** `src/engine/solver.ts` +
       its own prompt (`solver-prompt.ts` — the three §2 prompts untouched):
       chunks of 10 rows + their figure crops, temperature 0, JSON-only,
-      primary model with the flash-lite 5xx fallback, one content-repair
+      primary model with no lower-quality bbox fallback, one content-repair
       retry, per-chunk caching in an `ai-answers` artifact (re-export never
       re-burns quota). Scope (`unanswered` / `unanswered+verify` / `all`)
       and confidence threshold (`certain` / `likely` / `never`) chosen in a

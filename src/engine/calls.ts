@@ -14,7 +14,6 @@ import type { AuditReport, Blueprint, MergedRow, ReducedBlueprint } from './type
 /** Model assignments (§1.2). The planner primary is availability-checked. */
 export const PLANNER_MODEL = DEFAULT_GEMINI_VISION_MODEL // gemini-3.5-flash
 export const AUDIT_MODEL = 'gemini-3.1-flash-lite'
-export const PLANNER_FALLBACK_MODEL = AUDIT_MODEL
 export const WORKER_MODEL = AUDIT_MODEL
 
 const JSON_ONLY = 'application/json'

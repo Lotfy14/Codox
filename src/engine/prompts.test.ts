@@ -48,7 +48,7 @@ describe('prompt migration fidelity', () => {
     expect(sha256(WORKER_PROMPT)).toBe(PROMPT_SHA256.worker)
     expect(sha256(AUDIT_PROMPT)).toBe(PROMPT_SHA256.audit)
     expect(PROMPT_SHA256.planner).toBe(
-      '464c4054a9bba8defe34708bc524b12a48b1fb88ce9f327ccf971009bc382f25',
+      '550503d8db2aa20626bb3f9627f053f603e52bac524abb617ba5295dd9eadb8d',
     )
     expect(PROMPT_SHA256.worker).toBe(
       'b7c7ba0e18e770d1874007ffaba218fbf190178590deb06501d85dfc32c354cf',
@@ -64,5 +64,11 @@ describe('prompt migration fidelity', () => {
     expect(PLANNER_PROMPT).toContain(
       '"Case stem: {case_stem}\\nQuestion: {question_prompt}"',
     )
+  })
+
+  it('strictly requires question-linked image discovery and precise boxes', () => {
+    expect(PLANNER_PROMPT).toContain('it MUST appear once in assets')
+    expect(PLANNER_PROMPT).toContain('Never reuse a')
+    expect(PLANNER_PROMPT).toContain('If the PDF has no question-linked visuals')
   })
 })

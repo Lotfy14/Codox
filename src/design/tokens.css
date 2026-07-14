@@ -7,8 +7,8 @@
     BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-weight-regular: 400;
   --font-weight-medium: 500;
-  --font-weight-label: 800;
-  --font-weight-heading: 800;
+  --font-weight-label: 700;
+  --font-weight-heading: 700;
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
   --font-size-md: 1rem;
@@ -18,7 +18,7 @@
   --font-size-3xl: 2rem;
   --line-height-tight: 1.15;
   --line-height-heading: 1.22;
-  --line-height-body: 1.55;
+  --line-height-body: 1.45;
   --letter-spacing-label: 0.12em;
 
   /* Four-pixel spacing scale */
@@ -37,26 +37,26 @@
   --layout-gap-mobile: var(--space-4);
   --layout-gap-desktop: var(--space-8);
 
-  /* Geometry — the one-screen trio (frame 32 / card 22 / input 12) */
-  --radius-input: 0.75rem;
-  --radius-row: 0.875rem;
-  --radius-chip: 1rem;
-  --radius-card: 1.375rem;
-  --radius-action: 1.75rem;
-  --radius-dashboard: 2rem;
-  --radius-dashboard-large: 2.5rem;
+  /* Compact geometry */
+  --radius-input: 0.5rem;
+  --radius-row: 0.625rem;
+  --radius-chip: 0.75rem;
+  --radius-card: 0.875rem;
+  --radius-action: 1rem;
+  --radius-dashboard: 1rem;
+  --radius-dashboard-large: 1.25rem;
   --radius-frame: var(--radius-dashboard);
   --radius-full: 999px;
 
   /* One-screen frame structure. The frame is fluid: it always fills the
      window minus the thin cream margin — never a fixed width. Only the
      work column's content caps, for readability on wide monitors. */
-  --layout-sidebar-width: 14.5rem;
-  --layout-rail-width: 6rem;
-  --frame-padding: 1rem;
-  --frame-gap: 1rem;
-  --work-max-width: 68.75rem;
-  --stage-padding: clamp(0.5rem, 1.5vw, 1.25rem);
+  --layout-sidebar-width: 12.5rem;
+  --layout-rail-width: 4.5rem;
+  --frame-padding: 0.75rem;
+  --frame-gap: 0.75rem;
+  --work-max-width: none;
+  --stage-padding: 0.5rem;
 
   /* Interaction and motion */
   --touch-target-min: 2.75rem;
@@ -68,62 +68,61 @@
   --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --motion-ease-emphasized: cubic-bezier(0.2, 0.8, 0.2, 1);
 
-  --shadow-raised: 0 12px 30px -18px rgb(62 15 29 / 35%);
+  --shadow-raised: 0 10px 24px -18px rgb(15 23 42 / 30%);
   --shadow-dialog: 0 28px 80px -30px rgb(0 0 0 / 55%);
-  --shadow-frame: 0 40px 80px -40px rgb(80 20 30 / 28%),
-    0 8px 24px -16px rgb(80 20 30 / 20%);
-  --shadow-card: 0 1px 2px rgb(80 20 30 / 4%);
+  --shadow-frame: 0 20px 50px -36px rgb(15 23 42 / 28%);
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 5%);
 
-  /* Light theme surfaces — the framed cream stage */
-  --color-surface: #f4e9e0;
-  --color-stage-mid: #fbf4ef;
-  --color-stage-glow: #fdf6f0;
+  /* Light theme: neutral surfaces with one blue accent */
+  --color-surface: #eef1f5;
+  --color-stage-mid: #f5f7fa;
+  --color-stage-glow: #ffffff;
   --stage-gradient: radial-gradient(
     120% 90% at 12% 0%,
     var(--color-stage-glow) 0%,
     var(--color-stage-mid) 45%,
     var(--color-surface) 100%
   );
-  --color-frame: #fffaf7;
-  --color-frame-border: #f3e7e2;
+  --color-frame: #f8fafc;
+  --color-frame-border: #dde2e9;
   --color-surface-elevated: #ffffff;
   --color-card-fill: var(--color-surface-elevated);
   --color-paper: #fdfdf8;
   --color-paper-text: #5a6472;
-  --color-outline: #efe2e0;
-  --color-row: #fbf7f6;
-  --color-row-border: #f4ebe9;
-  --color-row-hover: #f6eeec;
-  --color-drop-border: #e7c9cf;
-  --color-drop-top: #fffdfc;
-  --color-drop-bottom: #fff7f8;
+  --color-outline: #dfe3e8;
+  --color-row: #f7f8fa;
+  --color-row-border: #e5e7eb;
+  --color-row-hover: #eef2f6;
+  --color-drop-border: #cbd2dc;
+  --color-drop-top: #ffffff;
+  --color-drop-bottom: #f8fafc;
   --drop-gradient: linear-gradient(
     180deg,
     var(--color-drop-top),
     var(--color-drop-bottom)
   );
-  --color-inplace-border: #d9c3c8;
-  --color-inplace-text: #7a5c62;
+  --color-inplace-border: #cbd2dc;
+  --color-inplace-text: #667085;
   --inplace-hatch: repeating-linear-gradient(
     135deg,
-    #fdf6f3 0 10px,
-    #fbf1ee 10px 20px
+    #f8fafc 0 10px,
+    #f1f5f9 10px 20px
   );
-  --color-nav-item: #6f5e62;
-  --color-scrim: rgb(43 17 24 / 54%);
+  --color-nav-item: #475467;
+  --color-scrim: rgb(15 23 42 / 54%);
 
   /* Light theme text and actions */
-  --color-text-strong: #2a1b1f;
-  --color-text-muted: #8c797e;
+  --color-text-strong: #101828;
+  --color-text-muted: #667085;
   --color-text-on-primary: #ffffff;
-  --color-primary: #800020;
-  --color-primary-foreground: #800020;
-  --color-primary-hover: #6a001b;
-  --color-primary-soft: #f6e9ec;
-  --color-primary-border: #f0d8dd;
-  --color-control-border: #ead9dd;
-  --color-focus-ring: #800020;
-  --color-focus-halo: rgb(128 0 32 / 20%);
+  --color-primary: #2563eb;
+  --color-primary-foreground: #1d4ed8;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-soft: #eff6ff;
+  --color-primary-border: #bfdbfe;
+  --color-control-border: #d0d5dd;
+  --color-focus-ring: #2563eb;
+  --color-focus-halo: rgb(37 99 235 / 18%);
 
   /* Raw brand state colors plus accessible semantic pairs */
   --color-warning: #f59e0b;
@@ -143,50 +142,50 @@
   --color-unreachable-foreground: #365b7a;
   --color-unreachable-surface: #edf3f8;
   --color-unreachable-border: #91a9bc;
-  --color-neutral-surface: #f4edef;
-  --color-neutral-border: #94717b;
+  --color-neutral-surface: #f2f4f7;
+  --color-neutral-border: #d0d5dd;
 
 }
 
 [data-theme="dark"] {
   color-scheme: dark;
 
-  /* Dark surfaces re-derived from the warm ink family, not midnight blue */
-  --color-surface: #111013;
-  --color-stage-mid: #151417;
-  --color-stage-glow: #1d171a;
-  --color-frame: #171619;
-  --color-frame-border: #28252b;
-  --color-surface-elevated: #201e22;
+  /* Dark theme: neutral charcoal surfaces */
+  --color-surface: #0d0f13;
+  --color-stage-mid: #11141a;
+  --color-stage-glow: #171b22;
+  --color-frame: #14171d;
+  --color-frame-border: #292e38;
+  --color-surface-elevated: #1b1f27;
   --color-card-fill: var(--color-surface-elevated);
-  --color-outline: #343138;
-  --color-row: #29262c;
-  --color-row-border: #3a363e;
-  --color-row-hover: #343039;
-  --color-drop-border: #5a3b44;
-  --color-drop-top: #242126;
-  --color-drop-bottom: #211e23;
-  --color-inplace-border: #4d3339;
-  --color-inplace-text: #cbb2b9;
+  --color-outline: #303642;
+  --color-row: #222731;
+  --color-row-border: #343b47;
+  --color-row-hover: #2b313d;
+  --color-drop-border: #46505f;
+  --color-drop-top: #20252d;
+  --color-drop-bottom: #1b1f27;
+  --color-inplace-border: #46505f;
+  --color-inplace-text: #aab2c0;
   --inplace-hatch: repeating-linear-gradient(
     135deg,
-    #271a1e 0 10px,
-    #231619 10px 20px
+    #20252d 0 10px,
+    #1b1f27 10px 20px
   );
-  --color-nav-item: #c2adb3;
-  --color-scrim: rgb(15 5 8 / 72%);
+  --color-nav-item: #b4bdca;
+  --color-scrim: rgb(3 7 18 / 72%);
 
-  --color-text-strong: #f6edef;
-  --color-text-muted: #b9b1ba;
+  --color-text-strong: #f2f4f7;
+  --color-text-muted: #a7b0bf;
   --color-text-on-primary: #ffffff;
-  --color-primary: #af2b3e;
-  --color-primary-foreground: #ff9aac;
-  --color-primary-hover: #c43d51;
-  --color-primary-soft: #351d25;
-  --color-primary-border: #70404b;
-  --color-control-border: #514b55;
-  --color-focus-ring: #ff9aac;
-  --color-focus-halo: rgb(255 154 172 / 24%);
+  --color-primary: #3b82f6;
+  --color-primary-foreground: #93c5fd;
+  --color-primary-hover: #2563eb;
+  --color-primary-soft: #172554;
+  --color-primary-border: #31548a;
+  --color-control-border: #46505f;
+  --color-focus-ring: #60a5fa;
+  --color-focus-halo: rgb(96 165 250 / 22%);
 
   --color-warning-foreground: #fcd34d;
   --color-warning-surface: #352b16;
@@ -203,8 +202,8 @@
   --color-unreachable-foreground: #c8d5e4;
   --color-unreachable-surface: #2b2833;
   --color-unreachable-border: #5d5a70;
-  --color-neutral-surface: #33242a;
-  --color-neutral-border: #7d666d;
+  --color-neutral-surface: #262c35;
+  --color-neutral-border: #505967;
 
   --shadow-raised: 0 14px 34px -18px rgb(0 0 0 / 70%);
   --shadow-frame: 0 40px 80px -40px rgb(0 0 0 / 60%),

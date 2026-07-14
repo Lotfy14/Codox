@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
-import { Badge, Button, GlassPanel, ProgressBar } from '../design/components'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { Button, GlassPanel } from '../design/components'
 import { convertMessages, exportMessages, reviewMessages } from '../copy/messages'
 import type { RunState } from '../state/types'
 import {
@@ -49,7 +49,6 @@ export function ReviewDetail({
   const allResolved = filter === 'needs-review' && unresolved.length === 0
   const flagged = orderedRows.filter((row) => row.category !== null)
   const resolvedCount = flagged.length - unresolved.length
-  const [showSource, setShowSource] = useState(false)
   const [wholePage, setWholePage] = useState(false)
   const [justResolved, setJustResolved] = useState(false)
   const confirmId = useId()
@@ -69,7 +68,6 @@ export function ReviewDetail({
 
   useEffect(() => {
     setSelected(savedAnswer)
-    setShowSource(false)
     setWholePage(false)
   }, [currentRowId, savedAnswer])
 
@@ -124,9 +122,6 @@ export function ReviewDetail({
       } else if (event.key === 'ArrowLeft' || event.key === 'p') {
         goTo(currentIndex - 1)
         event.preventDefault()
-      } else if (event.key === 'v') {
-        setShowSource((current) => !current)
-        event.preventDefault()
       } else if (event.key === 'w') {
         setWholePage((current) => !current)
         event.preventDefault()
@@ -140,8 +135,7 @@ export function ReviewDetail({
   }, [allResolved, confirm, confirmId, currentIndex, goTo, reviewRow])
 
   const imageUrl = wholePage ? source.page : (source.crop ?? source.page)
-  const progress = useMemo(() => ({ resolvedCount, total: flagged.length }), [flagged.length, resolvedCount])
-
+  const displayQuestion = reviewRow.row.question.replace(/^\s*case\s*stem\s*:\s*/i, '')
   if (allResolved || reviewRow === undefined) {
     return (
       <section aria-labelledby="review-done-heading" className="review-done">
@@ -157,7 +151,7 @@ export function ReviewDetail({
             <Button onPress={onExport}>
               {exported ? convertMessages.exportAgain : convertMessages.exportBundle}
             </Button>
-            <Button onPress={onBack} variant="quiet">{reviewMessages.backToList}</Button>
+            <Button onPress={onBack}>{reviewMessages.backToList}</Button>
           </div>
         </GlassPanel>
       </section>
@@ -166,33 +160,11 @@ export function ReviewDetail({
 
   return (
     <section aria-labelledby="review-heading" className="review">
-      <header className="review__header">
-        <div className="review__header-row">
-          <div>
-            <h2 id="review-heading">{reviewMessages.reviewHeading(run.fileName)}</h2>
-            <p className="ds-muted">
-              {reviewMessages.questionPosition(currentIndex + 1, orderedRows.length)} ·{' '}
-              {reviewMessages.pagePosition(reviewRow.questionNumber, reviewRow.pageIndex)}
-            </p>
-          </div>
-          <Button autoFocus onPress={onBack} variant="quiet">{reviewMessages.backToList}</Button>
-        </div>
-        {progress.total > 0 ? (
-          <ProgressBar
-            className="review__progress"
-            label={reviewMessages.flagsResolved}
-            max={progress.total}
-            value={progress.resolvedCount}
-          />
-        ) : null}
-        {offline ? (
-          <p className="ds-inline-note ds-inline-note--info" role="status">
-            {reviewMessages.offlineIsFine}
-          </p>
-        ) : null}
-      </header>
+      <h2 className="ds-visually-hidden" id="review-heading">
+        {reviewMessages.reviewHeading(run.fileName)}
+      </h2>
 
-      <div className={`review__split ${showSource ? 'review__split--source' : ''}`}>
+      <div className="review__split">
         <section
           aria-label={reviewRow.pageIndex === null
             ? reviewMessages.sourceUnavailableLabel
@@ -218,19 +190,35 @@ export function ReviewDetail({
               {wholePage ? reviewMessages.questionArea : reviewMessages.wholePage}
             </Button>
           ) : null}
-          <Button className="review__flip" onPress={() => setShowSource(false)} variant="secondary">
-            {reviewMessages.backToAnswer}
-          </Button>
         </section>
 
         <section
           aria-label={`Question ${reviewRow.questionNumber}`}
           className={`review__question ${justResolved ? 'review__question--tick' : ''}`}
         >
-          {reviewRow.category !== null ? (
-            <Badge tone="warning">{reviewMessages.whyFlagged[reviewRow.category]}</Badge>
+          <h3>{displayQuestion}</h3>
+          {imageUrl !== null ? (
+            <button
+              aria-label={wholePage ? reviewMessages.questionArea : reviewMessages.wholePage}
+              aria-pressed={wholePage}
+              className="review__mobile-source"
+              data-whole-page={wholePage || undefined}
+              disabled={source.crop === null || source.page === null}
+              onClick={() => setWholePage((current) => !current)}
+              type="button"
+            >
+              <figure className="review-paper">
+                <figcaption className="review-paper__label">
+                  {reviewMessages.pageCaption(
+                    (reviewRow.pageIndex ?? 0) + 1,
+                    run.fileName,
+                    wholePage,
+                  )}
+                </figcaption>
+                <img alt={reviewMessages.sourceAlt(reviewRow.questionNumber)} src={imageUrl} />
+              </figure>
+            </button>
           ) : null}
-          <h3>{reviewRow.row.question}</h3>
           <div aria-label={reviewMessages.pickAnswer} className="review__options" role="radiogroup">
             {reviewRow.row.options.map((option, index) => (
               <button
@@ -253,9 +241,6 @@ export function ReviewDetail({
             <Button id={confirmId} isDisabled={selected === undefined} onPress={confirm}>
               {reviewMessages.confirm}
             </Button>
-            <Button className="review__flip" onPress={() => setShowSource(true)} variant="secondary">
-              {reviewMessages.viewSource}
-            </Button>
             <Button isDisabled={currentIndex === 0} onPress={() => goTo(currentIndex - 1)} variant="quiet">
               {reviewMessages.previous}
             </Button>
@@ -263,11 +248,24 @@ export function ReviewDetail({
               {reviewMessages.next}
             </Button>
           </div>
-          <p className="ds-muted review__hint">
-            {reviewMessages.keyboardHint(reviewRow.row.options.length)}
-          </p>
         </section>
       </div>
+
+      <footer className="review__footer">
+        <div className="review__meta">
+          <span>{reviewMessages.questionPosition(currentIndex + 1, orderedRows.length)}</span>
+          <span>{reviewMessages.pagePosition(reviewRow.questionNumber, reviewRow.pageIndex)}</span>
+          {flagged.length > 0 ? (
+            <span>{reviewMessages.flagsResolved(resolvedCount, flagged.length)}</span>
+          ) : null}
+        </div>
+        <Button onPress={onBack}>{reviewMessages.backToList}</Button>
+        {offline ? (
+          <p className="ds-inline-note ds-inline-note--info" role="status">
+            {reviewMessages.offlineIsFine}
+          </p>
+        ) : null}
+      </footer>
     </section>
   )
 }

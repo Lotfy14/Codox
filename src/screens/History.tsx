@@ -140,7 +140,6 @@ export function History({ onOpenConvert }: HistoryProps) {
     <section aria-labelledby="history-heading" className="ds-convert">
       <header className="ds-work__head">
         <h1 id="history-heading">{appMessages.navHistory}</h1>
-        <p>{historyMessages.retentionNote}</p>
       </header>
 
       {reviewRun !== undefined ? (
@@ -200,9 +199,6 @@ export function History({ onOpenConvert }: HistoryProps) {
                     ? historyMessages.originalKept
                     : historyMessages.originalRemoved}
                 </span>
-                {(run.requestCount ?? 0) > 0 ? (
-                  <span>{historyMessages.requests(run.requestCount ?? 0)}</span>
-                ) : null}
               </div>
 
               {notice?.runId === run.id ? (

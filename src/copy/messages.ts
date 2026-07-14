@@ -8,7 +8,6 @@
  *   messages, three colors. Never just "failed".
  * - Quota is calm: "paused / resting", amber, never red, never "error".
  * - Order inside a message: what happened → is my work safe → what to do.
- * - Codox never guesses, and the words say so wherever it matters.
  * - Gemini is the only provider; no failover or add-provider language.
  */
 
@@ -122,16 +121,15 @@ export const helpMessages = {
     },
     {
       title: '3. Add an answer key (optional)',
-      body: 'Drop a separate answer-key PDF if you have one. Codox reads answers printed inside the PDFs on its own.',
+      body: 'Add a separate answer-key PDF if needed.',
     },
     {
       title: '4. Review and export',
-      body: 'Start converting, check anything Codox flags, then export the Triviadox bundle.',
+      body: 'Convert, review flagged questions, then export.',
     },
   ],
   troubleTitle: 'If something gets in the way',
-  trouble:
-    'Wrong key means Gemini rejected it. Paused means its allowance needs time. Unreachable means Codox cannot contact Gemini. Your saved progress stays on this device.',
+  trouble: 'Recheck a wrong key, wait if paused, or check your connection if unreachable.',
 } as const
 
 export const convertMessages = {
@@ -140,10 +138,10 @@ export const convertMessages = {
     'Drop exam PDFs and Codox turns them into a Triviadox question set — all on this screen.',
   dropTitle: 'Drop PDFs here',
   dropHint: 'batch of PDFs supported',
-  dropMoreTitle: 'Drop more PDFs here',
-  dropMoreHint: 'Add more PDFs to this batch',
-  keyDropTitle: 'Drop the answer key here',
-  keyDropHint: 'PDF answer key',
+  dropMoreTitle: 'Add PDFs',
+  dropMoreHint: 'PDF files',
+  keyDropTitle: 'Answer key (optional)',
+  keyDropHint: 'PDF file',
   batchPanelLabel: 'Batch files',
   optionsPanelLabel: 'Before you start',
   progressPanelLabel: 'Conversion progress',
@@ -163,7 +161,6 @@ export const convertMessages = {
   startButton: 'Start converting',
   startFailed:
     'Codox could not start this conversion on this device. Your PDFs are still here; try again.',
-  apiKeyRequired: 'Add and check your Gemini API key before converting.',
   stopButton: 'Stop converting',
   convertingFiles: (count: number) =>
     `Converting ${count} PDF${count === 1 ? '' : 's'}`,
@@ -198,8 +195,6 @@ export const convertMessages = {
   },
   retryStopped: 'Retry saved run',
   fixApiKey: 'Fix API key',
-  unsafeRuns: (count: number) =>
-    `${count === 1 ? 'One file came' : `${count} files came`} back with checks that did not pass, so ${count === 1 ? 'it is' : 'they are'} marked for your review before import. Codox never guesses.`,
   reviewFlags: (count: number, fileName?: string) =>
     `Review ${count} flag${count === 1 ? '' : 's'}${fileName ? ` · ${fileName}` : ''}`,
   exportAgain: 'Export again',
@@ -232,13 +227,9 @@ export const reviewMessages = {
   confirm: 'Confirm answer (Enter)',
   previous: 'Previous (←)',
   next: 'Next (→)',
-  viewSource: 'View source (V)',
-  backToAnswer: 'Back to answer (V)',
   wholePage: 'Show whole page (W)',
   questionArea: 'Back to the question area (W)',
   pickAnswer: 'Pick the correct answer',
-  keyboardHint: (optionCount: number) =>
-    `Keyboard: 1–${optionCount} pick an answer · Enter confirm · ← → move between questions · V flip to the page · W whole page. Unsure? Skip it — unresolved answers export blank and marked for review, never guessed.`,
   sourceUnavailable: 'No source image is stored for this question.',
   sourceUnavailableLabel: 'Source unavailable',
   sourceAlt: (questionNumber: number) =>
@@ -249,19 +240,8 @@ export const reviewMessages = {
   pagePosition: (questionNumber: number, pageIndex: number | null) =>
     `Question ${questionNumber}${pageIndex === null ? '' : `, page ${pageIndex + 1}`}`,
   backToResults: 'Back to results',
-  flagsResolved: 'Flags resolved',
-  whyFlagged: {
-    'blank-answer':
-      'No answer found — Codox never guesses, so this one is yours.',
-    'conflicting-marks':
-      'Two answers appear marked. Pick the right one from the page.',
-    'length-mismatch':
-      'The options list looks incomplete. Check it against the page.',
-    'low-confidence':
-      'The scan is hard to read here. Confirm what the page says.',
-  },
-  flagsRemainOnExport: (flagCount: number) =>
-    `${flagCount} answer${flagCount === 1 ? '' : 's'} still need${flagCount === 1 ? 's' : ''} your eyes. You can export as-is — unresolved rows stay blank and marked for review. They are never guessed.`,
+  flagsResolved: (resolved: number, total: number) =>
+    `Flags resolved ${resolved} of ${total}`,
   offlineIsFine:
     'You are offline. Reviewing works fully offline — export whenever you finish.',
   allResolved: 'All flags resolved. Your answers are in — export the bundle.',

@@ -245,7 +245,7 @@ describe('happy path', () => {
     expect(script.calls.at(-1)?.imageCount).toBe(4)
   })
 
-  it('uses the planner fallback without combining the planner, worker, and audit requests', async () => {
+  it('keeps the bbox planner on 3.5 even when model listing omits it', async () => {
     const blueprint = makeBlueprint()
     const script = scriptedAdapter(['gemini-3.1-flash-lite'])
     script.push(ok(JSON.stringify(blueprint)), ok(workerResponse(blueprint)), ok(AUDIT_PASS))
@@ -256,10 +256,11 @@ describe('happy path', () => {
     })
 
     expect(script.calls.map((call) => call.modelId)).toEqual([
-      'gemini-3.1-flash-lite',
+      'gemini-3.5-flash',
       'gemini-3.1-flash-lite',
       'gemini-3.1-flash-lite',
     ])
+    expect((await getRun(runId))?.plannerModel).toBe('gemini-3.5-flash')
     expect(script.calls.map((call) => call.prompt.startsWith('You are the'))).toEqual([
       true,
       true,
@@ -568,8 +569,7 @@ describe('stop reasons (§1.3)', () => {
     expect((await getRun(runId))?.stopReason).toBe('invalid-request')
   })
 
-  it('a planner that stays 5xx on the primary model falls back to flash-lite', async () => {
-    const blueprint = makeBlueprint()
+  it('a planner that stays 5xx never silently downgrades bbox detection', async () => {
     const script = scriptedAdapter()
     const overloaded: VisionResult = {
       ok: false,
@@ -578,17 +578,16 @@ describe('stop reasons (§1.3)', () => {
       httpStatus: 503,
       retryAfterSeconds: 0,
     }
-    // The controller's own transient retries (initial + 3) all fail on the
-    // primary model, then the fallback attempt plans and finishes normally.
+    // The controller's own transient retries (initial + 3) all fail. The
+    // engine stops honestly instead of accepting lower-quality boxes.
     script.push(overloaded, overloaded, overloaded, overloaded)
-    script.push(ok(JSON.stringify(blueprint)), ok(workerResponse(blueprint)), ok(AUDIT_PASS))
     const runId = await newRun()
 
     const outcome = await executeRun(runId, PDF_BYTES, {
       controller: new GeminiController(script.adapter),
     })
 
-    expect(outcome.status).toBe('done')
+    expect(outcome).toMatchObject({ status: 'provider-stopped', kind: 'provider-error' })
     const plannerModels = script.calls
       .filter((call) => call.prompt.startsWith('You are the PLANNER'))
       .map((call) => call.modelId)
@@ -597,11 +596,11 @@ describe('stop reasons (§1.3)', () => {
       'gemini-3.5-flash',
       'gemini-3.5-flash',
       'gemini-3.5-flash',
-      'gemini-3.1-flash-lite',
     ])
+    expect((await getRun(runId))?.plannerModel).toBe('gemini-3.5-flash')
   })
 
-  it('a planner already on the fallback model still stops on a persistent 5xx', async () => {
+  it('does not choose flash-lite when only flash-lite appears in model listing', async () => {
     const script = scriptedAdapter(['gemini-3.1-flash-lite'])
     const overloaded: VisionResult = {
       ok: false,
@@ -622,7 +621,7 @@ describe('stop reasons (§1.3)', () => {
       kind: 'provider-error',
     })
     expect((await getRun(runId))?.stopReason).toBe('temporarily-unavailable')
-    // No second planning attempt: the fallback IS the model that failed.
+    expect(script.calls.every((call) => call.modelId === 'gemini-3.5-flash')).toBe(true)
     expect(script.calls).toHaveLength(4)
   })
 })

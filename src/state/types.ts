@@ -59,6 +59,8 @@ export interface RunState {
   promptTokens?: number
   candidatesTokens?: number
   totalTokens?: number
+  /** Exact model that produced this run's structure and image boxes. */
+  plannerModel?: string
   /** Set when the run's bundle last left the device (export-early law). */
   exportedAt?: number
   createdAt: number

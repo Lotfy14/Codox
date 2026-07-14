@@ -59,7 +59,7 @@ function applyResolvedTheme(theme: ResolvedTheme): void {
   document.documentElement.style.colorScheme = theme
   document
     .querySelector<HTMLMetaElement>('meta[name="theme-color"]')
-    ?.setAttribute('content', theme === 'dark' ? '#191013' : '#f4e9e0')
+    ?.setAttribute('content', theme === 'dark' ? '#0d0f13' : '#eef1f5')
 }
 
 let snapshot: ThemeSnapshot = (() => {

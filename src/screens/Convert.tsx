@@ -9,10 +9,8 @@ import {
   SplitButton,
   StatusChip,
   Toggle,
-  TypewriterLine,
 } from '../design/components'
 import type { StatusChipStatus } from '../design/components'
-import { sillySentences } from '../design/silly-sentences'
 import {
   convertMessages,
   exportMessages,
@@ -45,30 +43,6 @@ import type { ControllerStatus } from '../providers/controller'
 import { useGeminiCredential } from '../state/credentials'
 
 type ConversionStatus = ControllerStatus
-
-/** The hatched marker: the whole job happens on this one screen. */
-function InplaceHint() {
-  return (
-    <div className="ds-inplace">
-      <svg
-        aria-hidden="true"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-        viewBox="0 0 24 24"
-      >
-        <path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M19 5l-3 3M8 16l-3 3" />
-      </svg>
-      <p>
-        {convertMessages.inplaceBefore}
-        <strong>{convertMessages.inplaceHighlight}</strong>
-        {convertMessages.inplaceAfter}
-      </p>
-    </div>
-  )
-}
 
 /**
  * The real Convert tab: home, files, running, and done stages. Progress is
@@ -103,7 +77,6 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
   const exams = pdfs.filter((file) => file.kind === 'exam')
   const answerKey = pdfs.find((file) => file.kind === 'answer-key')
   const keepOriginal = job.keepOriginal ?? false
-  const totalPages = exams.reduce((sum, file) => sum + file.pageCount, 0)
   const keyReady = credential?.lastValidation?.status === 'working'
 
   const hasRuns = runs.length > 0
@@ -232,7 +205,6 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
       >
         <header className="ds-work__head">
           <h1 id="convert-heading">{convertMessages.title}</h1>
-          <p>{convertMessages.subtitle}</p>
         </header>
         {exportNotice !== null ? (
           <p
@@ -289,7 +261,6 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
     <section aria-labelledby="convert-heading" className="ds-convert">
       <header className="ds-work__head">
         <h1 id="convert-heading">{convertMessages.title}</h1>
-        <p>{convertMessages.subtitle}</p>
       </header>
       {exams.length === 0 ? (
         <div className="ds-stack">
@@ -302,13 +273,23 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
             onRejected={rejectFiles}
           />
           {inlineNotes}
-          <InplaceHint />
         </div>
       ) : (
-        <div className="ds-stack">
-          <GlassPanel aria-label={convertMessages.batchPanelLabel} as="section" padding="compact">
+        <div className="ds-stack ds-upload-layout">
+          <GlassPanel
+            aria-label={convertMessages.batchPanelLabel}
+            as="section"
+            className="ds-upload-panel ds-upload-panel--files"
+            padding="compact"
+          >
             <div className="ds-panel-head">
               <strong>{convertMessages.filesReady(exams.length)}</strong>
+              <Button
+                onPress={() => void clearCurrentDraft()}
+                variant="quiet"
+              >
+                {convertMessages.clearAll}
+              </Button>
             </div>
             {inlineNotes}
             <div className="ds-row-list" role="list">
@@ -336,22 +317,21 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
                 onRejected={rejectFiles}
               />
             </div>
-            <div className="ds-clear-row">
-              <Button
-                onPress={() => void clearCurrentDraft()}
-                variant="quiet"
-              >
-                {convertMessages.clearAll}
-              </Button>
-            </div>
           </GlassPanel>
 
-          <GlassPanel aria-label={convertMessages.optionsPanelLabel} as="section" padding="default">
-            <div className="ds-field-stack">
+          <GlassPanel
+            aria-label={convertMessages.optionsPanelLabel}
+            as="section"
+            className="ds-upload-panel ds-upload-panel--options"
+            padding="compact"
+          >
+            <div className="ds-options-stack">
+              <Toggle
+                isSelected={keepOriginal}
+                label={convertMessages.keepOriginalLabel}
+                onChange={(keep) => void updateJob({ keepOriginal: keep })}
+              />
               <div className="ds-key-file-slot">
-                <p className="ds-inline-note ds-inline-note--info">
-                  {uploadMessages.keyFileOptional}
-                </p>
                 {answerKey !== undefined ? (
                   <p className="ds-key-file-added" role="status">
                     ✓ {convertMessages.answerKeyAdded(answerKey.name)}{' '}
@@ -374,32 +354,18 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
                   />
                 )}
               </div>
-              <Toggle
-                description={convertMessages.keepOriginalHint}
-                isSelected={keepOriginal}
-                label={convertMessages.keepOriginalLabel}
-                onChange={(keep) => void updateJob({ keepOriginal: keep })}
-              />
             </div>
-            <div className="ds-start-row">
-              <Button
-                isDisabled={busy || startBusy}
-                isPending={startBusy}
-                onPress={() => void startConversion()}
-              >
-                {convertMessages.startButton}
-              </Button>
-              <span className="ds-start-row__note">
-                {uploadMessages.pageCount(totalPages)}
-              </span>
-            </div>
-            {!keyReady ? (
-              <p className="ds-muted ds-phase-note">
-                {convertMessages.apiKeyRequired}
-              </p>
-            ) : null}
           </GlassPanel>
-          <InplaceHint />
+
+          <div className="ds-convert-action">
+            <Button
+              isDisabled={busy || startBusy}
+              isPending={startBusy}
+              onPress={() => void startConversion()}
+            >
+              {convertMessages.startButton}
+            </Button>
+          </div>
         </div>
       )}
     </section>
@@ -434,7 +400,6 @@ function RunningStage({
   runs: readonly RunState[]
 }) {
   const status = chipStatus(providerStatus)
-  const healthy = status === 'working'
   const badPageRun = runs.find((run) => (run.badPages?.length ?? 0) > 0)
 
   const seriousLine =
@@ -464,9 +429,7 @@ function RunningStage({
         ) : null}
 
         <div className="ds-progress-status" role="status">
-          {healthy ? (
-            <TypewriterLine sentences={sillySentences} />
-          ) : seriousLine !== null ? (
+          {seriousLine !== null ? (
             <p className="ds-inline-note ds-inline-note--info">
               {seriousLine}
             </p>
@@ -497,7 +460,7 @@ function RunningStage({
         ) : null}
 
         <div className="ds-done-actions">
-          <Button onPress={onStop} variant="quiet">
+          <Button onPress={onStop}>
             {convertMessages.stopButton}
           </Button>
         </div>
@@ -561,7 +524,6 @@ function DoneStage({
     ].includes(run.stopReason ?? ''),
   )
   const wrongKey = stopped.some((run) => run.stopReason === 'wrong-key')
-  const unsafe = runs.filter((run) => run.notSafeToImport === true)
   const done = runs.filter((run) => run.status === 'done')
   const counts = useUnresolvedCounts(done.map((run) => run.id))
   const remaining =
@@ -599,18 +561,6 @@ function DoneStage({
             {convertMessages.stoppedRun(run.fileName, run.stopReason ?? '')}
           </p>
         ))}
-
-        {unsafe.length > 0 ? (
-          <p className="ds-inline-note ds-inline-note--info" role="status">
-            {convertMessages.unsafeRuns(unsafe.length)}
-          </p>
-        ) : null}
-
-        {remaining > 0 ? (
-          <p className="ds-muted">
-            {reviewMessages.flagsRemainOnExport(remaining)}
-          </p>
-        ) : null}
 
         {exported ? (
           <p
@@ -681,13 +631,6 @@ function DoneStage({
             {exported ? exportMessages.exported : exportMessages.notExportedYet}
           </Badge>
         </div>
-        <p className="ds-muted ds-phase-note">
-          {convertMessages.exportDeviceNote} {exportMessages.whyExportMatters}
-        </p>
-        <p className="ds-muted ds-phase-note">
-          {convertMessages.convertAnotherHint}
-        </p>
-
       </GlassPanel>
     </div>
   )

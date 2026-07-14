@@ -36,7 +36,7 @@ import {
   buildPlannerRepairRequest,
   buildPlannerRequest,
   buildWorkerRequest,
-  PLANNER_FALLBACK_MODEL,
+  PLANNER_MODEL,
   WORKER_MODEL,
   wasTruncated,
   type CallImage,
@@ -51,7 +51,6 @@ import {
 import { boxToCropBox, hasPositiveExtent } from './boxes'
 import { emitCsv } from './csv'
 import { mergeRows, validateWorkerChunk } from './merge'
-import { resolvePlannerModel } from './models'
 import { stripEnumerationLabels } from './normalize'
 import { parseAuditReport, validateFinalRows } from './validate'
 import type {
@@ -305,45 +304,24 @@ async function stepPlanAndValidate(
   }
 
   const pages = await renderedPages(runId)
-  const plannerModel = (await resolvePlannerModel(controller, signal)).chosen
+  // Bounding-box quality is a correctness requirement. Never silently
+  // downgrade this role to Flash Lite because a model-list request failed.
+  const plannerModel = PLANNER_MODEL
+  await updateRun(runId, { plannerModel })
   const pageNumbers = pageNumbersOf(pages)
   const images = await pageImages(
     runId,
     pages.map((page) => page.pageIndex ?? 0),
   )
 
-  try {
-    return await planWithModel(
-      runId,
-      controller,
-      images,
-      pageNumbers,
-      plannerModel,
-      signal,
-    )
-  } catch (error) {
-    // The primary planner model staying 5xx (a 503 overload spell) is not
-    // the end of the run: the sanctioned §1.2 fallback gets one full
-    // planning attempt of its own. Restarting the whole attempt keeps the
-    // repair round single-model. Only overload falls back — a wrong key or
-    // an invalid request would fail identically on the fallback.
-    if (
-      error instanceof ProviderStop &&
-      error.kind === 'provider-error' &&
-      error.code === 'temporarily-unavailable' &&
-      plannerModel !== PLANNER_FALLBACK_MODEL
-    ) {
-      return planWithModel(
-        runId,
-        controller,
-        images,
-        pageNumbers,
-        PLANNER_FALLBACK_MODEL,
-        signal,
-      )
-    }
-    throw error
-  }
+  return planWithModel(
+    runId,
+    controller,
+    images,
+    pageNumbers,
+    plannerModel,
+    signal,
+  )
 }
 
 /** One complete planning attempt (planner call + one repair round). */

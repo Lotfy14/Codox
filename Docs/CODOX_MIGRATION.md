@@ -62,7 +62,7 @@ absent or uncertain, answers stay blank and flagged.
 
 | Role | Intended model | Note |
 |---|---|---|
-| Planner | `gemini-3.5-flash` | fallback `gemini-3.1-flash-lite` when the primary model is unavailable; an invalid blueprint goes through the repair flow with the same chosen planner model |
+| Planner | `gemini-3.5-flash` | no lower-quality fallback; an invalid blueprint gets one repair attempt with the same model |
 | Worker | `gemini-3.1-flash-lite` | matches the audit model; each chunk still receives its own worker request and reduced blueprint |
 | Audit | `gemini-3.1-flash-lite` | deliberately the weakest model doing the hardest verification job; its accuracy is a *measured output*, never an assumption |
 
@@ -407,6 +407,23 @@ Rules:
   case stem.
 - box_2d is [ymin, xmin, ymax, xmax], normalized 0-1000 relative to the exact
   page image.
+- Before returning the blueprint, inspect every page specifically for visual
+  material that belongs to a question: clinical photographs, radiographs,
+  scans, diagrams, charts, maps, specimens, microscopy, and multi-panel
+  figures. If such a visual is needed to understand or answer one or more
+  questions, it MUST appear once in assets and its output_path MUST appear in
+  every linked row's image_urls. Shared visuals use one asset linked to all
+  dependent rows.
+- Do not create assets for logos, watermarks, decorative graphics, page
+  furniture, answer marks, or ordinary text-only question boxes.
+- For every asset, re-check the page and draw box_2d tightly around the visual
+  itself, with a small margin so meaningful edges, labels, legends, arrows, and
+  panels are not cut off. Exclude surrounding question text, options, headers,
+  footers, page numbers, and unrelated neighboring visuals. Never reuse a
+  question_prompt or options box as an image asset box.
+- Verify every asset's page, box_2d, linked_row_ids, and row image_urls before
+  returning JSON. If the PDF has no question-linked visuals, return assets: []
+  and keep every row's image_urls empty.
 - Anchors must be short visible cues only, not full row transcriptions.
 - Answer policy is document evidence only. Allowed types are no_answer_key,
   separate_key, inline_marks, mixed, and uncertain.

@@ -35,7 +35,7 @@
 }
 
 .ds-glass-panel h2 {
-  margin: 0 0 var(--space-4);
+  margin: 0 0 var(--space-3);
   font-family: var(--font-family-heading);
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-heading);
@@ -47,15 +47,15 @@
 }
 
 .ds-glass-panel--padding-compact {
-  padding: var(--space-4);
+  padding: var(--space-3);
 }
 
 .ds-glass-panel--padding-default {
-  padding: var(--space-6);
+  padding: var(--space-4);
 }
 
 .ds-glass-panel--padding-spacious {
-  padding: var(--space-8);
+  padding: var(--space-5);
 }
 
 .ds-button {
@@ -66,7 +66,7 @@
   min-height: var(--touch-target-min);
   border: 1px solid transparent;
   border-radius: var(--radius-input);
-  padding: var(--space-2) var(--space-5);
+  padding: var(--space-2) var(--space-4);
   font-family: var(--font-family-body);
   font-weight: var(--font-weight-medium);
   line-height: 1.2;
@@ -677,7 +677,7 @@
   min-height: var(--touch-target-min);
   border: 1px solid var(--color-row-border);
   border-radius: var(--radius-row);
-  padding: var(--space-3);
+  padding: var(--space-2) var(--space-3);
   background: var(--color-row);
 }
 
@@ -689,8 +689,8 @@
 .ds-file-drop-zone__mark {
   display: grid;
   place-items: center;
-  width: 2.75rem;
-  height: 2.75rem;
+  width: 2.25rem;
+  height: 2.25rem;
   border-radius: var(--radius-input);
   background: var(--color-primary-soft);
   color: var(--color-primary-foreground);
@@ -795,7 +795,7 @@
   display: grid;
   place-items: center;
   padding: var(--space-4);
-  background: var(--color-scrim);
+  background: rgb(0 0 0 / 58%);
   animation: ds-fade-in var(--motion-duration-standard) var(--motion-ease-standard)
     both;
 }
@@ -806,14 +806,18 @@
 
 .ds-dialog__modal {
   width: min(100%, 34rem);
-  max-height: min(90vh, 44rem);
-  overflow: auto;
+  max-height: calc(100dvh - 2 * var(--space-4));
+  overflow: hidden;
   outline: none;
 }
 
 .ds-dialog {
+  display: flex;
+  max-height: inherit;
+  flex-direction: column;
+  overflow: hidden;
   border-radius: var(--radius-card);
-  padding: var(--space-6);
+  padding: var(--space-4);
   box-shadow: var(--shadow-frame);
   animation: ds-dialog-enter var(--motion-duration-standard)
     var(--motion-ease-emphasized) both;
@@ -839,7 +843,10 @@
 }
 
 .ds-dialog__body {
-  margin-top: var(--space-5);
+  min-height: 0;
+  margin-top: var(--space-3);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .ds-dialog__actions {
@@ -1017,10 +1024,10 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  gap: var(--space-3);
-  border: 2px dashed var(--color-drop-border);
+  gap: var(--space-2);
+  border: 1px dashed var(--color-drop-border);
   border-radius: var(--radius-card);
-  padding: var(--space-8) var(--space-6);
+  padding: var(--space-6) var(--space-4);
   background: var(--drop-gradient);
   cursor: pointer;
 }
@@ -1106,10 +1113,10 @@
 
 /* The sidebar is a full-height white card: brand, nav, meter at its foot. */
 .ds-sidebar {
-  gap: var(--space-6);
+  gap: var(--space-4);
   border: 1px solid var(--color-outline);
   border-radius: var(--radius-card);
-  padding: var(--space-5) var(--space-4);
+  padding: var(--space-4) var(--space-3);
   background: var(--color-card-fill);
   box-shadow: var(--shadow-card);
 }
@@ -1139,8 +1146,8 @@
 
 .ds-brand__logo {
   display: block;
-  width: 2.375rem;
-  height: 2.375rem;
+  width: 2rem;
+  height: 2rem;
   flex: none;
   border-radius: var(--radius-input);
 }
@@ -1164,7 +1171,7 @@
 /* Work starts at the top of the frame and caps at a readable width on
    wide monitors; the spare room becomes breathing space, not stretch. */
 .ds-work {
-  gap: var(--space-4);
+  gap: var(--space-3);
   justify-content: flex-start;
   width: 100%;
   max-width: var(--work-max-width);
@@ -1173,7 +1180,7 @@
 
 .ds-convert {
   display: grid;
-  gap: var(--space-4);
+  gap: var(--space-3);
 }
 
 .ds-work__head {
@@ -1186,20 +1193,18 @@
   margin: 0;
   color: var(--color-text-strong);
   font-family: var(--font-family-heading);
-  font-size: clamp(var(--font-size-2xl), 4vw, var(--font-size-3xl));
+  font-size: clamp(var(--font-size-xl), 3vw, var(--font-size-2xl));
   font-weight: var(--font-weight-heading);
   line-height: var(--line-height-heading);
 }
 
 .ds-work__head p,
-.ds-panel-head p,
-.ds-start-row__note {
+.ds-panel-head p {
   margin: 0;
   color: var(--color-text-muted);
 }
 
-.ds-panel-head,
-.ds-start-row {
+.ds-panel-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1217,17 +1222,6 @@
 .ds-panel-head p {
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
-}
-
-/* Start converting sits left with the page estimate beside it. */
-.ds-start-row {
-  justify-content: flex-start;
-  margin-top: var(--space-6);
-}
-
-.ds-start-row__note {
-  font-size: var(--font-size-sm);
-  font-variant-numeric: tabular-nums;
 }
 
 /* The hatched in-place marker: the whole job happens on this screen. */
@@ -1257,12 +1251,6 @@
 .ds-inplace strong {
   color: var(--color-primary-foreground);
   font-weight: 700;
-}
-
-.ds-clear-row {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: var(--space-2);
 }
 
 .ds-rail {
@@ -1322,6 +1310,61 @@
   display: grid;
   place-items: center;
   color: var(--color-primary-foreground);
+}
+
+/* Desktop is a three-pane shell: both rails stay inside the viewport and
+   only the central workspace participates in page scrolling. */
+@media (min-width: 64rem) {
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .ds-stage {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .ds-frame {
+    grid-template-rows: minmax(0, 1fr);
+    height: calc(100dvh - 2 * var(--stage-padding));
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .ds-sidebar,
+  .ds-rail {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .ds-sidebar__foot {
+    transform: none;
+  }
+
+  .ds-work {
+    height: 100%;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .ds-rail {
+    align-items: center;
+  }
+
+  .ds-rail__foot {
+    align-self: center;
+  }
+
+  .ds-rail .ds-theme-switcher__options {
+    flex-direction: column;
+  }
 }
 
 .ds-empty-state,
@@ -1433,7 +1476,7 @@
   position: fixed;
   z-index: 80;
   inset: 0;
-  background: rgb(13 20 18 / 72%);
+  background: rgb(0 0 0 / 68%);
   backdrop-filter: blur(2px);
   animation: api-coachmark-fade-in var(--motion-duration-standard)
     var(--motion-easing-standard) both;
@@ -1532,7 +1575,7 @@
 
 .help-guide {
   display: grid;
-  gap: var(--space-5);
+  gap: var(--space-3);
 }
 
 .help-guide__intro,
@@ -1542,12 +1585,12 @@
 }
 
 .help-guide__intro {
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-md);
 }
 
 .help-guide__steps {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1576,16 +1619,14 @@
 
 .ds-stack {
   display: grid;
-  gap: var(--layout-gap-mobile);
+  gap: var(--space-3);
 }
 
 @media (min-width: 64rem) {
   .ds-mobile-nav {
     display: none;
   }
-  .ds-stack {
-    gap: var(--space-6);
-  }
+  .ds-stack { gap: var(--space-3); }
 }
 
 .ds-muted {
@@ -1597,7 +1638,7 @@
   margin: 0;
   border: 1px solid var(--color-neutral-border);
   border-radius: var(--radius-input);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-3);
   background: var(--color-neutral-surface);
   color: var(--color-text-strong);
   font-size: var(--font-size-sm);
@@ -1627,7 +1668,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-2);
 }
 
 .ds-row-list {
@@ -1636,7 +1677,8 @@
 }
 
 .ds-drop-more {
-  margin-top: var(--space-4);
+  margin-top: auto;
+  padding-top: var(--space-2);
 }
 
 /* Secondary drop zones (add-more, answer key) stay slim rows so the
@@ -1645,25 +1687,50 @@
 .ds-key-file-slot .ds-file-drop-zone {
   flex-direction: row;
   justify-content: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-5);
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
   text-align: start;
 }
 
 .ds-drop-more .ds-file-drop-zone__mark,
 .ds-key-file-slot .ds-file-drop-zone__mark {
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2rem;
+  height: 2rem;
 }
 
 .ds-field-stack {
   display: grid;
-  gap: var(--space-5);
+  gap: var(--space-3);
+}
+
+.ds-upload-panel {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.ds-options-stack {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* On stacked screens, keep the answer-key action first. */
+.ds-options-stack .ds-key-file-slot {
+  order: -1;
+}
+
+.ds-convert-action {
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: center;
+  padding-block: var(--space-1);
 }
 
 .ds-key-file-slot {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .ds-key-file-added {
@@ -1672,17 +1739,11 @@
   font-weight: var(--font-weight-medium);
 }
 
-.ds-phase-note {
-  margin-top: var(--space-3);
-  text-align: right;
-  font-size: var(--font-size-sm);
-}
-
 /* ---------- Convert: running + done stages ---------- */
 
 .ds-progress-status {
-  min-height: 3rem;
-  margin: var(--space-4) 0;
+  min-height: var(--space-5);
+  margin: var(--space-2) 0;
   display: grid;
   gap: var(--space-2);
 }
@@ -1704,7 +1765,7 @@
   align-items: center;
   gap: var(--space-3);
   flex-wrap: wrap;
-  margin-top: var(--space-5);
+  margin-top: var(--space-3);
 }
 
 /* ---------- History ---------- */
@@ -1716,14 +1777,14 @@
 
 .history-card {
   display: grid;
-  gap: var(--space-4);
+  gap: var(--space-2);
 }
 
 .history-card__head {
   display: flex;
   align-items: start;
   justify-content: space-between;
-  gap: var(--space-4);
+  gap: var(--space-2);
 }
 
 .history-card__head > div {
@@ -1752,7 +1813,7 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
+  gap: var(--space-1) var(--space-3);
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
@@ -1766,6 +1827,29 @@
 
 .history-card__delete {
   color: var(--color-danger-foreground);
+}
+
+@media (min-width: 75rem) {
+  .ds-upload-layout {
+    grid-template-columns: minmax(0, 1.15fr) minmax(20rem, 0.85fr);
+    align-items: stretch;
+  }
+
+  .ds-upload-layout > .ds-glass-panel {
+    min-width: 0;
+  }
+
+  /* Both upload rows share the bottom edge of their equally tall panels. */
+  .ds-options-stack .ds-key-file-slot {
+    order: initial;
+    margin-top: auto;
+  }
+}
+
+@media (min-width: 80rem) {
+  .history-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 /* ---------- Review list ---------- */
@@ -1904,33 +1988,29 @@
 
 .review {
   display: grid;
-  gap: var(--space-5);
-}
-
-.review__header {
-  display: grid;
   gap: var(--space-3);
 }
 
-.review__header-row {
+.review__footer {
   display: flex;
-  align-items: start;
+  align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
   flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
 }
 
-.review__header h2 {
+.review__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
   margin: 0;
-  font-family: var(--font-family-heading);
-  font-weight: var(--font-weight-heading);
-  font-size: var(--font-size-2xl);
-  line-height: var(--line-height-heading);
-  color: var(--color-text-strong);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
 }
 
-.review__progress {
-  max-width: 28rem;
+.review__footer .ds-inline-note {
+  flex-basis: 100%;
 }
 
 .review__split {
@@ -1959,9 +2039,40 @@
   margin: 0;
   font-family: var(--font-family-heading);
   font-weight: var(--font-weight-heading);
-  font-size: var(--font-size-xl);
-  line-height: var(--line-height-heading);
+  font-size: clamp(var(--font-size-md), 2.2vw, var(--font-size-xl));
+  line-height: 1.3;
   color: var(--color-text-strong);
+}
+
+.review__mobile-source {
+  display: block;
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  text-align: start;
+  cursor: zoom-in;
+}
+
+.review__mobile-source[data-whole-page] {
+  cursor: zoom-out;
+}
+
+.review__mobile-source:disabled {
+  cursor: default;
+}
+
+.review__mobile-source .review-paper {
+  width: 100%;
+}
+
+.review__mobile-source img {
+  max-height: min(45vh, 24rem);
+}
+
+.review__mobile-source[data-whole-page] img {
+  max-height: 70vh;
 }
 
 .review__question--tick {
@@ -2049,10 +2160,6 @@
   flex-wrap: wrap;
 }
 
-.review__hint {
-  font-size: var(--font-size-sm);
-}
-
 .review-done {
   display: grid;
   justify-items: stretch;
@@ -2109,16 +2216,8 @@
   margin: 0 auto;
 }
 
-/* Phone: flippable card — one side at a time. */
+/* Phones render the image inline inside the question card. */
 .review__source {
-  display: none;
-}
-
-.review__split--source .review__source {
-  display: grid;
-}
-
-.review__split--source .review__question {
   display: none;
 }
 
@@ -2132,14 +2231,13 @@
     width: 100%;
   }
 
-  /* Confirm and the source flip get full rows; Previous/Next share one. */
-  .review__actions .ds-button:first-child,
-  .review__actions .review__flip {
+  /* Confirm gets a full row; Previous/Next share one. */
+  .review__actions .ds-button:first-child {
     grid-column: 1 / -1;
   }
 }
 
-/* Desktop: side-by-side, flip buttons disappear. */
+/* Desktop: source and question stay side by side. */
 @media (min-width: 64rem) {
   .review__split {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
@@ -2147,18 +2245,13 @@
     align-items: start;
   }
 
-  .review__source,
-  .review__split--source .review__source {
+  .review__source {
     display: grid;
     position: sticky;
     top: var(--space-4);
   }
 
-  .review__split--source .review__question {
-    display: grid;
-  }
-
-  .review__flip {
+  .review__mobile-source {
     display: none;
   }
 }
@@ -2294,7 +2387,7 @@
   .ds-work {
     grid-row: 2;
     max-width: none;
-    padding: var(--space-5) var(--space-4) var(--space-6);
+    padding: var(--space-3) var(--space-3) var(--space-4);
   }
 
   .ds-frame__privacy {
@@ -2404,7 +2497,7 @@
   }
 
   .ds-work__head h1 {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
   }
 
   .ds-work__head p {
@@ -2424,7 +2517,7 @@
 
   .ds-glass-panel--padding-default,
   .ds-glass-panel--padding-spacious {
-    padding: var(--space-4);
+  padding: var(--space-3);
   }
 
   .ds-done-actions {
@@ -2452,9 +2545,8 @@
     flex: 1 1 auto;
   }
 
-  .ds-phase-note {
-    margin-top: var(--space-4);
-    text-align: start;
+  .ds-convert-action .ds-button {
+    width: 100%;
   }
 }
 
