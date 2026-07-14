@@ -29,6 +29,24 @@ export async function putAnswerKeyPdf(
   return id
 }
 
+/**
+ * Store the job's topics document (PDF or image). A job has at most one —
+ * adding a new one replaces the old, transactionally.
+ */
+export async function putTopicsDoc(
+  entry: Omit<NewStoredPdf, 'kind'>,
+): Promise<string> {
+  const id = crypto.randomUUID()
+  await db.transaction('rw', db.files, async () => {
+    const existing = await db.files.where('jobId').equals(entry.jobId).toArray()
+    await db.files.bulkDelete(
+      existing.filter((file) => file.kind === 'topics').map((file) => file.id),
+    )
+    await db.files.add({ ...entry, kind: 'topics', id, addedAt: Date.now() })
+  })
+  return id
+}
+
 export async function removeStoredPdf(id: string): Promise<void> {
   await db.files.delete(id)
 }

@@ -571,6 +571,23 @@ blank `correct_index` remains the hard review signal, the column only explains
 it. (The Planner-Worker-Audit pipeline's working column list is the 10-column
 form — §1.6.)
 
+**Exported projection (owner-approved 2026-07-14).** The 10-column list above
+remains the engine's internal working format — the blueprint `csv_schema`,
+merged rows, the in-run `csv` artifact, and the CodoxSandbox gold gate are
+unchanged. The CSV that leaves the device in an export bundle is a
+*projection* of it (`src/export/export-csv.ts`):
+
+- `id` and `group_id` are never exported (internal keying only).
+- `topic`, `subtopic`, `year` are conditional columns, omitted entirely
+  (header included) when not provided. `topic`/`subtopic` appear only when
+  the user supplied a topic list for the run, and their values come from
+  export-time AI matching against that list (`src/engine/topic-matcher.ts`)
+  — blank when unsure, never planner heading text. `year` appears per the
+  run's year mode: the user-typed value, or the planner's document-evidence
+  value, or not at all.
+- The always-present columns keep this exact relative order:
+  `question,options,correct_index,image_urls,needs_review`.
+
 ### 3.2 Parsing contract (exact)
 
 - **Encoding:** UTF-8, read BOM-tolerant. (Real exams contain medical terms
@@ -588,11 +605,14 @@ form — §1.6.)
 ### 3.3 Semantics
 
 - **`id`** — unique per PDF / per import, never globally; it links rows
-  within one upload. Batch imports namespace per file.
+  within one upload. Batch imports namespace per file. *Since 2026-07-14
+  internal only:* it still keys review resolutions, AI answers, and topic
+  matches inside Codox, but is no longer emitted in exported CSVs.
 - **`group_id`** — shared by related questions (same image or same case
   stem); blank = standalone. **Mis-grouping is worse than no grouping** — when
   unsure, leave blank for all candidates; the importer must treat blank as
-  standalone and never invent a group. Grouped rows render together.
+  standalone and never invent a group. Grouped rows render together. *Since
+  2026-07-14 internal only:* no longer emitted in exported CSVs.
 - **Blank `correct_index` = needs review** — the single most important
   semantic. The row lands in a review queue / editable draft; it is never
   dropped and never defaulted.
@@ -601,9 +621,11 @@ form — §1.6.)
   relative to the CSV's location at import time; the importer reads the local
   files and re-hosts them (confirmed with the Triviadox side 2026-07-03).
   Missing files are flagged gracefully, never a whole-import crash.
-- **`topic`/`subtopic`** — subject-agnostic free text from the document's own
-  headings; displayed as-is, never mapped to a hardcoded taxonomy. `year`
-  optional; blank is normal.
+- **`topic`/`subtopic`** — subject-agnostic free text, displayed as-is,
+  never mapped to a hardcoded taxonomy. Internally the planner still fills
+  these from the document's own headings; *exported* values come only from
+  the user's topic list via AI matching (§3.1 projection), blank when
+  unsure. `year` optional; blank is normal.
 - **True/False questions** — `options=["True","False"]` with a normal 0-based
   `correct_index`. No dedicated question-type column. (Pinned 2026-07-03.)
 - The old 5-column schema (`question,options,correct_index,year,image_url`)

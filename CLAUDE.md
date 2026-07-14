@@ -47,6 +47,18 @@ Correctness is graded externally in the CodoxSandbox repo (gold gate:
 appendicitis 127/127 exact rows); do not build or duplicate a test harness
 for engine output here.
 
+*Export projection (owner-approved 2026-07-14):* exported CSVs are a
+column projection of the pinned format (`src/export/export-csv.ts`,
+CODOX_MIGRATION §3.1): `id`/`group_id` never leave the device;
+`topic`/`subtopic`/`year` are conditional per the Customizations settings.
+The engine prompts, blueprint `csv_schema`, merge, the in-run `csv`
+artifact, and the gold gate are untouched — they keep the internal
+10-column format. The topic matcher (`src/engine/topic-matcher.ts`) and
+topics-document reader (`src/engine/topic-extract.ts`) are new surface
+outside the engine path, solver-style: they never modify `merged-rows`,
+deterministic code validates every pick against the user's list, and
+unsure stays blank — a wrong topic is worse than a blank one.
+
 ## Ship everywhere or nowhere (non-negotiable)
 
 A fix is not done until it is **committed and pushed to `main`** — that one

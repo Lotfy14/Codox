@@ -11,6 +11,7 @@ import type { AppTab, TabNavItem } from './design/components'
 import { appMessages, privacyMessages } from './copy/messages'
 import { geminiController } from './providers/controller'
 import { Convert } from './screens/Convert'
+import { Customizations } from './screens/Customizations'
 import { ApiCoachmark } from './screens/ApiCoachmark'
 import { HelpContent } from './screens/HelpContent'
 import { History } from './screens/History'
@@ -25,13 +26,28 @@ type OpenDialog = 'api' | 'help' | 'privacy' | null
 type MobileNavItem = AppTab | Exclude<OpenDialog, null | 'privacy'>
 
 function NavIcon({ kind }: { kind: AppTab }) {
-  return kind === 'convert' ? (
-    <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24">
-      <path d="M4 4h10l6 6v10H4z" />
-      <path d="M14 4v6h6" />
-      <path d="M9 15l2 2 4-4" />
-    </svg>
-  ) : (
+  if (kind === 'convert') {
+    return (
+      <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24">
+        <path d="M4 4h10l6 6v10H4z" />
+        <path d="M14 4v6h6" />
+        <path d="M9 15l2 2 4-4" />
+      </svg>
+    )
+  }
+  if (kind === 'customize') {
+    return (
+      <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24">
+        <path d="M4 6h16" />
+        <path d="M4 12h16" />
+        <path d="M4 18h16" />
+        <circle cx="9" cy="6" fill="none" r="2" />
+        <circle cx="15" cy="12" fill="none" r="2" />
+        <circle cx="7" cy="18" fill="none" r="2" />
+      </svg>
+    )
+  }
+  return (
     <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24">
       <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
       <path d="M3 3v5h5" />
@@ -62,6 +78,7 @@ function RailIcon({ kind }: { kind: 'api' | 'help' }) {
 
 const workspaceItems: readonly TabNavItem<AppTab>[] = [
   { id: 'convert', icon: <NavIcon kind="convert" />, label: appMessages.navConvert },
+  { id: 'customize', icon: <NavIcon kind="customize" />, label: appMessages.navCustomize },
   { id: 'history', icon: <NavIcon kind="history" />, label: appMessages.navHistory },
 ]
 
@@ -100,8 +117,8 @@ function App() {
 
   const handleMobileNav = (item: MobileNavItem) => {
     if (showCoachmark) hideCoachmark()
-    if (item === 'convert' || item === 'history') setActiveTab(item)
-    else setOpenDialog(item)
+    if (item === 'api' || item === 'help') setOpenDialog(item)
+    else setActiveTab(item)
   }
 
   return (
@@ -148,6 +165,8 @@ function App() {
         <main className="ds-work">
           {activeTab === 'convert' ? (
             <Convert onRequestApiKey={openApi} />
+          ) : activeTab === 'customize' ? (
+            <Customizations />
           ) : (
             <History onOpenConvert={() => setActiveTab('convert')} />
           )}
@@ -180,17 +199,21 @@ function App() {
       </div>
 
       <Dialog
+        className="ds-dialog--drawer"
         dismissLabel={appMessages.dialogDismiss}
         isOpen={openDialog === 'api'}
         onOpenChange={(open) => setOpenDialog(open ? 'api' : null)}
+        overlayClassName="ds-dialog__overlay--drawer"
         title={appMessages.apiDialogTitle}
       >
         <KeysPanel />
       </Dialog>
       <Dialog
+        className="ds-dialog--drawer"
         dismissLabel={appMessages.dialogDismiss}
         isOpen={openDialog === 'help'}
         onOpenChange={(open) => setOpenDialog(open ? 'help' : null)}
+        overlayClassName="ds-dialog__overlay--drawer"
         title={appMessages.helpDialogTitle}
       >
         <HelpContent onOpenApi={openApi} />

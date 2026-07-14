@@ -11,14 +11,19 @@
  */
 import { Capacitor } from '@capacitor/core'
 import { fileSave } from 'browser-fs-access'
-import { emitCsv } from '../engine/csv'
 import { applyAiAnswers, readAiAnswers } from '../engine/solver'
+import {
+  applyTopicMatches,
+  readRunTopics,
+  readTopicMatches,
+} from '../engine/topic-matcher'
 import type { MergedRow } from '../engine/types'
 import { getAiAnswerSettings } from '../state/ai-answers-settings'
 import { bytesToBase64 } from '../providers/base64'
 import { getArtifact, getArtifacts, updateRun } from '../state/runs'
 import type { RunState } from '../state/types'
 import { applyResolutions, getResolutions } from '../screens/review-data'
+import { emitExportCsv, exportColumns } from './export-csv'
 import {
   assembleBundleFiles,
   exportArchiveName,
@@ -98,7 +103,25 @@ async function buildBundleInputs(
     const rows = merged.json as MergedRow[]
     const resolutions = await getResolutions(run.id)
     const resolved = applyResolutions(rows, resolutions)
-    const csvText = emitCsv(await rowsForMode(run, resolved, mode))
+    let projected = await rowsForMode(run, resolved, mode)
+    // Column projection (owner-approved 2026-07-14): topics come only from
+    // the run's snapshot + matches (blank when matching didn't finish —
+    // export never waits); year per the run's snapshot; id/group_id never.
+    const hasTopics = (await readRunTopics(run.id)) !== undefined
+    if (hasTopics) {
+      projected = applyTopicMatches(projected, await readTopicMatches(run.id))
+    }
+    const typedYear = run.yearMode === 'type' ? (run.typedYear ?? '') : ''
+    if (typedYear !== '') {
+      projected = projected.map((row) => ({ ...row, year: typedYear }))
+    }
+    const csvText = emitExportCsv(
+      projected,
+      exportColumns({
+        topics: hasTopics,
+        year: run.yearMode === 'ai' || typedYear !== '',
+      }),
+    )
     const crops = (await getArtifacts(run.id, 'crop')).flatMap((crop) =>
       crop.path !== undefined && crop.bytes !== undefined
         ? [{ path: crop.path, bytes: crop.bytes }]

@@ -14,13 +14,13 @@
  */
 import { CSV_SCHEMA, type MergedRow } from './types'
 
-function csvField(value: string): string {
+export function csvField(value: string): string {
   return /[",\r\n]/.test(value)
     ? `"${value.replaceAll('"', '""')}"`
     : value
 }
 
-function csvLine(cells: readonly string[]): string {
+export function csvLine(cells: readonly string[]): string {
   return cells.map(csvField).join(',')
 }
 

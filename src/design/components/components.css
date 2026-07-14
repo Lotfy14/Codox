@@ -1739,6 +1739,36 @@
   font-weight: var(--font-weight-medium);
 }
 
+/* ---------- Convert: topics editor ---------- */
+
+.ds-topics-editor {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+}
+
+.ds-topics-editor__topic {
+  display: grid;
+  width: 100%;
+  gap: var(--space-2);
+}
+
+.ds-topics-editor__row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: var(--space-2);
+}
+
+.ds-topics-editor__row--subtopic {
+  padding-inline-start: var(--space-5);
+}
+
+.ds-topics-editor__field {
+  flex: 1;
+  min-width: 0;
+}
+
 /* ---------- Convert: running + done stages ---------- */
 
 .ds-progress-status {

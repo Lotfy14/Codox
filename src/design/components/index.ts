@@ -1,5 +1,6 @@
 export * from './Badge'
 export * from './Button'
+export * from './ChoiceGroup'
 export * from './Dialog'
 export * from './FileDropZone'
 export * from './FileRow'

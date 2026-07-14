@@ -3,7 +3,20 @@ import { DropZone } from 'react-aria-components/DropZone'
 import { FileTrigger } from 'react-aria-components/FileTrigger'
 import { isFileDropItem } from 'react-aria-components/useDragAndDrop'
 
+export interface FileAccept {
+  mimeTypes: readonly string[]
+  extensions: readonly string[]
+}
+
+/** The default acceptance: PDFs only, as every original zone expects. */
+const PDF_ACCEPT: FileAccept = {
+  mimeTypes: ['application/pdf'],
+  extensions: ['.pdf'],
+}
+
 export interface FileDropZoneProps {
+  /** Accepted types; omit for the PDF-only default. */
+  accept?: FileAccept
   allowsMultiple?: boolean
   className?: string
   chooseLabel: string
@@ -14,11 +27,16 @@ export interface FileDropZoneProps {
   onRejected?: (files: File[]) => void
 }
 
-function isPdf(file: File): boolean {
-  return file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+function isAccepted(file: File, accept: FileAccept): boolean {
+  const name = file.name.toLowerCase()
+  return (
+    accept.mimeTypes.includes(file.type) ||
+    accept.extensions.some((extension) => name.endsWith(extension))
+  )
 }
 
 export function FileDropZone({
+  accept = PDF_ACCEPT,
   allowsMultiple = true,
   className,
   chooseLabel,
@@ -28,6 +46,14 @@ export function FileDropZone({
   onFiles,
   onRejected,
 }: FileDropZoneProps) {
+  const split = (files: File[]) => {
+    const accepted = files.filter((file) => isAccepted(file, accept))
+    const rejected = files.filter((file) => !isAccepted(file, accept))
+    if (accepted.length > 0) {
+      onFiles(allowsMultiple ? accepted : accepted.slice(0, 1))
+    }
+    if (rejected.length > 0) onRejected?.(rejected)
+  }
   return (
     <DropZone
       aria-label={label}
@@ -38,12 +64,7 @@ export function FileDropZone({
           .filter(isFileDropItem)
           .map((item) => item.getFile())
 
-        void Promise.all(pendingFiles).then((files) => {
-          const pdfs = files.filter(isPdf)
-          const rejected = files.filter((file) => !isPdf(file))
-          if (pdfs.length > 0) onFiles(allowsMultiple ? pdfs : pdfs.slice(0, 1))
-          if (rejected.length > 0) onRejected?.(rejected)
-        })
+        void Promise.all(pendingFiles).then(split)
       }}
     >
       <div aria-hidden="true" className="ds-file-drop-zone__mark">
@@ -67,14 +88,10 @@ export function FileDropZone({
       {/* The trigger stretches invisibly across the zone: clicking or
           keyboard-activating anywhere opens the file picker. */}
       <FileTrigger
-        acceptedFileTypes={['application/pdf']}
+        acceptedFileTypes={[...accept.mimeTypes]}
         allowsMultiple={allowsMultiple}
         onSelect={(fileList) => {
-          const selected = fileList ? Array.from(fileList) : []
-          const files = selected.filter(isPdf)
-          const rejected = selected.filter((file) => !isPdf(file))
-          if (files.length > 0) onFiles(allowsMultiple ? files : files.slice(0, 1))
-          if (rejected.length > 0) onRejected?.(rejected)
+          split(fileList ? Array.from(fileList) : [])
         }}
       >
         <AriaButton

@@ -236,8 +236,13 @@ test('critical journey: answer-key PDF → review list/detail → named export �
   await expect(page.getByText('Critical Exam.pdf')).toBeVisible()
 
   // The answer-key slot is always visible and optional — no declaration
-  // question stands between the tutor and dropping the key.
-  await page.locator('.ds-key-file-slot input[type="file"]').setInputFiles({
+  // question stands between the tutor and dropping the key. (The optional
+  // topics slot shares the same styling, so scope by the zone's label.)
+  await page
+    .locator('.ds-key-file-slot')
+    .filter({ hasText: 'Answer key (optional)' })
+    .locator('input[type="file"]')
+    .setInputFiles({
     name: 'Critical Answers.pdf',
     mimeType: 'application/pdf',
     buffer: minimalPdf('Answer 1: B'),
@@ -317,6 +322,10 @@ test('critical journey: answer-key PDF → review list/detail → named export �
   const csvPath = 'Critical Exam Cx/Critical Exam Cx.csv'
   expect(Object.keys(zipped)).toContain(csvPath)
   const csv = new TextDecoder().decode(zipped[csvPath]).replace(/^\uFEFF/, '')
+  // The exported projection: no id/group_id, no unprovided optional columns.
+  expect(csv.split('\r\n')[0]).toBe(
+    'question,options,correct_index,image_urls,needs_review',
+  )
   expect(csv).toContain('What is two plus two?')
   expect(csv).toContain('"[""Three"",""Four""]",1,[],')
 
@@ -336,7 +345,9 @@ test('critical journey: answer-key PDF → review list/detail → named export �
   await page.locator('.review-list-row').filter({
     hasText: 'Question 1: What is two plus two?',
   }).click()
-  await expect(page.getByAltText('Scanned source for question 1')).toBeVisible()
+  await expect(
+    page.locator('.review__source').getByAltText('Scanned source for question 1'),
+  ).toBeVisible()
   await page.getByRole('button', { name: 'Back to questions' }).click()
   await page.getByRole('button', { name: 'Back to history' }).click()
 

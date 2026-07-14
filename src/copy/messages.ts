@@ -61,6 +61,8 @@ export const progressMessages = {
 export const uploadMessages = {
   notPdf: (fileName: string) =>
     `Only PDF files work here — "${fileName}" was skipped.`,
+  notPdfOrImage: (fileName: string) =>
+    `Only PDF or image files work here — "${fileName}" was skipped.`,
   encryptedPdf: (fileName: string) =>
     `"${fileName}" is password-protected, so Codox cannot open it. Remove the password and drop it again.`,
   keyFileOptional:
@@ -75,6 +77,7 @@ export const appMessages = {
   brandName: 'Codox',
   navLabel: 'Workspace',
   navConvert: 'Convert',
+  navCustomize: 'Customize',
   navHistory: 'History',
   railApi: 'API',
   railHelp: 'Help',
@@ -206,6 +209,71 @@ export const convertMessages = {
   startingFresh: 'Starting fresh…',
   exportDeviceNote:
     'On a phone this opens the share sheet; on desktop it asks where to save the zip.',
+} as const
+
+export const customizeMessages = {
+  title: 'Customize',
+  subtitle:
+    'Choose which optional details your exported question sets carry. These choices apply to conversions you start next — finished runs keep the columns they were made with.',
+  yearPanelLabel: 'Year column',
+  yearLegend: 'Year',
+  yearOff: 'No year',
+  yearOffHint: 'Exports have no year column.',
+  yearType: 'You type it',
+  yearTypeHint:
+    'Convert shows a year field; the year you type applies to every question in the batch.',
+  yearAi: 'From the document',
+  yearAiHint:
+    'Codox uses the year printed in the document when one is visible — blank otherwise. No extra AI requests.',
+  topicsPanelLabel: 'Topics and subtopics',
+  topicsLegend: 'Topics',
+  topicsOff: 'Off',
+  topicsOffHint: 'No topics on Convert, no topic columns in exports.',
+  topicsOn: 'On',
+  topicsOnHint:
+    'Convert shows a topic list you can type or read from a topics PDF or image. After conversion, Gemini matches each question to your list — unsure stays blank.',
+} as const
+
+export const topicsMessages = {
+  editorLabel: 'Your topic list',
+  editorHint:
+    'Type your topics — or drop a topics PDF or image and Codox fills this list for you to check.',
+  topicPlaceholder: 'Topic',
+  subtopicPlaceholder: 'Subtopic',
+  addTopic: 'Add topic',
+  addSubtopic: 'Add subtopic',
+  removeTopic: (topic: string) =>
+    `Remove topic${topic === '' ? '' : ` ${topic}`}`,
+  removeSubtopic: (subtopic: string) =>
+    `Remove subtopic${subtopic === '' ? '' : ` ${subtopic}`}`,
+  topicLabel: (position: number) => `Topic ${position}`,
+  subtopicLabel: (topicPosition: number, position: number) =>
+    `Topic ${topicPosition} subtopic ${position}`,
+  dropTitle: 'Topics file (optional)',
+  dropHint: 'PDF or image',
+  docAdded: (fileName: string) => `${fileName} added`,
+  reading: 'Reading your topics…',
+  readSuccess: (fileName: string) =>
+    `Topics read from ${fileName} — check and edit the list below.`,
+  readAgain: 'Read again',
+  readUnreadable:
+    'Codox could not find a topic list in this file. You can still type your topics below.',
+  readWrongKey:
+    'Gemini rejected the saved API key, so the topics file was not read. Fix the key, then choose Read again.',
+  readFailed:
+    'Gemini could not read this file right now. Choose Read again to retry, or type the topics below.',
+  readQuotaPaused:
+    'Your Gemini allowance is resting — Codox keeps trying and reads the topics file when it can. You can type the topics below meanwhile.',
+  readUnreachable:
+    "Can't reach Gemini right now — Codox retries automatically. You can also type the topics below meanwhile.",
+  yearLabel: 'Year (optional)',
+  yearHint: 'Applies to every question in this batch.',
+  matching: 'Matching questions to your topics…',
+  matchIncomplete: (count: number) =>
+    `${count} question${count === 1 ? '' : 's'} not matched to a topic yet — exports leave those topic cells blank.`,
+  matchWrongKey:
+    'Topic matching stopped: Gemini rejected the saved API key. Fix the key, then retry.',
+  retryMatching: 'Retry topic matching',
 } as const
 
 export const reviewMessages = {

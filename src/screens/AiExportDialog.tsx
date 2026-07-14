@@ -6,7 +6,8 @@
  * every answered chunk is cached, so a cancel never wastes quota.
  */
 import { useEffect, useRef, useState } from 'react'
-import { Button, Dialog, ProgressBar } from '../design/components'
+import { Button, ChoiceGroup, Dialog, ProgressBar } from '../design/components'
+import type { ChoiceOption } from '../design/components'
 import { aiExportMessages, appMessages } from '../copy/messages'
 import {
   clearAiAnswers,
@@ -38,12 +39,6 @@ export interface AiExportDialogProps {
 }
 
 type Phase = 'configure' | 'solving'
-
-interface ChoiceOption<V extends string> {
-  hint: string
-  label: string
-  value: V
-}
 
 const SCOPE_OPTIONS: readonly ChoiceOption<AiScope>[] = [
   {
@@ -80,41 +75,6 @@ const THRESHOLD_OPTIONS: readonly ChoiceOption<AiFlagBelow>[] = [
     hint: aiExportMessages.thresholdNeverHint,
   },
 ]
-
-function ChoiceGroup<V extends string>({
-  legend,
-  onChange,
-  options,
-  value,
-}: {
-  legend: string
-  onChange: (value: V) => void
-  options: readonly ChoiceOption<V>[]
-  value: V
-}) {
-  return (
-    <div className="ds-choice-group">
-      <p className="ds-choice-group__legend" id={`legend-${legend}`}>
-        {legend}
-      </p>
-      <div aria-label={legend} className="ds-choice-group__options" role="radiogroup">
-        {options.map((option) => (
-          <button
-            aria-checked={value === option.value}
-            className="ds-choice"
-            key={option.value}
-            onClick={() => onChange(option.value)}
-            role="radio"
-            type="button"
-          >
-            <span className="ds-choice__label">{option.label}</span>
-            <span className="ds-choice__hint">{option.hint}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 /** Provider status → the calm line under the progress bar, if any. */
 function statusLine(status: ControllerStatus): string | null {

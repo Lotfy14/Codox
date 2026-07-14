@@ -75,6 +75,8 @@ async function exportedCsv(): Promise<string> {
   return new TextDecoder().decode(bytes.subarray(3))
 }
 
+const BASE_HEADER = 'question,options,correct_index,image_urls,needs_review'
+
 describe('export modes', () => {
   it('with-answers (default) keeps document answers and tutor resolutions', async () => {
     const runId = await seedDoneRun([
@@ -89,6 +91,8 @@ describe('export modes', () => {
     expect(outcome).toBe('downloaded')
     expect(lastDownloadName).toBe('Exam Cx.zip')
     const lines = (await exportedCsv()).trimEnd().split('\r\n')
+    // The projected header: no id/group_id, no unprovided optional columns.
+    expect(lines[0]).toBe(BASE_HEADER)
     expect(lines[1]).toContain(',2,') // document answer intact
     expect(lines[2]).toContain(',1,') // the tutor's confirmed answer applied
     expect((await getRun(runId))?.exportedAt).toBeDefined()
@@ -157,5 +161,72 @@ describe('export modes', () => {
     const run = await getRun(runId)
     expect(await exportRuns([run!])).toBe('nothing')
     expect(lastZip).toBeNull()
+  })
+})
+
+describe('column projection', () => {
+  it('a topics run gains topic/subtopic columns; gaps stay blank; merged-rows pristine', async () => {
+    const rows = [row('1'), row('2')]
+    const runId = await seedDoneRun(rows)
+    await putArtifact({
+      runId,
+      kind: 'topics-list',
+      json: { topics: [{ topic: 'Anatomy', subtopics: ['Abdomen'] }] },
+    })
+    // Partial matching: only row 1 has a cached match.
+    await putArtifact({
+      runId,
+      kind: 'topic-matches',
+      json: {
+        matches: { '1': { topic: 'Anatomy', subtopic: 'Abdomen' } },
+        matchedAt: Date.now(),
+      },
+    })
+    const run = await getRun(runId)
+
+    expect(await exportRuns([run!])).toBe('downloaded')
+    const lines = (await exportedCsv()).trimEnd().split('\r\n')
+    expect(lines[0]).toBe(`topic,subtopic,${BASE_HEADER}`)
+    expect(lines[1].startsWith('Anatomy,Abdomen,Question 1?')).toBe(true)
+    // Unmatched row: blank cells, never the planner's heading text.
+    expect(lines[2].startsWith(',,Question 2?')).toBe(true)
+    expect(await getArtifact(runId, 'merged-rows').then((a) => a?.json)).toEqual(rows)
+  })
+
+  it('typed year stamps every row; document year passes through on ai mode', async () => {
+    const typedId = await seedDoneRun([row('1', { year: '1999' })])
+    await updateRun(typedId, { yearMode: 'type', typedYear: '2024' })
+    expect(await exportRuns([(await getRun(typedId))!])).toBe('downloaded')
+    let lines = (await exportedCsv()).trimEnd().split('\r\n')
+    expect(lines[0]).toBe(`year,${BASE_HEADER}`)
+    expect(lines[1].startsWith('2024,Question 1?')).toBe(true)
+
+    await db.runs.clear()
+    await db.runArtifacts.clear()
+    const aiId = await seedDoneRun([row('1', { year: '1999' }), row('2')])
+    await updateRun(aiId, { yearMode: 'ai' })
+    expect(await exportRuns([(await getRun(aiId))!])).toBe('downloaded')
+    lines = (await exportedCsv()).trimEnd().split('\r\n')
+    expect(lines[0]).toBe(`year,${BASE_HEADER}`)
+    expect(lines[1].startsWith('1999,')).toBe(true)
+    // No document evidence → honestly blank, never guessed.
+    expect(lines[2].startsWith(',Question 2?')).toBe(true)
+  })
+
+  it('type mode with an empty year adds no column', async () => {
+    const runId = await seedDoneRun([row('1')])
+    await updateRun(runId, { yearMode: 'type', typedYear: '' })
+    expect(await exportRuns([(await getRun(runId))!])).toBe('downloaded')
+    expect((await exportedCsv()).split('\r\n')[0]).toBe(BASE_HEADER)
+  })
+
+  it('pre-feature runs (no snapshot) export the base five columns', async () => {
+    const runId = await seedDoneRun([row('1', { topic: 'Heading', year: '2001' })])
+    expect(await exportRuns([(await getRun(runId))!])).toBe('downloaded')
+    const csv = await exportedCsv()
+    expect(csv.split('\r\n')[0]).toBe(BASE_HEADER)
+    // Planner heading/year values never leak without the columns.
+    expect(csv).not.toContain('Heading')
+    expect(csv).not.toContain('2001')
   })
 })

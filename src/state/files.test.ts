@@ -5,6 +5,7 @@ import {
   addStoredPdf,
   clearJobPdfs,
   putAnswerKeyPdf,
+  putTopicsDoc,
   removeStoredPdf,
 } from './files'
 
@@ -61,5 +62,21 @@ describe('stored PDFs', () => {
     expect(keys[0].name).toBe('key_b.pdf')
     // The exam file is untouched by key replacement.
     expect(files.some((file) => file.name === 'exam.pdf')).toBe(true)
+  })
+
+  it('keeps at most one topics document per job — adding replaces', async () => {
+    const { kind: _first, ...key } = pdfEntry('key.pdf')
+    const { kind: _second, ...topicsA } = pdfEntry('topics_a.pdf')
+    const { kind: _third, ...topicsB } = pdfEntry('topics_b.png')
+    await putAnswerKeyPdf(key)
+    await putTopicsDoc(topicsA)
+    await putTopicsDoc(topicsB)
+
+    const files = await db.files.where('jobId').equals(JOB).toArray()
+    const topics = files.filter((file) => file.kind === 'topics')
+    expect(topics).toHaveLength(1)
+    expect(topics[0].name).toBe('topics_b.png')
+    // Replacing the topics doc never touches the answer key.
+    expect(files.some((file) => file.kind === 'answer-key')).toBe(true)
   })
 })

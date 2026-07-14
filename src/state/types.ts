@@ -1,22 +1,41 @@
 export type AppStep = 'setup' | 'upload' | 'progress' | 'review' | 'export'
 
+/**
+ * Where the exported `year` column comes from (Customizations tab):
+ * 'off' — no year column; 'type' — the user-typed job year stamped on
+ * every row; 'ai' — the planner's document-evidence year, blank when the
+ * document shows none (no extra AI requests — the engine already emits it).
+ */
+export type YearMode = 'off' | 'type' | 'ai'
+
+/** One user-provided topic and its subtopics — the matcher's whole world. */
+export interface TopicItem {
+  topic: string
+  subtopics: string[]
+}
+
 export interface JobState {
   id: string
   createdAt: number
   step: AppStep
   /** Keep the original PDF stored after conversion (History re-runs). */
   keepOriginal?: boolean
+  /** User-typed year, applied to every question when yearMode is 'type'. */
+  typedYear?: string
+  /** The user's topic list — typed or extracted from a topics document. */
+  topics?: TopicItem[]
 }
 
 /**
  * One PDF stored for the current job — the exam files plus at most one
- * answer-key file per job. The blob is the user's original file;
- * IndexedDB holding it is what lets a job survive reloads.
+ * answer-key file and at most one topics document per job. The blob is
+ * the user's original file; IndexedDB holding it is what lets a job
+ * survive reloads. A `topics` entry may also be an image (png/jpeg/webp).
  */
 export interface StoredPdf {
   id: string
   jobId: string
-  kind: 'exam' | 'answer-key'
+  kind: 'exam' | 'answer-key' | 'topics'
   name: string
   size: number
   pageCount: number
@@ -63,6 +82,14 @@ export interface RunState {
   plannerModel?: string
   /** Set when the run's bundle last left the device (export-early law). */
   exportedAt?: number
+  /**
+   * Snapshot of the year setting at run creation — History exports keep
+   * the columns the run was made with, whatever the user changes later.
+   * Absent on pre-feature runs, which read as 'off'.
+   */
+  yearMode?: YearMode
+  /** The job's typed year at run creation, when yearMode is 'type'. */
+  typedYear?: string
   createdAt: number
   updatedAt: number
 }
@@ -84,6 +111,8 @@ export type RunArtifactKind =
   | 'audit-report'
   | 'review-resolutions'
   | 'ai-answers'
+  | 'topics-list'
+  | 'topic-matches'
 
 export interface RunArtifact {
   id: string

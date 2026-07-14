@@ -10,12 +10,15 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { executeRun, type RunOutcome } from '../engine/executor'
+import { matchRunTopics } from '../engine/topic-matcher'
 import { geminiController, type ControllerStatus } from '../providers/controller'
+import { getCustomizationSettings } from '../state/customization-settings'
 import { db } from '../state/db'
 import {
   createRun,
   findResumableRuns,
   getRun,
+  putArtifact,
   stopJobRuns,
   updateRun,
   useJobRuns,
@@ -28,12 +31,18 @@ export interface ConversionState {
   providerStatus: ControllerStatus
   /** True while this tab is driving the batch. */
   isDriving: boolean
+  /** True while post-run topic matching is in flight. */
+  isMatching: boolean
+  /** Why the last topic-matching attempt stopped, if it did. */
+  topicMatchIssue: 'wrong-key' | 'failed' | null
   start: (
     exams: readonly StoredPdf[],
     answerKey: StoredPdf | undefined,
   ) => Promise<void>
   /** Re-enters provider-stopped runs from their persisted checkpoint. */
   retry: (runIds: readonly string[]) => Promise<void>
+  /** Re-runs topic matching for rows that never got a cached match. */
+  retryTopicMatching: (runIds: readonly string[]) => Promise<void>
   /** User stop: aborts in-flight work, marks unfinished runs stopped. */
   stop: () => Promise<void>
   outcomes: RunOutcome[]
@@ -72,10 +81,45 @@ export function useConversion(jobId: string): ConversionState {
     geminiController.getStatus(),
   )
   const [isDriving, setIsDriving] = useState(false)
+  const [isMatching, setIsMatching] = useState(false)
+  const [topicMatchIssue, setTopicMatchIssue] = useState<
+    'wrong-key' | 'failed' | null
+  >(null)
   const [outcomes, setOutcomes] = useState<RunOutcome[]>([])
   // One driver at a time, even across re-renders and StrictMode remounts.
   const driving = useRef(false)
   const abortRef = useRef<AbortController | null>(null)
+
+  /**
+   * Post-run topic matching — strictly after extraction, outside the
+   * engine path. A run without a topics-list snapshot is a no-op; any
+   * failure is recorded for the done-stage note and never touches the
+   * run's status (extraction success and matching are independent).
+   */
+  const matchTopics = useCallback(
+    async (runIds: readonly string[], signal?: AbortSignal) => {
+      setIsMatching(true)
+      setTopicMatchIssue(null)
+      try {
+        for (const runId of runIds) {
+          const run = await getRun(runId)
+          if (run?.status !== 'done') continue
+          const outcome = await matchRunTopics(runId, { signal })
+          if (!outcome.ok && outcome.failure.kind !== 'aborted') {
+            setTopicMatchIssue(
+              outcome.failure.kind === 'wrong-key' ? 'wrong-key' : 'failed',
+            )
+            return
+          }
+        }
+      } catch {
+        setTopicMatchIssue('failed')
+      } finally {
+        setIsMatching(false)
+      }
+    },
+    [],
+  )
 
   useEffect(() => {
     return geminiController.subscribe(() => {
@@ -105,6 +149,9 @@ export function useConversion(jobId: string): ConversionState {
               answerKeyPageCount: item.answerKey?.pageCount,
             })
             setOutcomes((previous) => [...previous, outcome])
+            // Label the finished run against the user's topic list before
+            // the next file starts (no-op without a topics-list snapshot).
+            await matchTopics([item.run.id], aborter.signal)
           } catch {
             // An unexpected crash must never leave a run 'running' forever
             // (an undriven run locks the screen with a frozen bar).
@@ -122,7 +169,7 @@ export function useConversion(jobId: string): ConversionState {
         setIsDriving(false)
       }
     },
-    [jobId],
+    [jobId, matchTopics],
   )
 
   const stopConversion = useCallback(async () => {
@@ -178,6 +225,15 @@ export function useConversion(jobId: string): ConversionState {
       exams: readonly StoredPdf[],
       answerKey: StoredPdf | undefined,
     ) => {
+      // Snapshot the Customizations choices and the job's inputs once per
+      // batch: History exports keep the columns a run was made with,
+      // whatever the user changes afterwards.
+      const settings = await getCustomizationSettings()
+      const job = await db.jobs.get(jobId)
+      const topics =
+        settings.topicsMode === 'on' ? (job?.topics ?? []) : []
+      const typedYear =
+        settings.yearMode === 'type' ? (job?.typedYear ?? '').trim() : ''
       const queue: QueueItem[] = []
       for (const exam of exams) {
         const runId = await createRun({
@@ -186,7 +242,12 @@ export function useConversion(jobId: string): ConversionState {
           answerKeyPdfId: answerKey?.id,
           fileName: exam.name,
           pageCount: exam.pageCount + (answerKey?.pageCount ?? 0),
+          yearMode: settings.yearMode,
+          ...(typedYear === '' ? {} : { typedYear }),
         })
+        if (topics.length > 0) {
+          await putArtifact({ runId, kind: 'topics-list', json: { topics } })
+        }
         const run = await getRun(runId)
         if (run === undefined) continue
         queue.push({
@@ -247,8 +308,11 @@ export function useConversion(jobId: string): ConversionState {
     runs,
     providerStatus,
     isDriving,
+    isMatching,
+    topicMatchIssue,
     start,
     retry,
+    retryTopicMatching: matchTopics,
     stop: stopConversion,
     outcomes,
   }
