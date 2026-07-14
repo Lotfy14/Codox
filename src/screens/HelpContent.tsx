@@ -24,6 +24,7 @@ export function HelpContent({ onOpenApi }: HelpContentProps) {
         <strong>{helpMessages.troubleTitle}</strong>
         <p>{helpMessages.trouble}</p>
       </aside>
+      <p className="help-guide__version">{helpMessages.version(__APP_VERSION__)}</p>
     </div>
   )
 }

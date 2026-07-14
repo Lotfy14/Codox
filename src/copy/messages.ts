@@ -141,6 +141,8 @@ export const helpMessages = {
   ],
   troubleTitle: 'If something gets in the way',
   trouble: 'Recheck a wrong key, wait if paused, or check your connection if unreachable.',
+  /** Shown at the foot of Help so a user can report exactly which build they run. */
+  version: (v: string) => `Codox v${v}`,
 } as const
 
 export const convertMessages = {

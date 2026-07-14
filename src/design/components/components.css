@@ -1615,6 +1615,14 @@
   background: var(--color-neutral-surface);
 }
 
+.help-guide__version {
+  margin: 0;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---------- Convert (Phase 5: home + files stages) ---------- */
 
 .ds-stack {
