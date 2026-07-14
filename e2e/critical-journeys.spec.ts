@@ -1,5 +1,4 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
-import { readFile } from 'node:fs/promises'
 import { unzipSync } from 'fflate'
 
 const CSV_SCHEMA = [
@@ -253,13 +252,37 @@ test('critical journey: answer-key PDF → review → named export → History r
   await page.getByRole('button', { name: 'Confirm answer (Enter)' }).click()
   await expect(page.getByText('All flags resolved. Your answers are in')).toBeVisible()
 
-  const downloadPromise = page.waitForEvent('download')
+  // Desktop export opens a Save-As picker. The native dialog cannot be
+  // automated, so stub it to capture what gets written to the picked file —
+  // everything up to that call (button → exporter → browser-fs-access) is real.
+  await page.evaluate(() => {
+    const capture = { name: '', chunks: [] as number[][] }
+    ;(window as unknown as Record<string, unknown>).__savedFile = capture
+    ;(window as unknown as Record<string, unknown>).showSaveFilePicker = async (
+      options?: { suggestedName?: string },
+    ) => {
+      capture.name = options?.suggestedName ?? ''
+      return {
+        createWritable: async () =>
+          new WritableStream({
+            write(chunk: Uint8Array) {
+              capture.chunks.push([...chunk])
+            },
+          }),
+      }
+    }
+  })
   await page.getByRole('button', { name: 'Export bundle' }).click()
-  const download = await downloadPromise
-  expect(download.suggestedFilename()).toBe('Critical Exam Cx.zip')
-  const downloadPath = await download.path()
-  expect(downloadPath).not.toBeNull()
-  const zipped = unzipSync(new Uint8Array(await readFile(downloadPath!)))
+  await expect(page.getByText(/lives safely outside Codox/)).toBeVisible()
+  const savedFile = await page.evaluate(
+    () =>
+      (window as unknown as Record<string, unknown>).__savedFile as {
+        name: string
+        chunks: number[][]
+      },
+  )
+  expect(savedFile.name).toBe('Critical Exam Cx.zip')
+  const zipped = unzipSync(new Uint8Array(savedFile.chunks.flat()))
   const csvPath = 'Critical Exam Cx/Critical Exam Cx.csv'
   expect(Object.keys(zipped)).toContain(csvPath)
   const csv = new TextDecoder().decode(zipped[csvPath]).replace(/^\uFEFF/, '')
