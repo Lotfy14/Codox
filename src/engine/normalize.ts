@@ -32,16 +32,66 @@ export interface NormalizedOptions {
 const LEADING_QUESTION_LABEL = /^\s*(?:q(?:uestion)?\s*)?\d{1,3}\s*[.):\-–—]\s+/i
 
 /**
- * Strips that leading label from a question prompt. Shape-based on purpose:
- * with per-page reading-order indexing the recorded printed number is not a
- * trustworthy anchor (it may itself be misread), so this does NOT require the
- * prefix to equal any recorded label — it removes whatever enumeration marker
- * the worker transcribed. If stripping would empty the prompt, the original
- * is kept so the empty-question guard sees the real (non-empty) text.
+ * Strips that leading label from a question prompt or case stem. Shape-based on
+ * purpose: with per-page reading-order indexing the recorded printed number is
+ * not a trustworthy anchor (it may itself be misread), so this does NOT require
+ * the prefix to equal any recorded label — it removes whatever enumeration
+ * marker the worker transcribed. Applied per-part at merge (the stem and the
+ * prompt are separate verbatim fields, §2.2). If stripping would empty the
+ * text, the original is kept so the empty-question guard sees the real text.
  */
 export function stripLeadingQuestionLabel(question: string): string {
   const stripped = question.replace(LEADING_QUESTION_LABEL, '')
   return stripped.trim() === '' ? question : stripped
+}
+
+/**
+ * A GFM table separator row — pipes, dashes, optional colons and whitespace,
+ * nothing else ("|---|---|" or "| :--- | ---: |"). This is the one
+ * unambiguous marker that a run of pipe-bearing lines is a real table and not
+ * prose that merely contains a "|". Requiring it (plus a pipe-bearing header
+ * line directly above) is what keeps the stripper from eating a sentence.
+ */
+function isTableSeparatorRow(line: string): boolean {
+  const trimmed = line.trim()
+  return (
+    trimmed.includes('|') &&
+    trimmed.includes('-') &&
+    /^[|:\-\s]+$/.test(trimmed)
+  )
+}
+
+/** A table row is any non-blank line carrying a column pipe. */
+function isTableRow(line: string): boolean {
+  return line.trim() !== '' && line.includes('|')
+}
+
+/**
+ * Removes a GFM table block from an assembled question, keeping the prose
+ * around it. Only ever called for rows that already carry an `image_urls`
+ * asset (the caller's guard): the table has been captured as a figure crop
+ * that ships to Triviadox, so the linearized pipe-text in the stem is
+ * redundant noise on the card. When the row has NO image the caller keeps the
+ * text, because it is then the only copy of the table — NEVER-GUESS applies to
+ * deletion too, a lost table is worse than an ugly one.
+ *
+ * A block is a pipe-bearing header line, a separator row directly below it,
+ * and every contiguous pipe-bearing line after that. If stripping would empty
+ * the question (a stem that was nothing but a table), the original is kept so
+ * the empty-question guard sees real text rather than a blank card.
+ */
+export function stripTableBlock(question: string): string {
+  const lines = question.split('\n')
+  for (let i = 1; i < lines.length; i += 1) {
+    if (!isTableSeparatorRow(lines[i]) || !lines[i - 1].includes('|')) continue
+    const start = i - 1
+    let end = i
+    while (end + 1 < lines.length && isTableRow(lines[end + 1])) end += 1
+    const kept = [...lines.slice(0, start), ...lines.slice(end + 1)]
+    const result = kept.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+    return result === '' ? question : result
+  }
+  return question
 }
 
 interface LabelMatch {

@@ -232,6 +232,36 @@ describe('loadReviewData', () => {
     expect(data.reviewRows[0].box).not.toBeNull()
     expect(data.reviewRows[1].box).not.toBeNull()
   })
+
+  it('attaches linked figures to their rows from blueprint assets', async () => {
+    const withAssets: Pick<Blueprint, 'planned_rows' | 'assets'> = {
+      ...blueprint,
+      assets: [
+        {
+          asset_id: 'asset01',
+          kind: 'question_figure',
+          page: 2,
+          box_2d: [200, 100, 500, 800],
+          output_path: 'images/asset01.jpg',
+          linked_group_id: '',
+          linked_row_ids: ['2'],
+          anchor: '',
+        },
+      ],
+    }
+    const rows = [
+      makeRow({ id: '1', correct_index: '0', needs_review: '' }),
+      makeRow({ id: '2', image_urls: ['images/asset01.jpg'] }),
+    ]
+    await putArtifact({ runId: 'run-asset', kind: 'merged-rows', json: rows })
+    await putArtifact({ runId: 'run-asset', kind: 'blueprint-valid', json: withAssets })
+    const data = await loadReviewData('run-asset')
+    expect(data.reviewRows[0].figures).toEqual([])
+    // 1-based asset page becomes a 0-based figure page index.
+    expect(data.reviewRows[1].figures).toEqual([
+      { pageIndex: 1, box: [200, 100, 500, 800] },
+    ])
+  })
 })
 
 describe('effectiveAnswer', () => {
@@ -241,6 +271,7 @@ describe('effectiveAnswer', () => {
     category: null,
     pageIndex: null,
     box: null,
+    figures: [],
   }
 
   it('uses a valid resolution before the engine answer', () => {
@@ -261,6 +292,7 @@ describe('answerSource', () => {
     category: null,
     pageIndex: null,
     box: null,
+    figures: [],
   })
 
   it('uses extracted answer when no resolution', () => {

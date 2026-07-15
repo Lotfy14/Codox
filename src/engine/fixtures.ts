@@ -135,6 +135,7 @@ export function makeWorkerRow(
     topic: planned.topic,
     subtopic: planned.subtopic,
     year: planned.year,
+    case_stem: '',
     question: `Question ${planned.id}?`,
     options: ['Alpha', 'Beta', 'Gamma', 'Delta'],
     correct_index: '',

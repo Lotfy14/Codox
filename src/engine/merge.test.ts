@@ -10,6 +10,7 @@ import {
   makeChunkResponse,
   makeEvidenceBlueprint,
   makePlannedRow,
+  makeRegion,
   makeWorkerRow,
 } from './fixtures'
 import type { AnswerPolicyType, Blueprint, WorkerRow } from './types'
@@ -293,6 +294,93 @@ describe('merge ownership', () => {
     const result = mergeRows(blueprint, rows)
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.errors.join(' ')).toContain('"99" is not in the blueprint')
+  })
+})
+
+describe('deterministic question assembly (§2.2)', () => {
+  function caseRow(id: string) {
+    return makePlannedRow(id, {
+      question_assembly: {
+        mode: 'case_stem_plus_question_prompt',
+        final_format: '{case_stem}\n\n{question_prompt}',
+      },
+      regions: {
+        case_stem: makeRegion(),
+        question_prompt: makeRegion(),
+        options: makeRegion(),
+        answer_evidence: null,
+      },
+    })
+  }
+
+  it('strips both printed numbers and joins stem + prompt with a blank line', () => {
+    const blueprint = makeBlueprint({ planned_rows: [caseRow('1')] })
+    const result = mergeRows(blueprint, [
+      makeWorkerRow(blueprint.planned_rows[0], {
+        case_stem: '16- A 45-year-old man presents',
+        question: '17- What is the next step?',
+      }),
+    ])
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.rows[0].question).toBe(
+        'A 45-year-old man presents\n\nWhat is the next step?',
+      )
+    }
+  })
+
+  it('keeps a printed case identity ("Case 10 …") in the stem', () => {
+    const blueprint = makeBlueprint({ planned_rows: [caseRow('1')] })
+    const result = mergeRows(blueprint, [
+      makeWorkerRow(blueprint.planned_rows[0], {
+        case_stem: 'Case 10 A 4 months-old infant presented',
+        question: '19) The most likely diagnosis is',
+      }),
+    ])
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.rows[0].question).toBe(
+        'Case 10 A 4 months-old infant presented\n\nThe most likely diagnosis is',
+      )
+    }
+  })
+
+  it('degrades to the prompt alone when a case row has no stem', () => {
+    const blueprint = makeBlueprint({ planned_rows: [caseRow('1')] })
+    const result = mergeRows(blueprint, [
+      makeWorkerRow(blueprint.planned_rows[0], {
+        case_stem: '',
+        question: 'Standalone prompt with no stem?',
+      }),
+    ])
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.rows[0].question).toBe('Standalone prompt with no stem?')
+    }
+  })
+
+  it('assembles a legacy-format checkpoint into its original labelled shape', () => {
+    // A pre-change blueprint still carries the old final_format; substitution
+    // reproduces the labelled output so resumed old runs are unchanged.
+    const blueprint = makeBlueprint({
+      planned_rows: [
+        caseRow('1'),
+      ],
+    })
+    blueprint.planned_rows[0].question_assembly.final_format =
+      'Case stem: {case_stem}\nQuestion: {question_prompt}'
+    const result = mergeRows(blueprint, [
+      makeWorkerRow(blueprint.planned_rows[0], {
+        case_stem: 'A shared stem',
+        question: 'The prompt?',
+      }),
+    ])
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.rows[0].question).toBe(
+        'Case stem: A shared stem\nQuestion: The prompt?',
+      )
+    }
   })
 })
 

@@ -447,6 +447,20 @@ Rules:
 
 ### 2.2 Worker prompt
 
+*Worker output split + code-owned assembly (owner-approved 2026-07-15):* the
+worker no longer assembles the `question` string. It transcribes the shared
+case stem and the individual prompt into two separate verbatim fields
+(`case_stem`, `question`); deterministic code strips the printed
+question/stem numbers and assembles the final text. This moves formatting off
+the weakest model and onto code (per CLAUDE.md "code owns all formatting"), and
+lets the case format change without a prompt edit. The assembled format itself
+changed from `Case stem: {case_stem}\nQuestion: {question_prompt}` to
+`{case_stem}\n\n{question_prompt}` — the printed case identity in the stem text
+(e.g. "Case 10 …") is kept, the `Case stem:`/`Question:` labels are dropped, and
+a blank line separates the two. §1.10 / §2.1's `final_format` string and the
+blueprint validation are updated to match; the legacy `Case stem:` format is
+still accepted on input so pre-change checkpoints resume unchanged.
+
 ```text
 You are the WORKER for an exam-to-CSV pipeline.
 
@@ -474,6 +488,7 @@ Output:
       "topic": "",
       "subtopic": "",
       "year": "",
+      "case_stem": "",
       "question": "",
       "options": [],
       "correct_index": "",
@@ -494,10 +509,13 @@ Rules:
   code removes enumeration labels deterministically.
 - Preserve option order exactly.
 - If a small local text span is illegible, write [unclear] only for that span.
-- For case_stem_plus_question_prompt rows, assemble question exactly as:
-  Case stem: <shared stem text>
-  Question: <individual prompt text>
-- For plain_question_prompt rows, use only the individual prompt text.
+- For case_stem_plus_question_prompt rows, transcribe the shared case stem
+  verbatim into case_stem and the individual question prompt verbatim into
+  question. Do not merge the two, add "Case stem:" or "Question:" labels, or
+  repeat the stem inside question. Downstream code strips labels and assembles
+  the final text.
+- For plain_question_prompt rows, leave case_stem empty ("") and put only the
+  individual prompt text in question.
 - Exclude page furniture such as headers, footers, watermarks, page numbers, and
   general instructions unless the planner region explicitly includes them as
   part of a question.

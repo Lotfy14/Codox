@@ -9,6 +9,7 @@
  *   worker response.
  */
 import { isRecord, isStringArray, parseModelJson } from './json'
+import { stripLeadingQuestionLabel } from './normalize'
 import {
   EVIDENCE_POLICY_TYPES,
   type Blueprint,
@@ -82,6 +83,11 @@ export function validateWorkerChunk(
     if (typeof raw.question !== 'string') {
       errors.push(`row "${planned.id}": "question" must be a string`)
     }
+    // case_stem is tolerated as absent: standalone rows omit it, and a
+    // pre-change checkpoint (which had no field) narrows to '' unharmed.
+    if (raw.case_stem !== undefined && typeof raw.case_stem !== 'string') {
+      errors.push(`row "${planned.id}": "case_stem" must be a string`)
+    }
     if (!isStringArray(raw.options)) {
       errors.push(`row "${planned.id}": "options" must be an array of strings`)
     }
@@ -98,6 +104,7 @@ export function validateWorkerChunk(
       topic: planned.topic,
       subtopic: planned.subtopic,
       year: planned.year,
+      case_stem: typeof raw.case_stem === 'string' ? raw.case_stem : '',
       question: raw.question as string,
       options: raw.options as string[],
       correct_index: String(correctIndex ?? ''),
@@ -108,6 +115,26 @@ export function validateWorkerChunk(
   }
 
   return errors.length > 0 ? { ok: false, errors } : { ok: true, rows }
+}
+
+/**
+ * Deterministic question assembly (owner-approved 2026-07-15, §2.2): the
+ * worker now hands us the shared stem and the individual prompt as two
+ * verbatim fields. Code — not the weakest model — strips each part's printed
+ * number and fills the blueprint's code-owned `final_format` template. A
+ * case-mode row whose stem came back empty degrades to the prompt alone
+ * rather than emitting a dangling "\n\n" header.
+ */
+function assembleQuestion(planned: PlannedRow, worker: WorkerRow): string {
+  const prompt = stripLeadingQuestionLabel(worker.question)
+  const template = planned.question_assembly.final_format
+  const wantsCase = template.includes('{case_stem}')
+  if (!wantsCase) return prompt
+  const stem = stripLeadingQuestionLabel(worker.case_stem)
+  if (stem.trim() === '') return prompt
+  return template
+    .replace('{case_stem}', stem)
+    .replace('{question_prompt}', prompt)
 }
 
 /** True when the per-row planner policy forces a blank answer (§1.5). */
@@ -211,7 +238,7 @@ export function mergeRows(
       topic: planned.topic,
       subtopic: planned.subtopic,
       year: planned.year,
-      question: worker.question,
+      question: assembleQuestion(planned, worker),
       options: [...worker.options],
       correct_index: forced.correct_index,
       // The worker's needs_review was discarded during chunk narrowing;

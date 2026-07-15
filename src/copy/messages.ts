@@ -352,6 +352,10 @@ export const reviewMessages = {
   sourceUnavailableLabel: 'Source unavailable',
   sourceAlt: (questionNumber: number) =>
     `Scanned source for question ${questionNumber}`,
+  figureAlt: (questionNumber: number, figureNumber: number) =>
+    `Figure ${figureNumber} linked to question ${questionNumber}`,
+  figureCaption: (figureNumber: number, total: number) =>
+    total === 1 ? 'Linked figure' : `Linked figure ${figureNumber} of ${total}`,
   pageCaption: (page: number, fileName: string, wholePage: boolean) =>
     `Page ${page} · ${fileName}${wholePage ? ' · whole page' : ''}`,
   reviewHeading: (fileName: string) => `Review · ${fileName}`,

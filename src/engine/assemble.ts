@@ -4,7 +4,11 @@ import type { ReconciledIndex } from './enumerate'
 import type { BoxResult, EvidenceMap } from './index-pass'
 
 const PLAIN_FORMAT = '{question_prompt}'
-const CASE_FORMAT = 'Case stem: {case_stem}\nQuestion: {question_prompt}'
+// Owner-approved 2026-07-15 (CODOX_MIGRATION §2.2): the printed case identity
+// stays in the stem text ("Case 10 …"), no "Case stem:"/"Question:" labels, a
+// blank line between stem and prompt. Deterministic code — not the worker —
+// now assembles this from the two verbatim fields.
+const CASE_FORMAT = '{case_stem}\n\n{question_prompt}'
 
 export interface AssembleInput {
   index: ReconciledIndex

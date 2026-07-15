@@ -98,6 +98,22 @@ reconciles identities and assembles the pinned Blueprint. Evidence and figures
 are observed separately, and an unresolved page is a visible non-fatal planning
 issue rather than a reason to discard clean rows.
 
+*Worker output split + code-owned assembly (owner-approved 2026-07-15):* the
+worker no longer assembles the `question` string. It returns the shared case
+stem and the individual prompt as two separate verbatim fields (`case_stem`,
+`question`); deterministic code (`merge.ts`) strips each part's printed number
+and fills the code-owned `final_format`. This honors "code owns all formatting"
+(the worker is the weakest model) and lets the case format change without
+touching a prompt. The assembled format itself changed from
+`Case stem: {case_stem}\nQuestion: {question_prompt}` to
+`{case_stem}\n\n{question_prompt}` — the printed case identity in the stem
+("Case 10 …") is kept, the `Case stem:`/`Question:` labels are dropped, and a
+blank line separates the two. This edited the pinned WORKER prompt (new SHA in
+`PROMPT_SHA256.worker`) and CODOX_MIGRATION §2.2; the legacy format is still
+accepted on blueprint input so pre-change checkpoints resume unchanged. **Open:
+the external gold gate's case-stem rows must be regenerated to the new format
+before the appendicitis 127/127 comparison is meaningful again.**
+
 *Export projection (owner-approved 2026-07-14):* exported CSVs are a
 column projection of the pinned format (`src/export/export-csv.ts`,
 CODOX_MIGRATION §3.1): `id`/`group_id` never leave the device;

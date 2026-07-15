@@ -16,9 +16,11 @@ import {
   type Region,
 } from './types'
 
-/** §1.10's exact per-mode formats, as the planner prompt pins them. */
+/** §1.10's exact per-mode formats. CASE_FORMAT changed 2026-07-15 (§2.2); the
+ * pre-change format is still accepted on input so old checkpoints resume. */
 const PLAIN_FORMAT = '{question_prompt}'
-const CASE_FORMAT = 'Case stem: {case_stem}\nQuestion: {question_prompt}'
+const CASE_FORMAT = '{case_stem}\n\n{question_prompt}'
+const LEGACY_CASE_FORMAT = 'Case stem: {case_stem}\nQuestion: {question_prompt}'
 
 export type BlueprintValidation =
   | { ok: true; blueprint: Blueprint }
@@ -134,9 +136,12 @@ function narrowRow(
   } else {
     mode = assembly.mode
     finalFormat = assembly.final_format
-    const expected = mode === 'plain_question_prompt' ? PLAIN_FORMAT : CASE_FORMAT
-    if (finalFormat !== expected) {
-      errors.push(`${where}: final_format must be ${JSON.stringify(expected)} for mode ${mode}`)
+    const accepted =
+      mode === 'plain_question_prompt'
+        ? [PLAIN_FORMAT]
+        : [CASE_FORMAT, LEGACY_CASE_FORMAT]
+    if (!accepted.includes(finalFormat)) {
+      errors.push(`${where}: final_format must be ${JSON.stringify(accepted[0])} for mode ${mode}`)
     }
   }
 

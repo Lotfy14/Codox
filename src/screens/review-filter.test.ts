@@ -32,6 +32,7 @@ function makeReviewRow(
     category: flagged ? 'blank-answer' : null,
     pageIndex: null,
     box: null,
+    figures: [],
   }
 }
 

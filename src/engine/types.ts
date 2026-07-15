@@ -154,6 +154,10 @@ export interface WorkerRow {
   topic: string
   subtopic: string
   year: string
+  /** Verbatim shared case stem, or '' for a standalone row. Code (not the
+   * worker) strips its printed number and assembles it with `question`. */
+  case_stem: string
+  /** Verbatim individual prompt only — no case stem, no labels (§2.2). */
   question: string
   options: string[]
   correct_index: string

@@ -18,6 +18,14 @@ export type FlagCategory =
   | 'length-mismatch'
   | 'low-confidence'
 
+/** A figure the planner linked to this question (its own page + box). */
+export interface ReviewFigure {
+  /** 0-based page index of the figure's source region. */
+  pageIndex: number
+  /** The figure's region on that page (normalized 0–1000). */
+  box: Box2d
+}
+
 export interface ReviewRow {
   row: MergedRow
   /** 1-based position among the run's rows — the tutor's question number. */
@@ -27,6 +35,8 @@ export interface ReviewRow {
   pageIndex: number | null
   /** Union of the row's regions on that page (normalized 0–1000), padded. */
   box: Box2d | null
+  /** Figures the planner linked to this row, in blueprint order. */
+  figures: readonly ReviewFigure[]
 }
 
 export interface ReviewData {
@@ -113,6 +123,16 @@ export async function loadReviewData(runId: string): Promise<ReviewData> {
   const plannedRows = new Map(
     (blueprint?.planned_rows ?? []).map((row) => [row.id, row]),
   )
+  const figuresByRow = new Map<string, ReviewFigure[]>()
+  for (const asset of blueprint?.assets ?? []) {
+    if (asset.page < 1) continue
+    const figure: ReviewFigure = { pageIndex: asset.page - 1, box: asset.box_2d }
+    for (const rowId of asset.linked_row_ids) {
+      const list = figuresByRow.get(rowId)
+      if (list === undefined) figuresByRow.set(rowId, [figure])
+      else list.push(figure)
+    }
+  }
   const reviewRows = rows.map((row, index) => {
     const { pageIndex, box } = sourceRegion(plannedRows, row.id)
     return {
@@ -123,6 +143,7 @@ export async function loadReviewData(runId: string): Promise<ReviewData> {
         : null,
       pageIndex,
       box: box,
+      figures: figuresByRow.get(row.id) ?? [],
     }
   })
   return { rows, reviewRows }

@@ -69,7 +69,7 @@ import {
 import { boxToCropBox, hasPositiveExtent } from './boxes'
 import { emitCsv } from './csv'
 import { mergeRows, validateWorkerChunk } from './merge'
-import { stripEnumerationLabels, stripLeadingQuestionLabel } from './normalize'
+import { stripEnumerationLabels, stripTableBlock } from './normalize'
 import { parseAuditReport, validateFinalRows } from './validate'
 import type {
   Blueprint,
@@ -908,9 +908,16 @@ export async function executeRun(
 
     const rows: MergedRow[] = merged.rows.map((row) => {
       const normalized = stripEnumerationLabels(row.options)
-      // Drop the printed question number the worker transcribed verbatim
-      // ("18– A 49yo…" → "A 49yo…"); shape-based, not label-matched.
-      const question = stripLeadingQuestionLabel(row.question)
+      // `question` was assembled and label-stripped deterministically at merge
+      // (case_stem + prompt, §2.2). When the row carries a figure crop that
+      // actually rendered, drop a linearized GFM table from the stem: the table
+      // ships as the image asset, so the pipe-text is redundant noise on the
+      // Triviadox card. Guarded on a *produced* crop — a planned-but-failed crop
+      // (path present, bytes missing) must NOT trigger deletion, or the card
+      // loses the table entirely. With no working image the text is the table's
+      // only copy and is kept (NEVER-GUESS covers deletion too).
+      const hasCrop = row.image_urls.some((path) => producedCrops.has(path))
+      const question = hasCrop ? stripTableBlock(row.question) : row.question
       // A row whose prompt read back empty is flagged, never a silent blank
       // card: BOX failed on that page and the whole-page fallback yielded no
       // text. NEVER-GUESS — a flag pointing at the page beats an empty row.

@@ -154,6 +154,15 @@ export function ReviewDetail({
     )
   }
 
+  const figureCrops = source.figures.map((url, index) => (
+    <figure className="review-paper review-paper--figure" key={url}>
+      <figcaption className="review-paper__label">
+        {reviewMessages.figureCaption(index + 1, source.figures.length)}
+      </figcaption>
+      <img alt={reviewMessages.figureAlt(reviewRow.questionNumber, index + 1)} src={url} />
+    </figure>
+  ))
+
   return (
     <section aria-labelledby="review-heading" className="review">
       <h2 className="ds-visually-hidden" id="review-heading">
@@ -186,6 +195,7 @@ export function ReviewDetail({
               {wholePage ? reviewMessages.questionArea : reviewMessages.wholePage}
             </Button>
           ) : null}
+          {figureCrops}
         </section>
 
         <section
@@ -214,6 +224,9 @@ export function ReviewDetail({
                 <img alt={reviewMessages.sourceAlt(reviewRow.questionNumber)} src={imageUrl} />
               </figure>
             </button>
+          ) : null}
+          {figureCrops.length > 0 ? (
+            <div className="review__mobile-figures">{figureCrops}</div>
           ) : null}
           <div aria-label={reviewMessages.pickAnswer} className="review__options" role="radiogroup">
             {reviewRow.row.options.map((option, index) => (
