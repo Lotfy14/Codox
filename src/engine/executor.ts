@@ -30,6 +30,7 @@ import {
   recordRequestUsage,
   updateRun,
 } from '../state/runs'
+import { logEvent } from '../state/diagnostics'
 import type { RunArtifact } from '../state/types'
 import {
   buildAuditRequest,
@@ -144,6 +145,12 @@ async function call(
   })
   if (!result.ok) {
     await recordRequestUsage(runId)
+    if (result.kind !== 'aborted') {
+      await logEvent({
+        scope: 'provider', level: 'error', event: 'provider.error', runId,
+        reason: result.kind, detail: result.code === undefined ? undefined : { code: result.code },
+      })
+    }
     throw new ProviderStop(
       result.kind === 'wrong-key'
         ? 'wrong-key'
@@ -159,6 +166,7 @@ async function call(
 
 async function stop(runId: string, step: RunStep, reason: StopReason): Promise<RunOutcome> {
   await updateRun(runId, { status: 'stopped', step, stopReason: reason })
+  await logEvent({ scope: 'engine', level: 'error', event: 'engine.stop', runId, reason, detail: { step } })
   return { status: 'stopped', runId, reason }
 }
 
@@ -533,6 +541,12 @@ async function stepPlanAndValidate(
   }
   const reconciled = reconcileIndexWindows(indexed)
   issues.push(...reconciled.issues)
+  await logEvent({
+    scope: 'engine',
+    level: reconciled.questions.length === 0 ? 'error' : 'info',
+    event: 'engine.index.reconciled', runId,
+    detail: { questions: reconciled.questions.length, issues: reconciled.issues.length },
+  })
   if (reconciled.questions.length === 0) {
     // Makes existing interrupted runs and old test fixtures resumable; fresh
     // calls always use INDEX above.
@@ -581,7 +595,9 @@ async function stepPlanAndValidate(
     ), signal)
     const parsed = wasTruncated(response.finishReason) ? undefined : parseBoxResult(response.text)
     if (parsed === undefined || !parsed.ok) {
-      issues.push(...questions.map((row) => ({ kind: 'unreadable_page' as const, page, rowRef: row.ref })))
+      const reason = parsed === undefined ? 'BOX response was truncated' : parsed.errors.join('; ')
+      await logEvent({ scope: 'engine', level: 'warn', event: 'engine.box.page.fail', runId, page, reason, detail: { rawResponse: response.text } })
+      issues.push(...questions.map((row) => ({ kind: 'unreadable_page' as const, page, rowRef: row.ref, reason })))
       continue
     }
     const onPage = <T extends { page: number }>(value: T): T => ({ ...value, page })
@@ -598,6 +614,10 @@ async function stepPlanAndValidate(
   await putArtifact({ runId, kind: 'index-reconcile', json: { ...reconciled, issues } })
   await putArtifact({ runId, kind: 'blueprint-valid', json: blueprint })
   await updateRun(runId, { planningIssues: issues.length === 0 ? undefined : issues })
+  await logEvent({
+    scope: 'engine', level: issues.length === 0 ? 'info' : 'warn', event: 'engine.blueprint', runId,
+    detail: { rows: blueprint.planned_rows.length, planningIssues: issues.length },
+  })
   return { ok: true, blueprint }
 }
 
@@ -786,6 +806,9 @@ export async function executeRun(
     await updateRun(runId, { step: 'crops' })
     const { producedCrops, cropFailures } = await stepCrops(runId, blueprint)
     let notSafeToImport = cropFailures.length > 0 || ((await getRun(runId))?.planningIssues?.length ?? 0) > 0
+    if (cropFailures.length > 0) {
+      await logEvent({ scope: 'engine', level: 'warn', event: 'engine.crops.failed', runId, detail: { count: cropFailures.length } })
+    }
 
     // 5 — chunked worker calls
     await updateRun(runId, { step: 'worker' })
@@ -872,6 +895,11 @@ export async function executeRun(
       })
     }
 
+    await logEvent({
+      scope: 'engine', level: auditUnavailable || notSafeToImport ? 'warn' : 'info', event: 'engine.audit', runId,
+      detail: { auditUnavailable, notSafeToImport },
+    })
+
     const flaggedRows = rows.filter((row) => row.needs_review !== '').length
     await updateRun(runId, {
       status: 'done',
@@ -879,6 +907,10 @@ export async function executeRun(
       notSafeToImport,
       auditUnavailable,
       flaggedRows,
+    })
+    await logEvent({
+      scope: 'engine', level: notSafeToImport ? 'warn' : 'info', event: 'engine.done', runId,
+      detail: { rows: rows.length, flaggedRows, notSafeToImport },
     })
     return { status: 'done', runId, csv, flaggedRows, notSafeToImport }
   } catch (error) {
@@ -894,8 +926,10 @@ export async function executeRun(
         stopReason: error.code ?? error.kind,
         step: (run?.step ?? 'planner') as RunStep,
       })
+      await logEvent({ scope: 'engine', level: 'error', event: 'engine.provider_stopped', runId, reason: error.code ?? error.kind })
       return { status: 'provider-stopped', runId, kind: error.kind }
     }
+    await logEvent({ scope: 'engine', level: 'error', event: 'engine.exception', runId, reason: error instanceof Error ? error.message : String(error) })
     throw error
   }
 }

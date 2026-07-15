@@ -10,6 +10,7 @@ import {
 
 beforeEach(async () => {
   await db.credentials.clear()
+  await db.logs.clear()
 })
 
 describe('the singleton Gemini credential', () => {
@@ -46,6 +47,15 @@ describe('the singleton Gemini credential', () => {
     const credential = await getGeminiCredential()
     expect(credential?.lastValidation?.status).toBe('quota-paused')
     expect(credential?.lastValidation?.checkedAt).toBeTypeOf('number')
+  })
+
+  it('writes a diagnostics log entry when a key validation is recorded', async () => {
+    await saveGeminiKey('first-key')
+    await recordKeyValidation('working')
+    const logs = await db.logs.toArray()
+    expect(logs).toHaveLength(1)
+    expect(logs[0].scope).toBe('key')
+    expect(logs[0].reason).toBe('working')
   })
 
   it('never grows beyond one record no matter how often keys are saved', async () => {

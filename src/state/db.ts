@@ -2,6 +2,7 @@ import Dexie, { type Table } from 'dexie'
 import type {
   GeminiCredential,
   JobState,
+  LogEvent,
   RunArtifact,
   RunState,
   StoredPdf,
@@ -19,6 +20,7 @@ export class CodoxDatabase extends Dexie {
   files!: Table<StoredPdf, string>
   runs!: Table<RunState, string>
   runArtifacts!: Table<RunArtifact, string>
+  logs!: Table<LogEvent, number>
 
   constructor() {
     super('codox')
@@ -55,6 +57,16 @@ export class CodoxDatabase extends Dexie {
       files: 'id, jobId',
       runs: 'id, jobId, pdfId',
       runArtifacts: 'id, runId, [runId+kind], [runId+kind+pageIndex]',
+    })
+    // Phase 7: the on-device diagnostics log. Additive only.
+    this.version(6).stores({
+      jobs: 'id',
+      meta: 'key',
+      credentials: 'id',
+      files: 'id, jobId',
+      runs: 'id, jobId, pdfId',
+      runArtifacts: 'id, runId, [runId+kind], [runId+kind+pageIndex]',
+      logs: '++seq, t, scope, runId',
     })
   }
 }

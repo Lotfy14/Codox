@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from './db'
+import { logEvent } from './diagnostics'
 import type { GeminiCredential, KeyValidationStatus } from './types'
 
 /**
@@ -37,6 +38,12 @@ export async function recordKeyValidation(
 ): Promise<void> {
   await db.credentials.update(GEMINI_CREDENTIAL_ID, {
     lastValidation: { status, checkedAt: Date.now() },
+  })
+  await logEvent({
+    scope: 'key',
+    level: status === 'working' ? 'info' : status === 'quota-paused' ? 'warn' : 'error',
+    event: 'key.validation',
+    reason: status,
   })
 }
 

@@ -106,6 +106,20 @@ export interface PlanningIssue {
   section?: string
   printedLabel?: string
   rowRef?: string
+  reason?: string
+}
+
+export interface LogEvent {
+  seq?: number
+  t: number
+  level: 'info' | 'warn' | 'error'
+  scope: 'key' | 'provider' | 'engine' | 'export' | 'app'
+  event: string
+  runId?: string
+  page?: number
+  ref?: string
+  reason?: string
+  detail?: Record<string, unknown>
 }
 
 
