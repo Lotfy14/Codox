@@ -729,11 +729,13 @@ function DoneStage({
   const heading =
     done.length === 0
       ? convertMessages.stoppedHeading
-      : remaining > 0
-        ? progressMessages.finishedWithFlags(remaining)
-        : hadFlags
-          ? reviewMessages.allResolved
-          : progressMessages.finishedClean
+      : planningIssueCount > 0
+        ? progressMessages.finishedIncomplete
+        : remaining > 0
+          ? progressMessages.finishedWithFlags(remaining)
+          : hadFlags
+            ? reviewMessages.allResolved
+            : progressMessages.finishedClean
 
   return (
     <div className="ds-stack">

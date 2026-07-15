@@ -56,7 +56,11 @@ export const progressMessages = {
   finishedWithFlags: (flagCount: number) =>
     `Done. ${flagCount} answer${flagCount === 1 ? '' : 's'} need${flagCount === 1 ? 's' : ''} your eyes — everything else is ready.`,
   finishedClean: 'Done. Every answer was read cleanly.',
-  planningIssue: (count: number) => 'This bundle may be incomplete: Codox could not verify ' + count + ' question' + (count === 1 ? '' : 's') + ' or source area' + (count === 1 ? '' : 's') + '. Successful questions are included and the bundle is marked unsafe to import.',
+  finishedIncomplete: 'Done — but some questions couldn’t be included.',
+  planningIssue: (count: number) =>
+    'Codox couldn’t locate ' + count + ' question' + (count === 1 ? '' : 's') +
+    ' on the page, so ' + (count === 1 ? 'it was' : 'they were') + ' left out. ' +
+    'Only the questions it could read are in this bundle — check the original before importing.',
 } as const
 
 export const uploadMessages = {
