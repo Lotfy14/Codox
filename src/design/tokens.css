@@ -58,6 +58,16 @@
   --work-max-width: none;
   --stage-padding: 0.5rem;
 
+  /* Safe-area insets (notch / camera / gesture bar). On Android the WebView's
+     own env(safe-area-inset-*) is unreliable (Chromium <140 reports 0), so
+     Capacitor's SystemBars plugin injects the real values as
+     --safe-area-inset-* on the root. Read those first, fall back to env() for
+     iOS/web PWA where env() already works, then to 0. */
+  --safe-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --safe-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+  --safe-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  --safe-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+
   /* Interaction and motion */
   --touch-target-min: 2.75rem;
   --focus-ring-width: 3px;

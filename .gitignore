@@ -29,6 +29,11 @@ scripts/out/
 playwright-report/
 test-results/
 
+# Local conversion run artifacts and scratch (never committed)
+input/
+output/
+scratch/
+
 # wrangler files
 .wrangler
 .dev.vars*

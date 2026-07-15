@@ -1404,9 +1404,9 @@
 .ds-mobile-nav {
   position: fixed;
   z-index: 20;
-  right: max(var(--space-4), env(safe-area-inset-right, 0px));
-  bottom: max(var(--space-3), env(safe-area-inset-bottom, 0px));
-  left: max(var(--space-4), env(safe-area-inset-left, 0px));
+  right: max(var(--space-4), var(--safe-right));
+  bottom: max(var(--space-3), var(--safe-bottom));
+  left: max(var(--space-4), var(--safe-left));
 }
 
 /* ---------- Key section (API panel + first run) ---------- */
@@ -2126,6 +2126,16 @@
   max-height: 70vh;
 }
 
+.review__mobile-figures {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.review-paper--figure img {
+  max-height: min(40vh, 20rem);
+}
+
 .review__question--tick {
   animation: review-tick var(--motion-duration-slow) var(--motion-ease-emphasized);
 }
@@ -2328,7 +2338,8 @@
     top: var(--space-4);
   }
 
-  .review__mobile-source {
+  .review__mobile-source,
+  .review__mobile-figures {
     display: none;
   }
 }
@@ -2418,7 +2429,7 @@
    Convert / History / API / Help. */
 @media (max-width: 63.999rem) {
   .ds-stage {
-    padding: 0 0 calc(4.75rem + env(safe-area-inset-bottom, 0px));
+    padding: 0 0 calc(4.75rem + var(--safe-bottom));
     background: var(--color-frame);
   }
 
@@ -2429,7 +2440,7 @@
   .api-coachmark {
     top: auto;
     right: var(--space-4);
-    bottom: calc(6.75rem + env(safe-area-inset-bottom, 0px));
+    bottom: calc(6.75rem + var(--safe-bottom));
     left: var(--space-4);
     width: auto;
     max-width: 27rem;
@@ -2450,7 +2461,7 @@
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto 1fr auto;
     gap: 0;
-    min-height: calc(100dvh - 4.75rem - env(safe-area-inset-bottom, 0px));
+    min-height: calc(100dvh - 4.75rem - var(--safe-bottom));
     border: 0;
     border-radius: 0;
     padding: 0;
@@ -2480,7 +2491,7 @@
     border: 0;
     border-bottom: 1px solid var(--color-outline);
     border-radius: 0;
-    padding: max(var(--space-3), env(safe-area-inset-top, 0px)) var(--space-4) var(--space-3);
+    padding: max(var(--space-3), var(--safe-top)) var(--space-4) var(--space-3);
     background: color-mix(in srgb, var(--color-frame) 94%, transparent);
     box-shadow: none;
   }
@@ -2535,7 +2546,7 @@
     gap: 0;
     border-width: 1px 0 0;
     border-radius: var(--radius-card) var(--radius-card) 0 0;
-    padding: var(--space-1) var(--space-2) max(var(--space-1), env(safe-area-inset-bottom, 0px));
+    padding: var(--space-1) var(--space-2) max(var(--space-1), var(--safe-bottom));
     background: color-mix(in srgb, var(--color-card-fill) 94%, transparent);
     box-shadow: 0 -12px 30px -24px rgb(0 0 0 / 55%);
     backdrop-filter: blur(18px);
@@ -2639,16 +2650,16 @@
 
   .ds-dialog__overlay--drawer .ds-dialog__modal {
     width: 100%;
-    max-height: calc(100dvh - env(safe-area-inset-top, 0px));
+    max-height: calc(100dvh - var(--safe-top));
     overflow: visible;
   }
 
   .ds-dialog--drawer {
     position: relative;
-    max-height: calc(100dvh - max(3rem, env(safe-area-inset-top, 0px)));
+    max-height: calc(100dvh - max(3rem, var(--safe-top)));
     overflow: auto;
     border-radius: var(--radius-card) var(--radius-card) 0 0;
-    padding: var(--space-8) var(--space-4) max(var(--space-5), env(safe-area-inset-bottom, 0px));
+    padding: var(--space-8) var(--space-4) max(var(--space-5), var(--safe-bottom));
     animation: ds-drawer-enter 320ms var(--motion-ease-emphasized) both;
     overscroll-behavior: contain;
   }
