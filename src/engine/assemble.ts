@@ -41,8 +41,15 @@ export function assembleBlueprint(input: AssembleInput): Blueprint {
   const rows: PlannedRow[] = []
   const refToId = new Map<string, string>()
   input.index.questions.forEach((question) => {
-    const geometry = boxed.get(question.ref)
-    if (geometry === undefined) return
+    const fallbackPage = question.sourcePages[0] ?? question.ownerPage
+    const wholePage: Region = { page: fallbackPage, box_2d: [0, 0, 1000, 1000] }
+    const geometry = boxed.get(question.ref) ?? {
+      ref: question.ref,
+      question: wholePage,
+      options: wholePage,
+      caseStem: question.caseStemKey !== null ? wholePage : null,
+      inlineEvidence: question.evidenceState === 'inline' ? wholePage : null,
+    }
     const id = labelsUnique ? question.printedLabel : String(rows.length + 1)
     refToId.set(question.ref, id)
     const keyEvidence = evidence.get(question.ref)

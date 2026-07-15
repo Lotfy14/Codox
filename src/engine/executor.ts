@@ -612,7 +612,7 @@ async function stepPlanAndValidate(
   const flaggedRefs = new Set(issues.flatMap((issue) => (issue.rowRef !== undefined ? [issue.rowRef] : [])))
   for (const question of reconciled.questions) {
     if (!boxedRefs.has(question.ref) && !flaggedRefs.has(question.ref)) {
-      issues.push({ kind: 'unreadable_page', page: question.ownerPage, rowRef: question.ref, reason: 'BOX returned no region for this question' })
+      issues.push({ kind: 'unreadable_page', page: question.ownerPage, rowRef: question.ref, reason: 'no box region — row recovered from the full page; verify' })
     }
   }
   const blueprint = rewriteAssetPaths(assembleBlueprint({ index: reconciled, boxes: allBoxes, evidence, pageCount: examPages.length }))

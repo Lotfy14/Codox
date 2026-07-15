@@ -126,7 +126,7 @@ describe('loadReviewData', () => {
   it('returns every row with question numbers and padded regions', async () => {
     const rows = [
       makeRow({ id: '1', correct_index: '0', needs_review: '' }),
-      makeRow({ id: '2' }),
+      makeRow({ id: '2', image_urls: ['images/asset01.jpg'] }),
     ]
     await putArtifact({ runId: 'run1', kind: 'merged-rows', json: rows })
     await putArtifact({ runId: 'run1', kind: 'blueprint-valid', json: blueprint })
@@ -160,13 +160,77 @@ describe('loadReviewData', () => {
   })
 
   it('keeps real source regions on unflagged rows', async () => {
-    const row = makeRow({ id: '2', correct_index: '0', needs_review: '' })
+    const row = makeRow({ id: '2', correct_index: '0', needs_review: '', image_urls: ['images/asset01.jpg'] })
     await putArtifact({ runId: 'run3', kind: 'merged-rows', json: [row] })
     await putArtifact({ runId: 'run3', kind: 'blueprint-valid', json: blueprint })
     const reviewRow = (await loadReviewData('run3')).reviewRows[0]
     expect(reviewRow.category).toBeNull()
     expect(reviewRow.pageIndex).toBe(1)
     expect(reviewRow.box).toEqual([70, 20, 530, 930])
+  })
+
+  it('shows crop box only for rows with attached figures', async () => {
+    const figBlueprint: Pick<Blueprint, 'planned_rows'> = {
+      planned_rows: [
+        {
+          id: '1',
+          group_id: '',
+          topic: '',
+          subtopic: '',
+          year: '',
+          question_assembly: {
+            mode: 'plain_question_prompt',
+            final_format: '{question_prompt}',
+          },
+          regions: {
+            case_stem: null,
+            question_prompt: { page: 1, box_2d: [100, 100, 400, 900] },
+            options: { page: 1, box_2d: [400, 100, 600, 900] },
+            answer_evidence: null,
+          },
+          image_urls: ['images/asset01.jpg'],
+          correct_index_policy: { type: 'blank_no_answer_key', value: '', needs_review: 'no_answer_key' },
+          worker_task: {
+            case_stem_required: false,
+            read_regions_only: false,
+            must_follow_planner_structure: true,
+          },
+        },
+        {
+          id: '2',
+          group_id: '',
+          topic: '',
+          subtopic: '',
+          year: '',
+          question_assembly: {
+            mode: 'plain_question_prompt',
+            final_format: '{question_prompt}',
+          },
+          regions: {
+            case_stem: null,
+            question_prompt: { page: 1, box_2d: [100, 100, 400, 900] },
+            options: { page: 1, box_2d: [400, 100, 600, 900] },
+            answer_evidence: null,
+          },
+          image_urls: [],
+          correct_index_policy: { type: 'blank_no_answer_key', value: '', needs_review: 'no_answer_key' },
+          worker_task: {
+            case_stem_required: false,
+            read_regions_only: false,
+            must_follow_planner_structure: true,
+          },
+        },
+      ],
+    }
+    const rows = [
+      makeRow({ id: '1', correct_index: '0', needs_review: '', image_urls: ['images/asset01.jpg'] }),
+      makeRow({ id: '2', correct_index: '0', needs_review: '' }),
+    ]
+    await putArtifact({ runId: 'run-fig', kind: 'merged-rows', json: rows })
+    await putArtifact({ runId: 'run-fig', kind: 'blueprint-valid', json: figBlueprint })
+    const data = await loadReviewData('run-fig')
+    expect(data.reviewRows[0].box).not.toBeNull()
+    expect(data.reviewRows[1].box).toBeNull()
   })
 })
 
