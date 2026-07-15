@@ -46,8 +46,9 @@ describe('resolveQuestionReferences', () => {
     await db.credentials.clear()
     await saveGeminiKey('local-key')
     runId = await createRun({
-      pdfName: 'test.pdf',
-      pdfSize: 12345,
+      jobId: 'test-job',
+      pdfId: 'test-pdf',
+      fileName: 'test.pdf',
       pageCount: 10,
     })
   })
