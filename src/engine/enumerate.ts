@@ -66,16 +66,57 @@ export function localizeIndexWindow(
  * as the row's display label. Completeness — a genuinely skipped question —
  * is the read-only audit's job, not something inferred from the numbering.
  */
+function isGenericAnchor(anchor: string): boolean {
+  const generic = [
+    'which',
+    'what',
+    'select',
+    'choose',
+    'according',
+    'refer',
+    'please',
+    'in the',
+    'the most',
+    'how',
+    'why',
+    'where',
+    'case stem',
+    'question',
+  ]
+  const norm = normalHint(anchor)
+  return norm.length < 12 || generic.some((g) => norm.startsWith(g))
+}
+
 export function reconcileIndexWindows(windows: readonly IndexWindow[]): ReconciledIndex {
   const questions: ReconciledQuestion[] = []
   const pagesByNumber = new Map<number, PageManifest>()
-  const seen = new Set<string>()
   for (const window of windows) {
     for (const page of window.pages) pagesByNumber.set(page.page, page)
     for (const question of window.questions) {
-      const key = question.ownerPage + '\u0000' + normalHint(question.anchor)
-      if (seen.has(key)) continue
-      seen.add(key)
+      const labelKey = question.printedLabel.trim()
+      if (labelKey !== '') {
+        const isDuplicate = questions.some((q) =>
+          q.printedLabel.trim() === labelKey &&
+          Math.abs(q.ownerPage - question.ownerPage) <= 1
+        )
+        if (isDuplicate) continue
+      }
+
+      const normAnchor = normalHint(question.anchor)
+      if (normAnchor !== '') {
+        const isDuplicateAnchor = questions.some((q) => {
+          const qNorm = normalHint(q.anchor)
+          const isPrefixMatch = qNorm.startsWith(normAnchor) || normAnchor.startsWith(qNorm)
+          return (
+            isPrefixMatch &&
+            Math.abs(q.ownerPage - question.ownerPage) <= 1 &&
+            !isGenericAnchor(q.anchor) &&
+            !isGenericAnchor(question.anchor)
+          )
+        })
+        if (isDuplicateAnchor) continue
+      }
+
       questions.push({ ...question, sectionKey: sectionKey(question) })
     }
   }

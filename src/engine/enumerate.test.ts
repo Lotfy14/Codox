@@ -70,4 +70,95 @@ describe('reconcileIndexWindows', () => {
     const result = reconcileIndexWindows(windows)
     expect(result.questions.map((r: ReconciledQuestion) => r.printedLabel)).toEqual(['8', '', '10'])
   })
+
+  it('does not deduplicate separate unnumbered questions on the same page with the same anchor', () => {
+    const windows: IndexWindow[] = [
+      {
+        questions: [
+          q('w0q0', '', 5, 'Which of the following'),
+          q('w0q1', '', 5, 'Which of the following'),
+        ],
+        pages: [],
+      },
+    ]
+    const result = reconcileIndexWindows(windows)
+    expect(result.questions.length).toBe(2)
+  })
+
+  it('deduplicates numbered questions across window boundaries if labels match and pages are close', () => {
+    const windows: IndexWindow[] = [
+      {
+        questions: [q('w0q0', '18', 10, 'Some anchor')],
+        pages: [],
+      },
+      {
+        questions: [q('w1q0', '18', 11, 'Some anchor')],
+        pages: [],
+      },
+    ]
+    const result = reconcileIndexWindows(windows)
+    expect(result.questions.length).toBe(1)
+    expect(result.questions[0].ownerPage).toBe(10)
+  })
+
+  it('does not deduplicate numbered questions on the same page if printed labels differ even with same anchor', () => {
+    const windows: IndexWindow[] = [
+      {
+        questions: [
+          q('w0q0', '18', 5, 'Which of the following'),
+          q('w0q1', '19', 5, 'Which of the following'),
+        ],
+        pages: [],
+      },
+    ]
+    const result = reconcileIndexWindows(windows)
+    expect(result.questions.length).toBe(2)
+  })
+
+  it('deduplicates questions across page boundaries with mismatched labels if the anchor is identical and non-generic', () => {
+    const windows: IndexWindow[] = [
+      {
+        questions: [q('w0q0', '15', 20, 'You are seeing')],
+        pages: [],
+      },
+      {
+        questions: [q('w1q0', '18', 21, 'You are seeing')],
+        pages: [],
+      },
+    ]
+    const result = reconcileIndexWindows(windows)
+    expect(result.questions.length).toBe(1)
+    expect(result.questions[0].ownerPage).toBe(20)
+  })
+
+  it('does not deduplicate questions across page boundaries with mismatched labels if the anchor is generic', () => {
+    const windows: IndexWindow[] = [
+      {
+        questions: [q('w0q0', '15', 20, 'Which of the following')],
+        pages: [],
+      },
+      {
+        questions: [q('w1q0', '18', 21, 'Which of the following')],
+        pages: [],
+      },
+    ]
+    const result = reconcileIndexWindows(windows)
+    expect(result.questions.length).toBe(2)
+  })
+
+  it('deduplicates questions across page boundaries with mismatched labels if one anchor is a prefix of another non-generic anchor', () => {
+    const windows: IndexWindow[] = [
+      {
+        questions: [q('w0q0', '15', 20, 'You are seeing')],
+        pages: [],
+      },
+      {
+        questions: [q('w1q0', '18', 21, 'You are seeing a 17-year-old')],
+        pages: [],
+      },
+    ]
+    const result = reconcileIndexWindows(windows)
+    expect(result.questions.length).toBe(1)
+    expect(result.questions[0].ownerPage).toBe(20)
+  })
 })

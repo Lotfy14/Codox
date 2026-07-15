@@ -254,7 +254,15 @@ export function buildFigureDetectRequest(
 }
 
 export function buildBoxRequest(
-  pages: readonly CallImage[], refs: readonly { ref: string; optionsPresent: boolean; hasCase: boolean; hasInlineEvidence: boolean }[],
+  pages: readonly CallImage[],
+  refs: readonly {
+    ref: string;
+    printedLabel: string;
+    anchor: string;
+    optionsPresent: boolean;
+    hasCase: boolean;
+    hasInlineEvidence: boolean;
+  }[],
   plannerModel = PLANNER_MODEL,
 ): VisionRequest {
   return structuredPlannerRequest(BOX_PROMPT + '\n\nPAGE TASKS:\n' + JSON.stringify(refs), pages, {

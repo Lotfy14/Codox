@@ -76,6 +76,8 @@ export class GeminiController {
   private readonly adapter: GeminiAdapter
   private readonly listeners = new Set<Listener>()
   private status: ControllerStatus = { kind: 'idle' }
+  private readonly requestTimestamps: number[] = []
+  private readonly maxRpm = 14
 
   constructor(adapter: GeminiAdapter = geminiAdapter) {
     this.adapter = adapter
@@ -182,6 +184,9 @@ export class GeminiController {
       }
 
       this.emit({ type: 'running' })
+      await this.throttleRequest(signal)
+      if (signal?.aborted) return { ok: false, kind: 'aborted' }
+
       const result = await this.adapter.complete(
         request,
         credential.apiKey,
@@ -234,6 +239,47 @@ export class GeminiController {
           if (signal?.aborted) return { ok: false, kind: 'aborted' }
           break
         }
+      }
+    }
+  }
+
+  private async throttleRequest(signal?: AbortSignal): Promise<void> {
+    for (;;) {
+      if (signal?.aborted) return
+
+      const now = Date.now()
+      // Remove timestamps older than 60 seconds
+      while (this.requestTimestamps.length > 0 && now - this.requestTimestamps[0] >= 60000) {
+        this.requestTimestamps.shift()
+      }
+
+      if (this.requestTimestamps.length < this.maxRpm) {
+        this.requestTimestamps.push(now)
+        return
+      }
+
+      const oldest = this.requestTimestamps[0]
+      const elapsed = now - oldest
+      const waitMs = Math.max(0, 60000 - elapsed) + 100
+
+      if (waitMs > 0) {
+        this.emit({
+          type: 'paused',
+          reason: 'quota',
+          resumesAt: now + waitMs,
+        })
+        await new Promise<void>((resolve) => {
+          let timer: number | undefined
+          const onDone = () => {
+            if (timer !== undefined) clearTimeout(timer)
+            signal?.removeEventListener('abort', onDone)
+            resolve()
+          }
+          timer = setTimeout(onDone, waitMs) as unknown as number
+          signal?.addEventListener('abort', onDone, { once: true })
+        })
+        if (signal?.aborted) return
+        this.emit({ type: 'resumed' })
       }
     }
   }

@@ -625,7 +625,14 @@ async function stepPlanAndValidate(
   const boxAttempt = async (page: number, refs: readonly ReconciledQuestion[], attempt: number) => {
     const response = await timed(runId, `box p${page}${attempt > 0 ? ` retry${attempt}` : ''}`, async () => call(controller, runId, buildBoxRequest(
       await pageImages(runId, [page - 1]),
-      refs.map((row) => ({ ref: row.ref, optionsPresent: row.optionsPresent, hasCase: row.caseStemKey !== null, hasInlineEvidence: row.evidenceState === 'inline' })),
+      refs.map((row) => ({
+        ref: row.ref,
+        printedLabel: row.printedLabel,
+        anchor: row.anchor,
+        optionsPresent: row.optionsPresent,
+        hasCase: row.caseStemKey !== null,
+        hasInlineEvidence: row.evidenceState === 'inline'
+      })),
       PLANNER_MODEL,
     ), signal))
     const parsed = wasTruncated(response.finishReason) ? undefined : parseBoxResult(response.text)
