@@ -504,23 +504,29 @@ Rules:
   year, image_urls.
 - Transcribe visible question text and options. Do not summarize, paraphrase,
   improve grammar, or add missing medical facts.
-- Transcribe options exactly as printed, including any leading option label
-  such as "A." or "B.". Do not decide whether a label is a label — downstream
-  code removes enumeration labels deterministically.
+- Do not include leading question numbers/labels (such as "26", "26.", "9)", etc.)
+  or case prefixes (such as "Case 5", "Case 5:", etc.) at the start of the
+  question text or case stem. Strip them so the transcribed question/stem begins
+  directly with the actual text.
+- Do not include leading option labels (such as "A.", "B.", "a.", "b.", "A ", "B ",
+  etc.) at the start of options. Strip these letters/numbers and any following
+  punctuation/spaces so only the option text itself is transcribed. However, if the
+  option text consists ONLY of the label (e.g. it is just the letter "A" or "B"),
+  transcribe it as "A", "B", etc., instead of leaving it empty.
 - Preserve option order exactly.
 - If a small local text span is illegible, write [unclear] only for that span.
 - For case_stem_plus_question_prompt rows, transcribe the shared case stem
-  verbatim into case_stem and the individual question prompt verbatim into
-  question. Do not merge the two, add "Case stem:" or "Question:" labels, or
-  repeat the stem inside question. Downstream code strips labels and assembles
-  the final text.
+  into case_stem and the individual question prompt into question (stripping leading
+  question/case numbers or identifiers from both). Do not merge the two, add
+  "Case stem:" or "Question:" labels, or repeat the stem inside question.
 - For plain_question_prompt rows, leave case_stem empty ("") and put only the
-  individual prompt text in question.
+  individual prompt text (stripped of leading numbers/labels) in question.
 - Exclude page furniture such as headers, footers, watermarks, page numbers, and
   general instructions unless the planner region explicitly includes them as
   part of a question.
 - Return valid JSON even when some text is unclear.
 ```
+
 
 ### 2.3 Audit prompt
 

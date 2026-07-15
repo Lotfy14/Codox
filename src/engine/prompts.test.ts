@@ -51,7 +51,7 @@ describe('prompt migration fidelity', () => {
       '550503d8db2aa20626bb3f9627f053f603e52bac524abb617ba5295dd9eadb8d',
     )
     expect(PROMPT_SHA256.worker).toBe(
-      '18602eb4fd432a2bfed9da11b739e80995a6a8c996d4343259628a5076070f47',
+      '912e103f84d47c59987e4c5b59cd5290a03fc5bc25b017dff9777c96e91d2608',
     )
     expect(PROMPT_SHA256.audit).toBe(
       '7bedae91c172cc5f071c31aa5839aef3e769a1c5c24c4e596079dad04ce2c6ce',
