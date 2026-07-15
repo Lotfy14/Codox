@@ -231,7 +231,12 @@ test('critical journey: answer-key PDF → review list/detail → named export �
   const search = page.getByRole('searchbox', { name: 'Find a question' })
   await search.fill('20')
   const highlightedRow = page.locator('.review-list-row--highlight')
-  await expect(highlightedRow).toContainText('Question 20: What is two plus two?')
+  // The row shows the number in its own column; the engine strips the
+  // worker-transcribed "Question 20:" label so the text is not doubled.
+  await expect(highlightedRow.locator('.review-list-row__num')).toHaveText('20')
+  await expect(highlightedRow.locator('.review-list-row__text')).toHaveText(
+    'What is two plus two?',
+  )
   await expect(page.locator('.review-list__viewport')).toHaveCount(0)
   const centralConsole = page.locator('.ds-work')
   await expect.poll(() => centralConsole.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
@@ -242,7 +247,8 @@ test('critical journey: answer-key PDF → review list/detail → named export �
   await page.getByRole('button', { name: 'Back to questions' }).click()
   await expect(search).toHaveValue('20')
   await expect(
-    page.locator('.review-list-row').filter({ hasText: 'Question 20:' })
+    page.locator('.review-list-row')
+      .filter({ has: page.locator('.review-list-row__num', { hasText: /^20$/ }) })
       .locator('.review-list-row__answer'),
   ).toHaveText('B')
   await expect(page.getByRole('button', { name: 'Needs review (29)' })).toBeVisible()
@@ -303,9 +309,9 @@ test('critical journey: answer-key PDF → review list/detail → named export �
 
   await page.getByRole('button', { name: 'Review answers' }).click()
   await expect(page.getByText('30 questions', { exact: true })).toBeVisible()
-  await page.locator('.review-list-row').filter({
-    hasText: 'Question 1: What is two plus two?',
-  }).click()
+  await page.locator('.review-list-row')
+    .filter({ has: page.locator('.review-list-row__num', { hasText: /^1$/ }) })
+    .click()
   await expect(
     page.locator('.review__source').getByAltText('Scanned source for question 1'),
   ).toBeVisible()
