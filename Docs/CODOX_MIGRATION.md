@@ -513,6 +513,7 @@ Rules:
   punctuation/spaces so only the option text itself is transcribed. However, if the
   option text consists ONLY of the label (e.g. it is just the letter "A" or "B"),
   transcribe it as "A", "B", etc., instead of leaving it empty.
+- If a question depends on a linked figure that is an option table or comparison matrix (where the rows are labeled A, B, C, D, etc. and contain columns of values/answers), do not transcribe the cell contents of those rows as options. Instead, transcribe the options simply as "A", "B", "C", "D", etc.
 - Preserve option order exactly.
 - If a small local text span is illegible, write [unclear] only for that span.
 - For case_stem_plus_question_prompt rows, transcribe the shared case stem
