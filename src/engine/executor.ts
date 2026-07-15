@@ -46,7 +46,7 @@ import {
   buildBoxRequest, buildEvidenceRequest, buildFigureDetectRequest, buildIndexRequest,
 } from './calls'
 import { assembleBlueprint } from './assemble'
-import { localizeIndexWindow, reconcileIndexWindows } from './enumerate'
+import { localizeIndexWindow, reconcileIndexWindows, type ReconciledQuestion } from './enumerate'
 import { parseBoxResult, parseEvidenceMap, parseFigureDetection, parseIndexWindow, type BoxResult, type EvidenceMap, type IndexWindow } from './index-pass'
 import type { PlanningIssue } from '../state/types'
 import {
@@ -615,26 +615,52 @@ async function stepPlanAndValidate(
     const list = byPage.get(question.ownerPage) ?? []
     list.push(question); byPage.set(question.ownerPage, list)
   }
-  for (const [page, questions] of byPage) {
-    const response = await timed(runId, `box p${page}`, async () => call(controller, runId, buildBoxRequest(
+  const onPage = <T extends { page: number }>(value: T, page: number): T => ({ ...value, page })
+  // BOX one page for a set of refs. A ref the model silently omits becomes a
+  // blank review card downstream, so a page keeps retrying the refs the last
+  // pass dropped (BOX_ATTEMPTS total) before those refs are flagged and left
+  // to the whole-page fallback. A full-page failure (truncation/parse error)
+  // is retried the same way.
+  const BOX_ATTEMPTS = 2
+  const boxAttempt = async (page: number, refs: readonly ReconciledQuestion[], attempt: number) => {
+    const response = await timed(runId, `box p${page}${attempt > 0 ? ` retry${attempt}` : ''}`, async () => call(controller, runId, buildBoxRequest(
       await pageImages(runId, [page - 1]),
-      questions.map((row) => ({ ref: row.ref, optionsPresent: row.optionsPresent, hasCase: row.caseStemKey !== null, hasInlineEvidence: row.evidenceState === 'inline' })),
+      refs.map((row) => ({ ref: row.ref, optionsPresent: row.optionsPresent, hasCase: row.caseStemKey !== null, hasInlineEvidence: row.evidenceState === 'inline' })),
       PLANNER_MODEL,
     ), signal))
     const parsed = wasTruncated(response.finishReason) ? undefined : parseBoxResult(response.text)
-    if (parsed === undefined || !parsed.ok) {
-      const reason = parsed === undefined ? 'BOX response was truncated' : parsed.errors.join('; ')
-      await logEvent({ scope: 'engine', level: 'warn', event: 'engine.box.page.fail', runId, page, reason, detail: { rawResponse: response.text } })
-      issues.push(...questions.map((row) => ({ kind: 'unreadable_page' as const, page, rowRef: row.ref, reason })))
-      continue
+    return { response, parsed }
+  }
+  for (const [page, questions] of byPage) {
+    let remaining: readonly ReconciledQuestion[] = questions
+    let figuresCaptured = false
+    let lastReason = 'no box region after retry'
+    for (let attempt = 0; attempt < BOX_ATTEMPTS && remaining.length > 0; attempt += 1) {
+      const { response, parsed } = await boxAttempt(page, remaining, attempt)
+      if (parsed === undefined || !parsed.ok) {
+        lastReason = parsed === undefined ? 'BOX response was truncated' : parsed.errors.join('; ')
+        await logEvent({ scope: 'engine', level: 'warn', event: 'engine.box.page.fail', runId, page, reason: lastReason, detail: { attempt, rawResponse: response.text } })
+        continue
+      }
+      const wanted = new Set(remaining.map((row) => row.ref))
+      const found = parsed.value.questions.filter((row) => wanted.has(row.ref))
+      allBoxes.questions.push(...found.map((row) => ({
+        ...row, question: onPage(row.question, page), options: row.options === null ? null : onPage(row.options, page),
+        caseStem: row.caseStem === null ? null : onPage(row.caseStem, page),
+        inlineEvidence: row.inlineEvidence === null ? null : onPage(row.inlineEvidence, page),
+      })))
+      // Figures cover the whole page, not just the requested refs; capture
+      // them once so a retry pass cannot duplicate an asset.
+      if (!figuresCaptured) {
+        allBoxes.figures.push(...parsed.value.figures.map((row) => ({ ...row, page })))
+        figuresCaptured = true
+      }
+      const foundRefs = new Set(found.map((row) => row.ref))
+      remaining = remaining.filter((row) => !foundRefs.has(row.ref))
     }
-    const onPage = <T extends { page: number }>(value: T): T => ({ ...value, page })
-    allBoxes.questions.push(...parsed.value.questions.map((row) => ({
-      ...row, question: onPage(row.question), options: row.options === null ? null : onPage(row.options),
-      caseStem: row.caseStem === null ? null : onPage(row.caseStem),
-      inlineEvidence: row.inlineEvidence === null ? null : onPage(row.inlineEvidence),
-    })))
-    allBoxes.figures.push(...parsed.value.figures.map((row) => ({ ...row, page })))
+    if (remaining.length > 0) {
+      issues.push(...remaining.map((row) => ({ kind: 'unreadable_page' as const, page, rowRef: row.ref, reason: lastReason })))
+    }
   }
   const boxedRefs = new Set(allBoxes.questions.map((q) => q.ref))
   const flaggedRefs = new Set(issues.flatMap((issue) => (issue.rowRef !== undefined ? [issue.rowRef] : [])))
