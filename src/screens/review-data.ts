@@ -122,7 +122,7 @@ export async function loadReviewData(runId: string): Promise<ReviewData> {
         ? flagCategory(row.needs_review, row.correct_index)
         : null,
       pageIndex,
-      box: row.image_urls.length > 0 ? box : null,
+      box: box,
     }
   })
   return { rows, reviewRows }

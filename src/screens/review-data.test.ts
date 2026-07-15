@@ -169,7 +169,7 @@ describe('loadReviewData', () => {
     expect(reviewRow.box).toEqual([70, 20, 530, 930])
   })
 
-  it('shows crop box only for rows with attached figures', async () => {
+  it('shows crop box for all rows', async () => {
     const figBlueprint: Pick<Blueprint, 'planned_rows'> = {
       planned_rows: [
         {
@@ -230,7 +230,7 @@ describe('loadReviewData', () => {
     await putArtifact({ runId: 'run-fig', kind: 'blueprint-valid', json: figBlueprint })
     const data = await loadReviewData('run-fig')
     expect(data.reviewRows[0].box).not.toBeNull()
-    expect(data.reviewRows[1].box).toBeNull()
+    expect(data.reviewRows[1].box).not.toBeNull()
   })
 })
 

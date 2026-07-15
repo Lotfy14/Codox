@@ -287,12 +287,15 @@ export function createGeminiAdapter(
                 {
                   parts: [
                     { text: request.prompt },
-                    ...request.images.map((image) => ({
-                      inlineData: {
-                        mimeType: image.mimeType,
-                        data: image.base64Data,
+                    ...request.images.flatMap((image, index) => [
+                      { text: `\nIMAGE ${index + 1}:\n` },
+                      {
+                        inlineData: {
+                          mimeType: image.mimeType,
+                          data: image.base64Data,
+                        },
                       },
-                    })),
+                    ]),
                   ],
                 },
               ],

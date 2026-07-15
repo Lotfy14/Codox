@@ -349,7 +349,7 @@ Examples:
             json: a.json
           }))
 
-        const pageJpegs = await db.runArtifacts.where('kind').equals('page-jpeg').toArray()
+        const pageJpegs = await db.runArtifacts.where('[runId+kind]').equals([runId, 'page-jpeg']).toArray()
         const pagesData = pageJpegs.map(p => {
           let binary = '';
           const bytes = p.bytes;
