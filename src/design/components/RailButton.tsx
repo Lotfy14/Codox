@@ -18,7 +18,7 @@ export function RailButton({ className, icon, label, ...props }: RailButtonProps
       <span aria-hidden="true" className="ds-rail-button__icon">
         {icon}
       </span>
-      <span>{label}</span>
+      <span className="ds-rail-button__label">{label}</span>
     </AriaButton>
   )
 }

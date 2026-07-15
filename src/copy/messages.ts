@@ -86,15 +86,31 @@ export const appMessages = {
   navHistory: 'History',
   railApi: 'API',
   railHelp: 'Help',
+  railDiagnostics: 'Diagnostics',
   railPrivacy: 'Privacy',
   storageLabel: 'On-device storage',
   apiDialogTitle: 'Gemini API key',
   helpDialogTitle: 'Help',
   privacyDialogTitle: 'Privacy',
+  diagnosticsDialogTitle: 'Diagnostics',
   dialogDismiss: 'Close dialog',
   themeGroupLabel: 'Appearance',
   themeLight: 'Light theme',
   themeDark: 'Dark theme',
+} as const
+
+export const diagnosticsMessages = {
+  problemsOnly: 'Problems only',
+  download: 'Download diagnostics',
+  clearSelected: (count: number) => `Clear selected (${count})`,
+  clearAll: 'Clear all',
+  detail: 'Details',
+  empty: 'No events logged yet. Codox records key checks, conversions, and any problems here.',
+  today: 'Today',
+  yesterday: 'Yesterday',
+  eventCount: (count: number) => `${count} event${count === 1 ? '' : 's'}`,
+  selectDay: (label: string) => `Select all logs from ${label}`,
+  selectEvent: (event: string) => `Select ${event} log`,
 } as const
 
 export const updateMessages = {

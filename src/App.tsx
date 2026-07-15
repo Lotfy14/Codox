@@ -13,6 +13,7 @@ import { geminiController } from './providers/controller'
 import { Convert } from './screens/Convert'
 import { Customizations } from './screens/Customizations'
 import { ApiCoachmark } from './screens/ApiCoachmark'
+import { DiagnosticsContent } from './screens/DiagnosticsContent'
 import { HelpContent } from './screens/HelpContent'
 import { History } from './screens/History'
 import { KeysPanel } from './screens/KeysPanel'
@@ -23,7 +24,7 @@ import {
 import { useStorageEstimate } from './state/storage'
 import { UpdateBanner } from './UpdateBanner.tsx'
 
-type OpenDialog = 'api' | 'help' | 'privacy' | null
+type OpenDialog = 'api' | 'help' | 'privacy' | 'diagnostics' | null
 type MobileNavItem = AppTab | Exclude<OpenDialog, null | 'privacy'>
 
 function NavIcon({ kind }: { kind: AppTab }) {
@@ -57,22 +58,33 @@ function NavIcon({ kind }: { kind: AppTab }) {
   )
 }
 
-function RailIcon({ kind }: { kind: 'api' | 'help' }) {
-  return kind === 'api' ? (
+function RailIcon({ kind }: { kind: 'api' | 'help' | 'diagnostics' }) {
+  if (kind === 'api') {
+    return (
+      <svg fill="none" height="20" viewBox="0 0 24 24" width="20">
+        <path
+          d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+        />
+        <circle cx="16.5" cy="7.5" fill="currentColor" r="0.5" />
+      </svg>
+    )
+  }
+  if (kind === 'help') {
+    return (
+      <svg fill="none" height="20" viewBox="0 0 24 24" width="20">
+        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+        <path d="M9.8 9a2.3 2.3 0 1 1 3.5 2c-.8.5-1.3 1-1.3 2M12 17h.01" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+      </svg>
+    )
+  }
+  return (
     <svg fill="none" height="20" viewBox="0 0 24 24" width="20">
-      <path
-        d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-      />
-      <circle cx="16.5" cy="7.5" fill="currentColor" r="0.5" />
-    </svg>
-  ) : (
-    <svg fill="none" height="20" viewBox="0 0 24 24" width="20">
-      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
-      <path d="M9.8 9a2.3 2.3 0 1 1 3.5 2c-.8.5-1.3 1-1.3 2M12 17h.01" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+      <path d="M4 4h12l4 4v12H4z" stroke="currentColor" strokeLinejoin="round" strokeWidth="2" />
+      <path d="M7 13l2-2 2 3 2-4 2 3" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
     </svg>
   )
 }
@@ -92,6 +104,7 @@ const mobileItems: readonly TabNavItem<MobileNavItem>[] = [
     className: 'api-coachmark__mobile-target',
   },
   { id: 'help', icon: <RailIcon kind="help" />, label: appMessages.railHelp },
+  { id: 'diagnostics', icon: <RailIcon kind="diagnostics" />, label: appMessages.railDiagnostics },
 ]
 
 function App() {
@@ -118,7 +131,7 @@ function App() {
 
   const handleMobileNav = (item: MobileNavItem) => {
     if (showCoachmark) hideCoachmark()
-    if (item === 'api' || item === 'help') setOpenDialog(item)
+    if (item === 'api' || item === 'help' || item === 'diagnostics') setOpenDialog(item)
     else setActiveTab(item)
   }
 
@@ -186,6 +199,11 @@ function App() {
             label={appMessages.railHelp}
             onPress={() => setOpenDialog('help')}
           />
+          <RailButton
+            icon={<RailIcon kind="diagnostics" />}
+            label={appMessages.railDiagnostics}
+            onPress={() => setOpenDialog('diagnostics')}
+          />
           <div className="ds-rail__foot">
             <ThemeSwitcher />
           </div>
@@ -235,6 +253,16 @@ function App() {
       {showCoachmark ? (
         <ApiCoachmark onDismiss={hideCoachmark} onOpenApi={openApi} />
       ) : null}
+      <Dialog
+        className="ds-dialog--drawer"
+        dismissLabel={appMessages.dialogDismiss}
+        isOpen={openDialog === 'diagnostics'}
+        onOpenChange={(open) => setOpenDialog(open ? 'diagnostics' : null)}
+        overlayClassName="ds-dialog__overlay--drawer"
+        title={appMessages.diagnosticsDialogTitle}
+      >
+        <DiagnosticsContent />
+      </Dialog>
     </div>
   )
 }

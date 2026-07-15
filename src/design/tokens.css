@@ -52,7 +52,7 @@
      window minus the thin cream margin — never a fixed width. Only the
      work column's content caps, for readability on wide monitors. */
   --layout-sidebar-width: 12.5rem;
-  --layout-rail-width: 4.5rem;
+  --layout-rail-width: 5.5rem;
   --frame-padding: 0.75rem;
   --frame-gap: 0.75rem;
   --work-max-width: none;
