@@ -63,6 +63,16 @@ function region(value: unknown): Region | null | undefined {
   const anchor = str(raw?.anchor)
   return anchor === undefined ? { page: p, box_2d: b } : { page: p, box_2d: b, anchor }
 }
+/** Tolerant region for BOX-stage boxes: the model often returns `page: 0`,
+ *  which the executor overwrites with the authoritative page anyway. */
+function boxRegion(value: unknown): Region | null | undefined {
+  if (value === null) return null
+  const raw = rec(value); const b = box(raw?.box_2d)
+  if (b === undefined) return undefined
+  const p = page(raw?.page) ?? 0
+  const anchor = str(raw?.anchor)
+  return anchor === undefined ? { page: p, box_2d: b } : { page: p, box_2d: b, anchor }
+}
 function root(text: string): Record<string, unknown> | undefined {
   const parsed = parseModelJson(text)
   return parsed.error === undefined ? rec(parsed.value) : undefined
@@ -125,8 +135,8 @@ export function parseBoxResult(text: string): ParseResult<BoxResult> {
   }
   const errors: string[] = []; const questions: BoxedQuestion[] = []; const figures: BoxedFigure[] = []
   value.questions.forEach((item, index) => {
-    const raw = rec(item); const ref = str(raw?.ref); const question = region(raw?.question)
-    const options = region(raw?.options); const caseStem = region(raw?.case_stem); const inlineEvidence = region(raw?.inline_evidence)
+    const raw = rec(item); const ref = str(raw?.ref); const question = boxRegion(raw?.question)
+    const options = boxRegion(raw?.options); const caseStem = boxRegion(raw?.case_stem); const inlineEvidence = boxRegion(raw?.inline_evidence)
     if (ref === undefined || question === undefined || question === null || options === undefined || caseStem === undefined || inlineEvidence === undefined) {
       errors.push('questions[' + index + '] is invalid'); return
     }
