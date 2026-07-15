@@ -101,15 +101,15 @@ export const appMessages = {
 
 export const diagnosticsMessages = {
   problemsOnly: 'Problems only',
-  download: 'Download diagnostics',
+  downloadAll: 'Download all',
+  downloadSelected: (count: number) => `Download selected (${count})`,
   clearSelected: (count: number) => `Clear selected (${count})`,
   clearAll: 'Clear all',
   detail: 'Details',
   empty: 'No events logged yet. Codox records key checks, conversions, and any problems here.',
-  today: 'Today',
-  yesterday: 'Yesterday',
+  generalGroup: 'General',
   eventCount: (count: number) => `${count} event${count === 1 ? '' : 's'}`,
-  selectDay: (label: string) => `Select all logs from ${label}`,
+  selectGroup: (label: string) => `Select all logs from ${label}`,
   selectEvent: (event: string) => `Select ${event} log`,
 } as const
 

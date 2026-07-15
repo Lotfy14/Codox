@@ -7,6 +7,7 @@
  */
 import { useLiveQuery } from 'dexie-react-hooks'
 import type { Blueprint, Box2d, MergedRow, PlannedRow } from '../engine/types'
+import type { AiAnswer } from '../engine/solver'
 import { db } from '../state/db'
 import { getArtifact, putArtifact } from '../state/runs'
 
@@ -160,6 +161,34 @@ export async function getResolutions(runId: string): Promise<Resolutions> {
 /** Live view of a run's confirmed answers. undefined while loading. */
 export function useResolutions(runId: string): Resolutions | undefined {
   return useLiveQuery(() => getResolutions(runId), [runId])
+}
+
+export async function getAiAnswers(runId: string): Promise<Record<string, AiAnswer>> {
+  const artifact = await getArtifact(runId, 'ai-answers')
+  const json = artifact?.json as { answers?: Record<string, AiAnswer> } | undefined
+  return json?.answers ?? {}
+}
+
+/** Live view of a run's AI-solved answers. undefined while loading. */
+export function useAiAnswers(runId: string): Record<string, AiAnswer> | undefined {
+  return useLiveQuery(() => getAiAnswers(runId), [runId])
+}
+
+export type AnswerSource = 'human' | 'extracted' | 'ai' | 'none'
+
+export function answerSource(
+  row: ReviewRow,
+  resolutions: Resolutions,
+  aiAnswers?: Record<string, AiAnswer>,
+): { index: number | null; source: AnswerSource } {
+  const inRange = (n: number) => Number.isInteger(n) && n >= 0 && n < row.row.options.length
+  const pick = resolutions[row.row.id]
+  if (pick !== undefined && inRange(pick)) return { index: pick, source: 'human' }
+  const engine = Number(row.row.correct_index)
+  if (row.row.correct_index !== '' && inRange(engine)) return { index: engine, source: 'extracted' }
+  const ai = aiAnswers?.[row.row.id]
+  if (ai !== undefined && ai.index !== null && inRange(ai.index)) return { index: ai.index, source: 'ai' }
+  return { index: null, source: 'none' }
 }
 
 export async function saveResolution(

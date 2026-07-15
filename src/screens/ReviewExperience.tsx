@@ -24,6 +24,7 @@ export function ReviewExperience({
   if (session.view.kind === 'detail') {
     return (
       <ReviewDetail
+        aiAnswers={session.aiAnswers}
         currentRowId={session.view.rowId}
         exported={session.activeRun.exportedAt !== undefined}
         filter={session.controls.filter}

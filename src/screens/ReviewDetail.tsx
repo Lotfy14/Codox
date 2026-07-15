@@ -2,7 +2,9 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Button, GlassPanel } from '../design/components'
 import { convertMessages, exportMessages, reviewMessages } from '../copy/messages'
 import type { RunState } from '../state/types'
+import type { AiAnswer } from '../engine/solver'
 import {
+  answerSource,
   saveResolution,
   type Resolutions,
   type ReviewRow,
@@ -22,6 +24,7 @@ export interface ReviewDetailProps {
   orderedRows: readonly ReviewRow[]
   currentRowId: string
   resolutions: Resolutions
+  aiAnswers: Record<string, AiAnswer> | undefined
   onNavigate: (rowId: string) => void
   onBack: () => void
   onExport: () => void
@@ -34,6 +37,7 @@ export function ReviewDetail({
   orderedRows,
   currentRowId,
   resolutions,
+  aiAnswers,
   onNavigate,
   onBack,
   onExport,
@@ -54,22 +58,14 @@ export function ReviewDetail({
   const confirmId = useId()
   const offline = useOffline()
   const source = useSourceUrls(run.id, reviewRow)
-  const savedPick = reviewRow === undefined
-    ? undefined
-    : resolutions[reviewRow.row.id]
-  const savedAnswer = reviewRow !== undefined &&
-    savedPick !== undefined &&
-    Number.isInteger(savedPick) &&
-    savedPick >= 0 &&
-    savedPick < reviewRow.row.options.length
-    ? savedPick
-    : undefined
-  const [selected, setSelected] = useState<number | undefined>(savedAnswer)
+  const answer = reviewRow === undefined ? { index: null, source: 'none' as const } : answerSource(reviewRow, resolutions, aiAnswers)
+  const seededAnswer = answer.index === null ? undefined : answer.index
+  const [selected, setSelected] = useState<number | undefined>(seededAnswer)
 
   useEffect(() => {
-    setSelected(savedAnswer)
+    setSelected(seededAnswer)
     setWholePage(false)
-  }, [currentRowId, savedAnswer])
+  }, [currentRowId, seededAnswer])
 
   const goTo = useCallback((index: number) => {
     const target = orderedRows[index]
@@ -224,6 +220,7 @@ export function ReviewDetail({
               <button
                 aria-checked={selected === index}
                 className="review-option"
+                data-ai={answer.source === 'ai' && index === answer.index ? true : undefined}
                 key={`${reviewRow.row.id}-${index}`}
                 onClick={() => setSelected(index)}
                 role="radio"
@@ -233,6 +230,9 @@ export function ReviewDetail({
                   {optionLetters[index] ?? index + 1}
                 </span>
                 <span>{option}</span>
+                {answer.source === 'ai' && index === answer.index ? (
+                  <span className="review-option__tag">AI</span>
+                ) : null}
                 <kbd aria-hidden="true">{index + 1}</kbd>
               </button>
             ))}

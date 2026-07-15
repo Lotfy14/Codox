@@ -1,11 +1,14 @@
 /**
- * Update detection for the two frozen channels. The web app updates itself
- * through its service worker, so this is a no-op there. Windows (Tauri) has a
- * signed silent updater; Android has no updater at all, so an installed APK
- * stays frozen until a fresh one from GitHub Releases is installed over it.
- * On Android `install` downloads that APK and opens the system installer
- * dialog — Android never installs a sideloaded app silently — and `url` stays
- * as the manual fallback for when it refuses. See UpdateBanner.tsx.
+ * Update detection for the platforms that do not refresh themselves the way
+ * the web app does. The web app updates through its service worker, so this is
+ * a no-op there. Windows (Tauri) has a signed, silent updater. Android checks
+ * GitHub for a newer release on launch and, when the user taps the banner,
+ * downloads that release's APK and opens the system installer — Android never
+ * installs a sideloaded app silently, so it needs one confirming tap (and
+ * "install from unknown sources" allowed once). `url` is the manual fallback
+ * for when that install is refused. The Android check reads the release's
+ * latest.json over github.com rather than the rate-limited api.github.com, so
+ * the banner appears reliably. See UpdateBanner.tsx.
  */
 const REPO = 'Lotfy14/Codox'
 
@@ -50,17 +53,18 @@ export async function checkForUpdate(): Promise<UpdateInfo | null> {
     }
   }
 
-  // Android: no updater, so compare our build version to the newest release.
-  // Web returns here too (not a native platform) and never shows a banner.
-  const { Capacitor } = await import('@capacitor/core')
+  // Android: no SILENT updater. Read the newest release's latest.json from
+  // github.com (NOT the rate-limited api.github.com) so the check is reliable,
+  // then offer that release's APK. Web returns here too (not native) — no banner.
+  const { Capacitor, CapacitorHttp } = await import('@capacitor/core')
   if (!Capacitor.isNativePlatform()) return null
   try {
-    const res = await fetch(
-      `https://api.github.com/repos/${REPO}/releases/latest`,
-    )
-    if (!res.ok) return null
-    const { tag_name } = (await res.json()) as { tag_name?: string }
-    const latest = String(tag_name ?? '').replace(/^v/, '')
+    const res = await CapacitorHttp.get({
+      url: `https://github.com/${REPO}/releases/latest/download/latest.json`,
+    })
+    if (res.status < 200 || res.status >= 300) return null
+    const manifest = (typeof res.data === 'string' ? JSON.parse(res.data) : res.data) as { version?: string }
+    const latest = String(manifest?.version ?? '').replace(/^v/, '')
     if (!latest || !isNewer(latest, __APP_VERSION__)) return null
     const url = `https://github.com/${REPO}/releases/download/v${latest}/codox-${latest}.apk`
     return {

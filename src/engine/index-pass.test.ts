@@ -30,7 +30,7 @@ describe('parseBoxResult', () => {
     }
   })
 
-  it('rejects a question region missing box_2d', () => {
+  it('skips an invalid question instead of failing the whole page', () => {
     const text = JSON.stringify({
       questions: [
         {
@@ -44,9 +44,25 @@ describe('parseBoxResult', () => {
       figures: [],
     })
     const result = parseBoxResult(text)
-    expect(result.ok).toBe(false)
-    if (!result.ok) {
-      expect(result.errors).toHaveLength(1)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.value.questions).toHaveLength(0)
+    }
+  })
+
+  it('keeps valid questions alongside invalid ones', () => {
+    const text = JSON.stringify({
+      questions: [
+        { ref: 'Q1', question: { page: 1, box_2d: [10, 20, 100, 200] }, options: null, case_stem: null, inline_evidence: null },
+        { ref: 'Q2', question: { page: 0 }, options: null, case_stem: null, inline_evidence: null },
+      ],
+      figures: [],
+    })
+    const result = parseBoxResult(text)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.value.questions).toHaveLength(1)
+      expect(result.value.questions[0].ref).toBe('Q1')
     }
   })
 

@@ -75,7 +75,20 @@ export function reconcileIndexWindows(windows: readonly IndexWindow[]): Reconcil
       questions.push({ ...question, sectionKey: sectionKey(question) })
     }
   }
-  questions.sort((a, b) => a.ownerPage - b.ownerPage || a.ref.localeCompare(b.ref, undefined, { numeric: true }))
+  const orderKey = new Map<ReconciledQuestion, number>()
+  const byOwner = new Map<number, ReconciledQuestion[]>()
+  for (const q of questions) {
+    const list = byOwner.get(q.ownerPage) ?? []
+    list.push(q); byOwner.set(q.ownerPage, list)
+  }
+  for (const list of byOwner.values()) {
+    let last = 0
+    for (const q of list) {
+      const n = numericLabel(q.printedLabel)
+      if (n !== undefined) { last = n; orderKey.set(q, n) } else { last += 0.5; orderKey.set(q, last) }
+    }
+  }
+  questions.sort((a, b) => a.ownerPage - b.ownerPage || (orderKey.get(a) ?? 0) - (orderKey.get(b) ?? 0) || a.ref.localeCompare(b.ref, undefined, { numeric: true }))
   const issues: PlanningIssue[] = []
   const bySection = new Map<string, ReconciledQuestion[]>()
   for (const question of questions) {

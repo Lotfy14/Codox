@@ -45,7 +45,8 @@ export async function clearEvents(seqs?: number[]): Promise<void> {
   await db.logs.bulkDelete(seqs)
 }
 
-export async function exportEventsBlob(): Promise<Blob> {
-  const events = await db.logs.orderBy('seq').toArray()
+export async function exportEventsBlob(seqs?: number[]): Promise<Blob> {
+  const all = await db.logs.orderBy('seq').toArray()
+  const events = seqs === undefined ? all : all.filter((event) => event.seq !== undefined && seqs.includes(event.seq))
   return new Blob([JSON.stringify(events, null, 2)], { type: 'application/json' })
 }

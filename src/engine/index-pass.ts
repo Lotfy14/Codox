@@ -133,22 +133,20 @@ export function parseBoxResult(text: string): ParseResult<BoxResult> {
   if (value === undefined || !Array.isArray(value.questions) || !Array.isArray(value.figures)) {
     return { ok: false, errors: ['box response must contain questions and figures'] }
   }
-  const errors: string[] = []; const questions: BoxedQuestion[] = []; const figures: BoxedFigure[] = []
-  value.questions.forEach((item, index) => {
+  const questions: BoxedQuestion[] = []; const figures: BoxedFigure[] = []
+  value.questions.forEach((item) => {
     const raw = rec(item); const ref = str(raw?.ref); const question = boxRegion(raw?.question)
     const options = boxRegion(raw?.options); const caseStem = boxRegion(raw?.case_stem); const inlineEvidence = boxRegion(raw?.inline_evidence)
-    if (ref === undefined || question === undefined || question === null || options === undefined || caseStem === undefined || inlineEvidence === undefined) {
-      errors.push('questions[' + index + '] is invalid'); return
-    }
+    if (ref === undefined || question === undefined || question === null || options === undefined || caseStem === undefined || inlineEvidence === undefined) { return }
     questions.push({ ref, question, options, caseStem, inlineEvidence })
   })
-  value.figures.forEach((item, index) => {
+  value.figures.forEach((item) => {
     const raw = rec(item); const p = page(raw?.page); const b = box(raw?.box_2d); const anchor = str(raw?.anchor)
     const refs = Array.isArray(raw?.linked_refs) ? raw.linked_refs.filter((x): x is string => typeof x === 'string') : []
-    if (p === undefined || b === undefined || anchor === undefined || refs.length === 0) { errors.push('figures[' + index + '] is invalid'); return }
+    if (p === undefined || b === undefined || anchor === undefined || refs.length === 0) { return }
     figures.push({ page: p, linkedRefs: refs, box: b, anchor })
   })
-  return errors.length === 0 ? { ok: true, value: { questions, figures } } : { ok: false, errors }
+  return { ok: true, value: { questions, figures } }
 }
 
 export function parseEvidenceMap(text: string): ParseResult<EvidenceMap> {

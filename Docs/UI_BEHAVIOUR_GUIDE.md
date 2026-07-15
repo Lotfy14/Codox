@@ -111,7 +111,7 @@ Bad: changing colours without preserving contrast/focus visibility, forcing anim
 | UI layout | Same shared responsive rules | Same shared responsive rules | Same shared responsive rules |
 | PDF choice | Browser picker; drag/drop where supported | Desktop picker and drag/drop | Android document picker; tapping is normal |
 | Preferred export | Phone-like coarse-pointer browsers try the OS share sheet; otherwise Save As or download | Save As picker where available; otherwise browser-style download fallback | Writes zip to temporary app storage, then opens Android's native share sheet |
-| Updates | Service worker handles web/PWA updates | Checks GitHub Releases at start, installs, then relaunches | User installs a newer APK; no in-app updater is implemented |
+| Updates | Service worker handles web/PWA updates | Checks GitHub Releases at start, installs, then relaunches | Checks GitHub Releases at launch; a banner downloads the new APK and opens the system installer (user taps through — not silent) |
 | Data storage | Browser/PWA local storage and IndexedDB | WebView local storage and IndexedDB | Android WebView local storage and IndexedDB |
 
 The native Android export route is selected because the app is inside a Capacitor container. Browser export chooses sharing on a coarse-pointer device only when the browser says it can share a file. Otherwise it falls back to the best save/download route.

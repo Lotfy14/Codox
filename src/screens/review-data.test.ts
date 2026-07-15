@@ -4,6 +4,7 @@ import type { Blueprint, MergedRow } from '../engine/types'
 import { db } from '../state/db'
 import { getArtifact, putArtifact } from '../state/runs'
 import {
+  answerSource,
   applyResolutions,
   effectiveAnswer,
   flagCategory,
@@ -186,5 +187,47 @@ describe('effectiveAnswer', () => {
   it('ignores invalid resolutions and validates the engine answer', () => {
     expect(effectiveAnswer(reviewRow, { '1': 9 })).toBe(1)
     expect(effectiveAnswer({ ...reviewRow, row: makeRow({ correct_index: '9' }) }, {})).toBeNull()
+  })
+})
+
+describe('answerSource', () => {
+  const reviewRow = (row: MergedRow) => ({
+    row,
+    questionNumber: 1,
+    category: null,
+    pageIndex: null,
+    box: null,
+  })
+
+  it('uses extracted answer when no resolution', () => {
+    expect(answerSource(reviewRow(makeRow({ correct_index: '1' })), {})).toEqual({
+      index: 1,
+      source: 'extracted',
+    })
+  })
+
+  it('human override beats extracted', () => {
+    expect(answerSource(reviewRow(makeRow({ id: '1', correct_index: '1' })), { '1': 2 })).toEqual({
+      index: 2,
+      source: 'human',
+    })
+  })
+
+  it('ai fallback when no extracted answer', () => {
+    expect(
+      answerSource(reviewRow(makeRow({ id: '1', correct_index: '' })), {}, { '1': { index: 0, confidence: 'likely' } }),
+    ).toEqual({ index: 0, source: 'ai' })
+  })
+
+  it('extracted beats ai', () => {
+    expect(
+      answerSource(reviewRow(makeRow({ id: '1', correct_index: '2' })), {}, { '1': { index: 0, confidence: 'certain' } }),
+    ).toEqual({ index: 2, source: 'extracted' })
+  })
+
+  it('none when no answer is available', () => {
+    expect(
+      answerSource(reviewRow(makeRow({ id: '1', correct_index: '' })), {}, { '1': { index: null, confidence: 'unsure' } }),
+    ).toEqual({ index: null, source: 'none' })
   })
 })

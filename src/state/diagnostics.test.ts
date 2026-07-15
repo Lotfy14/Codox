@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from './db'
-import { clearEvents, listEvents, logEvent } from './diagnostics'
+import { clearEvents, exportEventsBlob, listEvents, logEvent } from './diagnostics'
 
 beforeEach(async () => {
   await db.logs.clear()
@@ -41,6 +41,24 @@ describe('the on-device diagnostics log', () => {
     await clearEvents()
     expect(await db.logs.count()).toBe(0)
     expect(await listEvents()).toEqual([])
+  })
+
+  it('exportEventsBlob exports only the requested seqs when given a subset', async () => {
+    await logEvent({ t: 1, level: 'info', scope: 'app', event: 'alpha' })
+    await logEvent({ t: 2, level: 'info', scope: 'app', event: 'bravo' })
+    await logEvent({ t: 3, level: 'info', scope: 'app', event: 'charlie' })
+    const all = await listEvents()
+    const alphaSeq = all.find((e) => e.event === 'alpha')!.seq!
+    const charlieSeq = all.find((e) => e.event === 'charlie')!.seq!
+    const blob = await exportEventsBlob([alphaSeq, charlieSeq])
+    const parsed = JSON.parse(await blob.text()) as Array<{ event: string }>
+    expect(parsed).toHaveLength(2)
+    expect(parsed.find((e) => e.event === 'alpha')).toBeDefined()
+    expect(parsed.find((e) => e.event === 'charlie')).toBeDefined()
+    expect(parsed.find((e) => e.event === 'bravo')).toBeUndefined()
+    const allBlob = await exportEventsBlob()
+    const allParsed = JSON.parse(await allBlob.text()) as Array<{ event: string }>
+    expect(allParsed).toHaveLength(3)
   })
 
   it('clears only the selected events when seqs are given', async () => {

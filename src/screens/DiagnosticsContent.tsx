@@ -4,62 +4,47 @@ import { fileSave } from 'browser-fs-access'
 import { Button, Toggle } from '../design/components'
 import { diagnosticsMessages } from '../copy/messages'
 import { clearEvents, exportEventsBlob, listEvents } from '../state/diagnostics'
+import { db } from '../state/db'
 import type { LogEvent } from '../state/types'
 
-interface DayGroup {
+interface RunGroup {
   key: string
   label: string
   events: LogEvent[]
 }
 
-function dayLabel(date: Date): string {
-  const startOfToday = new Date()
-  startOfToday.setHours(0, 0, 0, 0)
-  const startOfThatDay = new Date(date)
-  startOfThatDay.setHours(0, 0, 0, 0)
-  const dayDiff = Math.round(
-    (startOfToday.getTime() - startOfThatDay.getTime()) / 86_400_000,
-  )
-  if (dayDiff === 0) return diagnosticsMessages.today
-  if (dayDiff === 1) return diagnosticsMessages.yesterday
-  return date.toLocaleDateString(undefined, {
-    weekday: 'short',
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
-}
-
-function groupByDay(events: readonly LogEvent[]): DayGroup[] {
-  const groups: DayGroup[] = []
-  const byKey = new Map<string, DayGroup>()
+function groupByRun(events: readonly LogEvent[], runNames: ReadonlyMap<string, string>): RunGroup[] {
+  const groups: RunGroup[] = []
+  const byKey = new Map<string, RunGroup>()
   for (const event of events) {
-    const date = new Date(event.t)
-    const key = date.toDateString()
+    const key = event.runId ?? '__none__'
     let group = byKey.get(key)
     if (group === undefined) {
-      group = { key, label: dayLabel(date), events: [] }
-      byKey.set(key, group)
-      groups.push(group)
+      const label = key === '__none__'
+        ? diagnosticsMessages.generalGroup
+        : (runNames.get(key) ?? `Run ${key.slice(0, 8)}`)
+      group = { key, label, events: [] }
+      byKey.set(key, group); groups.push(group)
     }
     group.events.push(event)
   }
   return groups
 }
 
-async function downloadDiagnostics() {
-  const blob = await exportEventsBlob()
-  const file = new File([blob], 'codox-diagnostics.json', {
-    type: 'application/json',
-  })
+function sanitizeName(name: string): string {
+  return name.replace(/\.[^.]+$/, '').replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '') || 'run'
+}
+
+async function downloadDiagnostics(seqs: number[] | undefined, base: string) {
+  const blob = await exportEventsBlob(seqs)
+  const date = new Date().toISOString().slice(0, 10)
+  const fileName = `codox-diagnostics_${base}_${date}.json`
+  const file = new File([blob], fileName, { type: 'application/json' })
   // ponytail: fileSave covers web + Tauri + the Firefox/Safari anchor
   // fallback. If Android-APK diagnostics download is ever needed, add the
   // Capacitor Share branch from src/export/exporter.ts.
   try {
-    await fileSave(file, {
-      fileName: 'codox-diagnostics.json',
-      extensions: ['.json'],
-    })
+    await fileSave(file, { fileName, extensions: ['.json'] })
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') return
     throw error
@@ -74,15 +59,27 @@ function seqsOf(events: readonly LogEvent[]): number[] {
 
 export function DiagnosticsContent() {
   const events = useLiveQuery(() => listEvents(), []) ?? []
+  const runs = useLiveQuery(() => db.runs.toArray(), []) ?? []
   const [problemsOnly, setProblemsOnly] = useState(false)
   const [selected, setSelected] = useState<ReadonlySet<number>>(new Set())
 
+  const runNames = new Map(runs.map((run) => [run.id, run.fileName]))
   const shown = problemsOnly
     ? events.filter((event) => event.level !== 'info')
     : events
-  const groups = groupByDay(shown)
+  const groups = groupByRun(shown, runNames)
   const liveSeqs = new Set(seqsOf(events))
   const selectedLive = [...selected].filter((seq) => liveSeqs.has(seq))
+
+  const selectedEvents = events.filter((event) => event.seq !== undefined && selected.has(event.seq))
+  const selectionRunIds = new Set(selectedEvents.map((event) => event.runId ?? '__none__'))
+  const selectionBase = selectionRunIds.size === 1
+    ? (() => {
+        const only = [...selectionRunIds][0]
+        const name = only === '__none__' ? undefined : runNames.get(only)
+        return name ? sanitizeName(name) : 'selection'
+      })()
+    : 'selection'
 
   const toggleOne = (seq: number | undefined) => {
     if (seq === undefined) return
@@ -94,7 +91,7 @@ export function DiagnosticsContent() {
     })
   }
 
-  const toggleDay = (group: DayGroup) => {
+  const toggleRun = (group: RunGroup) => {
     const seqs = seqsOf(group.events)
     const allSelected = seqs.length > 0 && seqs.every((seq) => selected.has(seq))
     setSelected((prev) => {
@@ -126,12 +123,11 @@ export function DiagnosticsContent() {
           onChange={setProblemsOnly}
         />
         <div className="ds-diagnostics__buttons">
-          <Button
-            isDisabled={events.length === 0}
-            onPress={() => void downloadDiagnostics()}
-            variant="secondary"
-          >
-            {diagnosticsMessages.download}
+          <Button isDisabled={events.length === 0} onPress={() => void downloadDiagnostics(undefined, 'all')} variant="secondary">
+            {diagnosticsMessages.downloadAll}
+          </Button>
+          <Button isDisabled={selectedLive.length === 0} onPress={() => void downloadDiagnostics(selectedLive, selectionBase)} variant="secondary">
+            {diagnosticsMessages.downloadSelected(selectedLive.length)}
           </Button>
           <Button
             isDisabled={selectedLive.length === 0}
@@ -162,10 +158,10 @@ export function DiagnosticsContent() {
               <section className="ds-diagnostics__day" key={group.key}>
                 <div className="ds-diagnostics__day-head">
                   <input
-                    aria-label={diagnosticsMessages.selectDay(group.label)}
+                    aria-label={diagnosticsMessages.selectGroup(group.label)}
                     checked={allSelected}
                     className="ds-diagnostics__check"
-                    onChange={() => toggleDay(group)}
+                    onChange={() => toggleRun(group)}
                     ref={(el) => {
                       if (el) el.indeterminate = someSelected && !allSelected
                     }}
@@ -201,7 +197,7 @@ export function DiagnosticsContent() {
                         <div className="ds-diagnostics__row-body">
                           <div className="ds-diagnostics__meta">
                             <span className="ds-diagnostics__time">
-                              {new Date(event.t).toLocaleTimeString()}
+                              {new Date(event.t).toLocaleString()}
                             </span>
                             <span className="ds-diagnostics__event">
                               {event.scope} · {event.event}

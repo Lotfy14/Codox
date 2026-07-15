@@ -608,6 +608,13 @@ async function stepPlanAndValidate(
     })))
     allBoxes.figures.push(...parsed.value.figures.map((row) => ({ ...row, page })))
   }
+  const boxedRefs = new Set(allBoxes.questions.map((q) => q.ref))
+  const flaggedRefs = new Set(issues.flatMap((issue) => (issue.rowRef !== undefined ? [issue.rowRef] : [])))
+  for (const question of reconciled.questions) {
+    if (!boxedRefs.has(question.ref) && !flaggedRefs.has(question.ref)) {
+      issues.push({ kind: 'unreadable_page', page: question.ownerPage, rowRef: question.ref, reason: 'BOX returned no region for this question' })
+    }
+  }
   const blueprint = rewriteAssetPaths(assembleBlueprint({ index: reconciled, boxes: allBoxes, evidence, pageCount: examPages.length }))
   const valid = validateBlueprint(JSON.stringify(blueprint), new Set(examPages))
   if (!valid.ok) return { ok: false, reason: 'planner_invalid_after_repair' }

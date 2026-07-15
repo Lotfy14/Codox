@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { RunState } from '../state/types'
 import {
   loadReviewData,
+  useAiAnswers,
   useResolutions,
   type ReviewData,
 } from './review-data'
@@ -50,6 +51,7 @@ export function useReviewSession(runs: readonly RunState[]) {
   const activeRun = doneRuns.find((run) => run.id === activeRunId) ?? doneRuns[0]
   const data = activeRun === undefined ? undefined : dataCache[activeRun.id]
   const resolutions = useResolutions(activeRun?.id ?? '__no_review_run__')
+  const aiAnswers = useAiAnswers(activeRun?.id ?? '__no_review_run__')
   const controls = controlsByRun[activeRunId] ?? { filter: 'all', search: '' }
   const filteredRows = useMemo(
     () => data === undefined || resolutions === undefined
@@ -139,6 +141,7 @@ export function useReviewSession(runs: readonly RunState[]) {
   return {
     activeRun,
     activeRunId,
+    aiAnswers,
     back,
     controls,
     data,

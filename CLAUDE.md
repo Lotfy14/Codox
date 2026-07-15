@@ -116,10 +116,15 @@ A fix is not done until it is **committed and pushed to `main`** — that one
 push is what ships every channel (auto-release.yml deploys the web app and
 cuts the GitHub release the Windows auto-updater feeds from). Channels
 update at different speeds: web is automatic within minutes, Windows
-auto-updates on launch, but **Android has no updater — an installed APK is
-frozen** until the user manually installs a fresh one from
-`/releases/latest`. Any "works on web, broken on phone" report is almost
-always a stale APK, not a code fork. Never deliver
+auto-updates silently on launch, and Android checks on launch too — it
+shows an in-app update banner that downloads the new APK and opens the
+system installer, but that needs the user to tap through (and allow
+"install from unknown sources" once), so it is **not silent** and can lag
+until they accept it. A "works on web, broken on phone" report is usually
+an APK whose update the user has not accepted yet — or, across the
+pre-v0.0.51 signing-key boundary, one that must be uninstalled once before
+it can upgrade (`/releases/latest` is the manual APK fallback) — not a code
+fork. Never deliver
 a fix as a local-only `wrangler deploy`, a hot edit on one machine, or a
 change to one device's stored data: that repairs a single installation and
 leaves every other device broken. If a fix genuinely cannot ship through
