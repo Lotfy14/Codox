@@ -58,6 +58,8 @@ interface QueueItem {
   }
 }
 
+let globalDriving = false
+
 /**
  * The answer key that travels with a run: the run's pinned key if it still
  * exists, else the job's key file. The planner decides from evidence what
@@ -131,8 +133,9 @@ export function useConversion(jobId: string): ConversionState {
     async (
       queue: ReadonlyArray<QueueItem>,
     ) => {
-      if (driving.current) return
+      if (driving.current || globalDriving) return
       driving.current = true
+      globalDriving = true
       setIsDriving(true)
       const aborter = new AbortController()
       abortRef.current = aborter
@@ -166,6 +169,7 @@ export function useConversion(jobId: string): ConversionState {
         // this 'stopped' write can never be overwritten by a late 'paused'.
         if (aborter.signal.aborted) await stopJobRuns(jobId)
         driving.current = false
+        globalDriving = false
         setIsDriving(false)
       }
     },
@@ -176,7 +180,10 @@ export function useConversion(jobId: string): ConversionState {
     abortRef.current?.abort()
     // No driver (stale state from a crash or another tab): nothing will
     // run the cleanup above, so mark the runs stopped right here.
-    if (!driving.current) await stopJobRuns(jobId)
+    if (!driving.current) {
+      await stopJobRuns(jobId)
+      globalDriving = false
+    }
   }, [jobId])
 
   /** Resume anything a reload or a closed tab left mid-flight. */
@@ -184,7 +191,7 @@ export function useConversion(jobId: string): ConversionState {
     let cancelled = false
     const resume = async () => {
       const resumable = await findResumableRuns(jobId)
-      if (cancelled || resumable.length === 0 || driving.current) return
+      if (cancelled || resumable.length === 0 || driving.current || globalDriving) return
       const queue: QueueItem[] = []
       for (const run of resumable) {
         const file = await db.files.get(run.pdfId)
@@ -307,7 +314,7 @@ export function useConversion(jobId: string): ConversionState {
   return {
     runs,
     providerStatus,
-    isDriving,
+    isDriving: isDriving || globalDriving,
     isMatching,
     topicMatchIssue,
     start,
