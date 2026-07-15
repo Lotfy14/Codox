@@ -1,99 +1,6 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
 import { unzipSync } from 'fflate'
 
-const CSV_SCHEMA = [
-  'id',
-  'group_id',
-  'topic',
-  'subtopic',
-  'year',
-  'question',
-  'options',
-  'correct_index',
-  'image_urls',
-  'needs_review',
-]
-
-const BLUEPRINT = {
-  csv_schema: CSV_SCHEMA,
-  document_profile: {
-    page_count: 2,
-    question_count: 30,
-    group_count: 1,
-    question_pages: [1],
-    answer_policy: {
-      type: 'no_answer_key',
-      answer_key_present: false,
-      marking_style: 'none',
-      worker_rule: 'leave the answer blank for review',
-    },
-  },
-  assets: [],
-  planned_rows: Array.from({ length: 30 }, (_, index) =>
-    ({
-      id: String(index + 1),
-      group_id: 'group1',
-      topic: '',
-      subtopic: '',
-      year: '',
-      question_assembly: {
-        mode: 'plain_question_prompt',
-        final_format: '{question_prompt}',
-      },
-      regions: {
-        case_stem: null,
-        question_prompt: {
-          page: 1,
-          box_2d: [80, 50, 250, 950],
-          anchor: 'question',
-        },
-        options: {
-          page: 1,
-          box_2d: [250, 50, 500, 950],
-          anchor: 'options',
-        },
-        answer_evidence: null,
-      },
-      image_urls: [],
-      correct_index_policy: {
-        type: 'blank_no_answer_key',
-        value: '',
-        needs_review: 'no_answer_key',
-      },
-      worker_task: {
-        case_stem_required: false,
-        read_regions_only: false,
-        must_follow_planner_structure: true,
-      },
-    }),
-  ),
-  worker_constraints: {
-    may_add_rows: false,
-    may_remove_rows: false,
-    may_change_grouping: false,
-    may_change_image_assignments: false,
-    may_change_answer_policy: false,
-    may_flag_planner_disagreement: false,
-  },
-}
-
-const WORKER_RESPONSE = {
-  rows: Array.from({ length: 30 }, (_, index) =>
-    ({
-      id: String(index + 1),
-      group_id: 'group1',
-      topic: '',
-      subtopic: '',
-      year: '',
-      question: `Question ${index + 1}: What is two plus two?`,
-      options: ['Three', 'Four'],
-      correct_index: '',
-      image_urls: [],
-      needs_review: '',
-    }),
-  ),
-}
-
 const AUDIT_RESPONSE = {
   audit_pass: true,
   risk_class: 'safe_to_import',
@@ -147,20 +54,74 @@ async function mockGemini(page: Page) {
       const prompt = parts.find((part) => typeof part.text === 'string')?.text ?? ''
       if (prompt === 'Reply with OK.') {
         await fulfillJson(route, geminiBody('OK'))
-      } else if (prompt.startsWith('You are the PLANNER')) {
-        plannerImageCount = parts.filter((part) => part.inlineData !== undefined).length
-        await fulfillJson(route, geminiBody(JSON.stringify(BLUEPRINT)))
+      } else if (prompt.startsWith('You are the INDEX stage')) {
+        plannerImageCount += parts.filter((part) => part.inlineData !== undefined).length
+        const indexResponse = {
+          questions: Array.from({ length: 30 }, (_, i) => ({
+            ref: 'q' + (i + 1),
+            printed_label: String(i + 1),
+            owner_page: 1,
+            source_pages: [1],
+            anchor: 'Question ' + (i + 1),
+            options_present: true,
+            case_stem_key: null,
+            section_hint: '',
+            visible_year: '',
+            evidence_state: 'none',
+          })),
+          pages: [{
+            page: 1,
+            contains_question_start: true,
+            first_printed_label: '1',
+            last_printed_label: '30',
+            section_hint: '',
+          }],
+        }
+        await fulfillJson(route, geminiBody(JSON.stringify(indexResponse)))
+      } else if (prompt.startsWith('You are the EVIDENCE / KEY MAP stage')) {
+        plannerImageCount += parts.filter((part) => part.inlineData !== undefined).length
+        await fulfillJson(route, geminiBody(JSON.stringify({
+          type: 'uncertain', marking_style: '', evidence: [],
+        })))
+      } else if (prompt.startsWith('You are the FIGURE DETECT stage')) {
+        await fulfillJson(route, geminiBody(JSON.stringify({ figures: [] })))
+      } else if (prompt.startsWith('You are the BOX stage')) {
+        const marker = 'PAGE TASKS:\n'
+        const refs = JSON.parse(prompt.slice(prompt.indexOf(marker) + marker.length)) as
+          Array<{ ref: string }>
+        await fulfillJson(route, geminiBody(JSON.stringify({
+          questions: refs.map((task) => ({
+            ref: task.ref,
+            question: { page: 1, box_2d: [80, 50, 250, 950], anchor: 'question' },
+            options: { page: 1, box_2d: [250, 50, 500, 950], anchor: 'options' },
+            case_stem: null,
+            inline_evidence: null,
+          })),
+          figures: [],
+        })))
       } else if (prompt.startsWith('You are the WORKER')) {
         const marker = 'CHUNK PACKAGE:\n'
         const packageText = prompt
           .slice(prompt.indexOf(marker) + marker.length)
           .split('\n\nYour previous response')[0]
-        const reduced = JSON.parse(packageText) as { planned_rows: Array<{ id: string }> }
-        const ids = new Set(reduced.planned_rows.map((row) => row.id))
+        const reduced = JSON.parse(packageText) as {
+          planned_rows: Array<{ id: string; group_id: string; year: string; image_urls: string[] }>
+        }
         await fulfillJson(
           route,
           geminiBody(JSON.stringify({
-            rows: WORKER_RESPONSE.rows.filter((row) => ids.has(row.id)),
+            rows: reduced.planned_rows.map((row) => ({
+              id: row.id,
+              group_id: row.group_id,
+              topic: '',
+              subtopic: '',
+              year: row.year,
+              question: 'Question ' + row.id + ': What is two plus two?',
+              options: ['Three', 'Four'],
+              correct_index: '',
+              image_urls: row.image_urls,
+              needs_review: '',
+            })),
           })),
         )
       } else if (prompt.startsWith('You are the AUDIT model')) {

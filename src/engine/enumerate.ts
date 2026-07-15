@@ -75,7 +75,7 @@ export function reconcileIndexWindows(windows: readonly IndexWindow[]): Reconcil
       questions.push({ ...question, sectionKey: sectionKey(question) })
     }
   }
-  questions.sort((a, b) => a.ownerPage - b.ownerPage || a.ref.localeCompare(b.ref))
+  questions.sort((a, b) => a.ownerPage - b.ownerPage || a.ref.localeCompare(b.ref, undefined, { numeric: true }))
   const issues: PlanningIssue[] = []
   const bySection = new Map<string, ReconciledQuestion[]>()
   for (const question of questions) {
