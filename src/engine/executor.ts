@@ -71,6 +71,7 @@ import { emitCsv } from './csv'
 import { mergeRows, validateWorkerChunk } from './merge'
 import { stripEnumerationLabels, stripTableBlock } from './normalize'
 import { parseAuditReport, validateFinalRows } from './validate'
+import { resolveQuestionReferences } from './reference-resolver'
 import type {
   Blueprint,
   MergedRow,
@@ -906,7 +907,11 @@ export async function executeRun(
     )
     if (!merged.ok) return stop(runId, 'merge', 'merge_validation_failed')
 
-    const rows: MergedRow[] = merged.rows.map((row) => {
+    const resolvedRows = await timed(runId, 'reference-resolver', async () =>
+      resolveQuestionReferences(merged.rows, controller, runId, signal),
+    )
+
+    const rows: MergedRow[] = resolvedRows.map((row) => {
       const normalized = stripEnumerationLabels(row.options)
       // `question` was assembled and label-stripped deterministically at merge
       // (case_stem + prompt, §2.2). When the row carries a figure crop that
