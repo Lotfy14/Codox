@@ -27,6 +27,25 @@ for why each stack piece was chosen.
    sees a key or a page. First run shows a one-line notice that pages are
    sent to Gemini under the user's key (owner chose minimal notice —
    users are a known group working with public documents).
+4. **Claude orchestrates, GLM codes** — in this repo Claude plans and
+   reviews; it never writes or edits application code itself, and never
+   hand-fixes a bug. Every code change goes through GLM via the `opencode`
+   CLI (the `delegate-to-opencode` skill): Claude writes the spec — what to
+   change, where, the constraints from this file, and what "done" looks
+   like — GLM executes it as a diff, and Claude reviews the diff against the
+   spec and against every other rule in this file. If the diff doesn't pass
+   review, Claude sends GLM one precise fix instruction and re-reviews — no
+   fixed round limit, keep iterating as long as each round makes real
+   progress on the review findings. If a round comes back with the same
+   problem unfixed (no progress), stop and surface it to the owner instead
+   of writing the fix by hand or looping further. Scope is
+   application code (`src/`, shipped config, build scripts) — Claude still
+   reads code, runs tests/builds/git to verify GLM's work, writes specs and
+   commit messages, and edits documentation (including this file) directly;
+   the line is who holds the pen on application code, not who's allowed to
+   touch a keyboard. The **Search before build** research step below is
+   unaffected — Claude still researches whether a package exists; if none
+   does, GLM writes the hand-rolled implementation, not Claude.
 
 ## Provider and quota rule (non-negotiable)
 
@@ -67,13 +86,14 @@ is to lower the count) and splits the page window instead. The surplus direction
 is not an error — rejecting it threw away 17 fully-specified rows over a
 profile field that read 15, and stopped a real 30-page run.
 
-*Export projection (owner-approved 2026-07-14):* exported CSVs are a
 *Planner redesign (owner-approved 2026-07-14):* the single Planner prompt is
 replaced by INDEX, EVIDENCE / KEY MAP, FIGURE DETECT, and BOX prompts. INDEX
 enumerates exam-page question slots without geometry; deterministic code
 reconciles identities and assembles the pinned Blueprint. Evidence and figures
 are observed separately, and an unresolved page is a visible non-fatal planning
 issue rather than a reason to discard clean rows.
+
+*Export projection (owner-approved 2026-07-14):* exported CSVs are a
 column projection of the pinned format (`src/export/export-csv.ts`,
 CODOX_MIGRATION §3.1): `id`/`group_id` never leave the device;
 `topic`/`subtopic`/`year` are conditional per the Customizations settings.
@@ -108,8 +128,10 @@ Before implementing any non-trivial functionality from scratch, dispatch a
 **Claude Sonnet 5 research subagent** (Agent tool, model `sonnet`, web search
 enabled) to check whether a maintained package already does it. Adopt the
 package when it is maintained, permissively licensed, and reasonably sized;
-hand-write code only when the search comes back empty. Goal: minimize
-hand-written code. Trivial glue (a loop, a small helper) needs no search.
+only when the search comes back empty does GLM hand-write the
+implementation (per the **Claude orchestrates, GLM codes** rule above —
+Claude specs it, doesn't write it). Goal: minimize hand-written code.
+Trivial glue (a loop, a small helper) needs no search.
 
 Already-decided packages (do not re-litigate): React 19 + Vite +
 vite-plugin-pwa, Dexie (IndexedDB), @hyzyla/pdfium (render/crop), pdf.js
