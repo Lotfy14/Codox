@@ -18,10 +18,6 @@ export interface ReconciledIndex {
   issues: PlanningIssue[]
 }
 
-function numericLabel(label: string): number | undefined {
-  const match = label.trim().match(/^(?:q(?:uestion)?\s*)?(\d+)[\).:\-]?$/i)
-  return match === null ? undefined : Number(match[1])
-}
 function normalHint(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, ' ')
 }
@@ -61,6 +57,14 @@ export function localizeIndexWindow(
  * Union shifted/retried windows without trusting model-issued references.
  * Same owner page + normalized anchor is intentionally conservative: a near
  * duplicate is retained rather than silently deleting a real question.
+ *
+ * Ordering is per-page reading order: within a page the questions keep the
+ * order INDEX emitted them (top to bottom), NOT the order of their printed
+ * numbers. A vision model lists a page's questions top-to-bottom far more
+ * reliably than it OCRs a faint two-digit label, so a misread "19"→"1" can
+ * no longer leapfrog a question to the top. The printed number is kept only
+ * as the row's display label. Completeness — a genuinely skipped question —
+ * is the read-only audit's job, not something inferred from the numbering.
  */
 export function reconcileIndexWindows(windows: readonly IndexWindow[]): ReconciledIndex {
   const questions: ReconciledQuestion[] = []
@@ -75,44 +79,13 @@ export function reconcileIndexWindows(windows: readonly IndexWindow[]): Reconcil
       questions.push({ ...question, sectionKey: sectionKey(question) })
     }
   }
-  const orderKey = new Map<ReconciledQuestion, number>()
-  const byOwner = new Map<number, ReconciledQuestion[]>()
-  for (const q of questions) {
-    const list = byOwner.get(q.ownerPage) ?? []
-    list.push(q); byOwner.set(q.ownerPage, list)
-  }
-  for (const list of byOwner.values()) {
-    let last = 0
-    for (const q of list) {
-      const n = numericLabel(q.printedLabel)
-      if (n !== undefined) { last = n; orderKey.set(q, n) } else { last += 0.5; orderKey.set(q, last) }
-    }
-  }
-  questions.sort((a, b) => a.ownerPage - b.ownerPage || (orderKey.get(a) ?? 0) - (orderKey.get(b) ?? 0) || a.ref.localeCompare(b.ref, undefined, { numeric: true }))
+  // Page, then emission order. Each page is owned by exactly one window's
+  // core (localizeIndexWindow), so a page's questions all share a window id
+  // and the ref ordinal is that window's top-to-bottom reading order. The
+  // printed number never reorders and never infers a gap — real exams number
+  // non-sequentially, so a genuine 18→20 jump must not invent a phantom 19.
+  questions.sort((a, b) => a.ownerPage - b.ownerPage || a.ref.localeCompare(b.ref, undefined, { numeric: true }))
   const issues: PlanningIssue[] = []
-  const bySection = new Map<string, ReconciledQuestion[]>()
-  for (const question of questions) {
-    const list = bySection.get(question.sectionKey) ?? []
-    list.push(question)
-    bySection.set(question.sectionKey, list)
-  }
-  for (const [section, rows] of bySection) {
-    let previous: number | undefined
-    for (const row of rows) {
-      const current = numericLabel(row.printedLabel)
-      if (current === undefined) continue
-      if (previous !== undefined && current > previous + 1) {
-        for (let missing = previous + 1; missing < current; missing += 1) {
-          issues.push({ kind: 'missing_question', page: row.ownerPage, section, printedLabel: String(missing) })
-        }
-      }
-      // A decrease is only a restart when the page-level heading corroborates
-      // it. Otherwise record no invented gap and keep the rows in reading order.
-      previous = current <= (previous ?? 0) && normalHint(row.sectionHint) !== section
-        ? current
-        : current
-    }
-  }
   for (const manifest of pagesByNumber.values()) {
     if (!manifest.containsQuestionStart) continue
     if (!questions.some((question) => question.ownerPage === manifest.page)) {

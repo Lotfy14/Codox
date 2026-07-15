@@ -21,6 +21,29 @@ export interface NormalizedOptions {
   ambiguous: boolean
 }
 
+/**
+ * A leading printed question label: an optional "Q"/"Question", 1–3 digits,
+ * an enumeration separator, then whitespace. The separator-plus-whitespace is
+ * the safety: it distinguishes a label ("18– A 49yo…", "5. What is…") from a
+ * prompt that genuinely opens with a number ("18 patients were enrolled…",
+ * "3-day history of fatigue…", where no separator follows). 1–3 digits keeps
+ * a leading 4-digit year ("2022. In this trial…") from reading as a label.
+ */
+const LEADING_QUESTION_LABEL = /^\s*(?:q(?:uestion)?\s*)?\d{1,3}\s*[.):\-–—]\s+/i
+
+/**
+ * Strips that leading label from a question prompt. Shape-based on purpose:
+ * with per-page reading-order indexing the recorded printed number is not a
+ * trustworthy anchor (it may itself be misread), so this does NOT require the
+ * prefix to equal any recorded label — it removes whatever enumeration marker
+ * the worker transcribed. If stripping would empty the prompt, the original
+ * is kept so the empty-question guard sees the real (non-empty) text.
+ */
+export function stripLeadingQuestionLabel(question: string): string {
+  const stripped = question.replace(LEADING_QUESTION_LABEL, '')
+  return stripped.trim() === '' ? question : stripped
+}
+
 interface LabelMatch {
   /** The label token, e.g. "A", "3", "iv". */
   label: string

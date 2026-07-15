@@ -4,7 +4,7 @@
  * inputs plus the exported CSV's optional columns. They apply to
  * conversions started next; finished runs keep their own snapshot.
  */
-import { ChoiceGroup, GlassPanel } from '../design/components'
+import { ChoiceGroup, GlassPanel, Toggle } from '../design/components'
 import type { ChoiceOption } from '../design/components'
 import { customizeMessages } from '../copy/messages'
 import {
@@ -83,6 +83,20 @@ export function Customizations() {
             }
             options={YEAR_OPTIONS}
             value={settings.yearMode}
+          />
+        </GlassPanel>
+        <GlassPanel
+          aria-label={customizeMessages.debugPanelLabel}
+          as="section"
+          padding="compact"
+        >
+          <Toggle
+            description={customizeMessages.debugHint}
+            isSelected={settings.debugConsole}
+            label={customizeMessages.debugLabel}
+            onChange={(debugConsole) =>
+              void saveCustomizationSettings({ ...settings, debugConsole })
+            }
           />
         </GlassPanel>
       </div>

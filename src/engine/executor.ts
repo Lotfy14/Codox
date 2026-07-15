@@ -69,7 +69,7 @@ import {
 import { boxToCropBox, hasPositiveExtent } from './boxes'
 import { emitCsv } from './csv'
 import { mergeRows, validateWorkerChunk } from './merge'
-import { stripEnumerationLabels } from './normalize'
+import { stripEnumerationLabels, stripLeadingQuestionLabel } from './normalize'
 import { parseAuditReport, validateFinalRows } from './validate'
 import type {
   Blueprint,
@@ -162,6 +162,34 @@ async function call(
   }
   await recordRequestUsage(runId, result.usage)
   return { text: result.text, finishReason: result.finishReason }
+}
+
+/**
+ * Times one unit of work and records it as a diagnostics event
+ * (`engine.timing`, detail `{ label, ms }`) the debug console reads back.
+ * Diagnostics only: it never changes what `fn` returns, and `logEvent`
+ * itself never throws — so this is invisible to the engine's behaviour and
+ * safe to wrap around any step or Gemini call. The `finally` records even a
+ * failed/aborted attempt, which is exactly what "where did it get stuck"
+ * needs.
+ */
+async function timed<T>(
+  runId: string,
+  label: string,
+  fn: () => Promise<T>,
+): Promise<T> {
+  const start = Date.now()
+  try {
+    return await fn()
+  } finally {
+    await logEvent({
+      scope: 'engine',
+      level: 'info',
+      event: 'engine.timing',
+      runId,
+      detail: { label, ms: Date.now() - start },
+    })
+  }
 }
 
 async function stop(runId: string, step: RunStep, reason: StopReason): Promise<RunOutcome> {
@@ -515,9 +543,9 @@ async function stepPlanAndValidate(
   for (let index = 0; index < windows.length; index += 1) {
     const window = windows[index]
     const images = await pageImages(runId, window.context.map((page) => page - 1))
-    const response = await call(controller, runId, buildIndexRequest(
+    const response = await timed(runId, `index w${index + 1}`, () => call(controller, runId, buildIndexRequest(
       images, window.core.map((page) => window.context.indexOf(page) + 1), PLANNER_MODEL,
-    ), signal)
+    ), signal))
     await putArtifact({ runId, kind: 'index-window', chunkIndex: index, text: response.text })
     const parsed = wasTruncated(response.finishReason) ? undefined : parseIndexWindow(response.text)
     if (parsed === undefined || !parsed.ok) {
@@ -559,11 +587,11 @@ async function stepPlanAndValidate(
   }
   if (answerKeyPageCount > 0 && examPageCount !== undefined) {
     const keyPages = allPages.map((page) => (page.pageIndex ?? 0) + 1).filter((page) => page > examPageCount)
-    const response = await call(controller, runId, buildEvidenceRequest(
+    const response = await timed(runId, 'evidence', async () => call(controller, runId, buildEvidenceRequest(
       await pageImages(runId, keyPages.map((page) => page - 1)),
       reconciled.questions.map((row) => ({ ref: row.ref, printedLabel: row.printedLabel, section: row.sectionKey })),
       PLANNER_MODEL,
-    ), signal)
+    ), signal))
     const parsed = wasTruncated(response.finishReason) ? undefined : parseEvidenceMap(response.text)
     if (parsed?.ok) evidence = parsed.value
   }
@@ -572,11 +600,11 @@ async function stepPlanAndValidate(
   // cannot suppress a visual. Its result is checkpointed for diagnostics.
   for (let index = 0; index < windows.length; index += 1) {
     const window = windows[index]
-    const response = await call(controller, runId, buildFigureDetectRequest(
+    const response = await timed(runId, `figure w${index + 1}`, async () => call(controller, runId, buildFigureDetectRequest(
       await pageImages(runId, window.context.map((page) => page - 1)),
       reconciled.questions.filter((row) => window.core.includes(row.ownerPage)).map((row) => ({ ref: row.ref, ownerPage: row.ownerPage })),
       PLANNER_MODEL,
-    ), signal)
+    ), signal))
     await putArtifact({ runId, kind: 'figure-window', chunkIndex: index, text: response.text })
     if (!wasTruncated(response.finishReason)) parseFigureDetection(response.text)
   }
@@ -588,11 +616,11 @@ async function stepPlanAndValidate(
     list.push(question); byPage.set(question.ownerPage, list)
   }
   for (const [page, questions] of byPage) {
-    const response = await call(controller, runId, buildBoxRequest(
+    const response = await timed(runId, `box p${page}`, async () => call(controller, runId, buildBoxRequest(
       await pageImages(runId, [page - 1]),
       questions.map((row) => ({ ref: row.ref, optionsPresent: row.optionsPresent, hasCase: row.caseStemKey !== null, hasInlineEvidence: row.evidenceState === 'inline' })),
       PLANNER_MODEL,
-    ), signal)
+    ), signal))
     const parsed = wasTruncated(response.finishReason) ? undefined : parseBoxResult(response.text)
     if (parsed === undefined || !parsed.ok) {
       const reason = parsed === undefined ? 'BOX response was truncated' : parsed.errors.join('; ')
@@ -742,11 +770,16 @@ async function stepWorker(
     let accepted: WorkerRow[] | undefined
     // Exactly one retry, consumed only by INVALID CONTENT.
     for (let attempt = 0; attempt < 2 && accepted === undefined; attempt += 1) {
-      const response = await call(
-        controller,
+      const response = await timed(
         runId,
-        buildWorkerRequest(reduced, images, workerModel, previousError),
-        signal,
+        `worker chunk ${chunkIndex + 1}`,
+        () =>
+          call(
+            controller,
+            runId,
+            buildWorkerRequest(reduced, images, workerModel, previousError),
+            signal,
+          ),
       )
       await putArtifact({
         runId,
@@ -794,15 +827,17 @@ export async function executeRun(
 
   try {
     // 1 — render
-    await updateRun(runId, { step: 'render' })
-    const render = await stepRender(runId, pdfBytes, options)
+    await updateRun(runId, { step: 'render', stepStartedAt: Date.now() })
+    const render = await timed(runId, 'render', () =>
+      stepRender(runId, pdfBytes, options),
+    )
     if (!render.ok) return stop(runId, 'render', 'render_failed')
     if (render.badPages.length > 0) {
       await updateRun(runId, { badPages: render.badPages })
     }
 
     // 2/3 — planner + blueprint validation (one repair round)
-    await updateRun(runId, { step: 'planner' })
+    await updateRun(runId, { step: 'planner', stepStartedAt: Date.now() })
     const planned = await stepPlanAndValidate(
       runId, controller, signal, render.examPageCount, render.answerKeyPageCount,
     )
@@ -810,15 +845,17 @@ export async function executeRun(
     const blueprint = planned.blueprint
 
     // 4 — deterministic crops
-    await updateRun(runId, { step: 'crops' })
-    const { producedCrops, cropFailures } = await stepCrops(runId, blueprint)
+    await updateRun(runId, { step: 'crops', stepStartedAt: Date.now() })
+    const { producedCrops, cropFailures } = await timed(runId, 'crops', () =>
+      stepCrops(runId, blueprint),
+    )
     let notSafeToImport = cropFailures.length > 0 || ((await getRun(runId))?.planningIssues?.length ?? 0) > 0
     if (cropFailures.length > 0) {
       await logEvent({ scope: 'engine', level: 'warn', event: 'engine.crops.failed', runId, detail: { count: cropFailures.length } })
     }
 
     // 5 — chunked worker calls
-    await updateRun(runId, { step: 'worker' })
+    await updateRun(runId, { step: 'worker', stepStartedAt: Date.now() })
     const worker = await stepWorker(
       runId,
       blueprint,
@@ -830,34 +867,55 @@ export async function executeRun(
     if (!worker.ok) return stop(runId, 'worker', 'worker_chunk_invalid')
 
     // 6 — deterministic merge, then normalization
-    await updateRun(runId, { step: 'merge' })
-    const merged = mergeRows(blueprint, worker.rows)
+    await updateRun(runId, { step: 'merge', stepStartedAt: Date.now() })
+    const merged = await timed(runId, 'merge', async () =>
+      mergeRows(blueprint, worker.rows),
+    )
     if (!merged.ok) return stop(runId, 'merge', 'merge_validation_failed')
 
     const rows: MergedRow[] = merged.rows.map((row) => {
       const normalized = stripEnumerationLabels(row.options)
+      // Drop the printed question number the worker transcribed verbatim
+      // ("18– A 49yo…" → "A 49yo…"); shape-based, not label-matched.
+      const question = stripLeadingQuestionLabel(row.question)
+      // A row whose prompt read back empty is flagged, never a silent blank
+      // card: BOX failed on that page and the whole-page fallback yielded no
+      // text. NEVER-GUESS — a flag pointing at the page beats an empty row.
+      const emptyQuestion = question.trim() === ''
       return {
         ...row,
+        question,
         options: normalized.options,
-        // An ambiguous label set is flagged, never guessed at.
+        // An existing flag wins; otherwise flag empties, then ambiguous labels.
         needs_review:
-          normalized.ambiguous && row.needs_review === ''
-            ? 'possible_merge'
-            : row.needs_review,
+          row.needs_review !== ''
+            ? row.needs_review
+            : emptyQuestion
+              ? 'empty_question'
+              : normalized.ambiguous
+                ? 'possible_merge'
+                : '',
       }
     })
+
+    const emptyQuestions = rows.filter((row) => row.needs_review === 'empty_question').length
+    if (emptyQuestions > 0) {
+      await logEvent({ scope: 'engine', level: 'warn', event: 'engine.empty_questions', runId, detail: { count: emptyQuestions } })
+    }
 
     await putArtifact({ runId, kind: 'merged-rows', json: rows })
 
     // 7 — final validation + CSV emit. A failure still writes the CSV.
-    await updateRun(runId, { step: 'emit' })
-    const final = validateFinalRows(rows, blueprint, producedCrops)
-    if (!final.ok) notSafeToImport = true
-    const csv = emitCsv(rows)
+    await updateRun(runId, { step: 'emit', stepStartedAt: Date.now() })
+    const csv = await timed(runId, 'emit', async () => {
+      const final = validateFinalRows(rows, blueprint, producedCrops)
+      if (!final.ok) notSafeToImport = true
+      return emitCsv(rows)
+    })
     await putArtifact({ runId, kind: 'csv', text: csv })
 
     // 8 — the read-only audit gate
-    await updateRun(runId, { step: 'audit' })
+    await updateRun(runId, { step: 'audit', stepStartedAt: Date.now() })
     let auditUnavailable = false
     try {
       const auditImages = [
@@ -867,11 +925,13 @@ export async function executeRun(
         )),
         ...(await cropImages(runId, [...producedCrops])),
       ]
-      const audit = await call(
-        controller,
-        runId,
-        buildAuditRequest(blueprint, rows, auditImages),
-        signal,
+      const audit = await timed(runId, 'audit', () =>
+        call(
+          controller,
+          runId,
+          buildAuditRequest(blueprint, rows, auditImages),
+          signal,
+        ),
       )
       const report = parseAuditReport(audit.text)
       if (report.ok) {

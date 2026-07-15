@@ -19,10 +19,15 @@ describe('customization settings', () => {
   })
 
   it('round-trips a saved value', async () => {
-    await saveCustomizationSettings({ yearMode: 'ai', topicsMode: 'off' })
+    await saveCustomizationSettings({
+      yearMode: 'ai',
+      topicsMode: 'off',
+      debugConsole: true,
+    })
     expect(await getCustomizationSettings()).toEqual({
       yearMode: 'ai',
       topicsMode: 'off',
+      debugConsole: true,
     })
   })
 
@@ -34,6 +39,7 @@ describe('customization settings', () => {
     expect(await getCustomizationSettings()).toEqual({
       yearMode: DEFAULT_CUSTOMIZATION_SETTINGS.yearMode,
       topicsMode: 'off',
+      debugConsole: DEFAULT_CUSTOMIZATION_SETTINGS.debugConsole,
     })
   })
 

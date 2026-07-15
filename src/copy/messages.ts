@@ -270,6 +270,18 @@ export const customizeMessages = {
   topicsOn: 'On',
   topicsOnHint:
     'Convert shows a topic list you can type or read from a topics PDF or image. After conversion, Gemini matches each question to your list — unsure stays blank.',
+  debugPanelLabel: 'Debug console',
+  debugLabel: 'Show debug console',
+  debugHint:
+    'Adds a timing panel to the Convert screen that shows each conversion step and how long it took — useful for finding what makes a run slow. Off by default; nothing is sent anywhere.',
+} as const
+
+export const debugMessages = {
+  panelLabel: 'Debug console',
+  panelTitle: 'Debug console — step timing',
+  waiting: 'Waiting for the first step to finish…',
+  total: 'Total (measured)',
+  now: (step: string) => `Now: ${step}`,
 } as const
 
 export const topicsMessages = {

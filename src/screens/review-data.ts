@@ -55,6 +55,7 @@ export function flagCategory(reason: string, correctIndex: string): FlagCategory
     text.includes('unclear') ||
     text.includes('illegible') ||
     text.includes('unreadable') ||
+    text.includes('empty') ||
     text.includes('low_confidence') ||
     correctIndex !== ''
   ) {

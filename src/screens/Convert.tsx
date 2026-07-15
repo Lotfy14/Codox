@@ -28,6 +28,7 @@ import {
   type ExportOutcome,
 } from '../export/exporter'
 import { AiExportDialog } from './AiExportDialog'
+import { DebugConsole } from './DebugConsole'
 import {
   addStoredPdf,
   putAnswerKeyPdf,
@@ -363,6 +364,7 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
             />
           </>
         )}
+        {settings.debugConsole ? <DebugConsole runs={runs} /> : null}
         <AiExportDialog
           isOpen={aiExportOpen}
           onExported={noticeForOutcome}

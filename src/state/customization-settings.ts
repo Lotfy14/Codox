@@ -16,6 +16,8 @@ export type TopicsMode = 'off' | 'on'
 export interface CustomizationSettings {
   yearMode: YearMode
   topicsMode: TopicsMode
+  /** Shows the Convert screen's step-timing debug console. Off by default. */
+  debugConsole: boolean
 }
 
 const SETTINGS_KEY = 'customizationSettings'
@@ -28,6 +30,7 @@ const SETTINGS_KEY = 'customizationSettings'
 export const DEFAULT_CUSTOMIZATION_SETTINGS: CustomizationSettings = {
   yearMode: 'type',
   topicsMode: 'on',
+  debugConsole: false,
 }
 
 const YEAR_MODES: readonly YearMode[] = ['off', 'type', 'ai']
@@ -44,6 +47,10 @@ function narrow(value: string | undefined): CustomizationSettings {
       topicsMode: TOPICS_MODES.includes(parsed.topicsMode as TopicsMode)
         ? (parsed.topicsMode as TopicsMode)
         : DEFAULT_CUSTOMIZATION_SETTINGS.topicsMode,
+      debugConsole:
+        typeof parsed.debugConsole === 'boolean'
+          ? parsed.debugConsole
+          : DEFAULT_CUSTOMIZATION_SETTINGS.debugConsole,
     }
   } catch {
     return DEFAULT_CUSTOMIZATION_SETTINGS

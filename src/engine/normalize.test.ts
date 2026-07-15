@@ -1,5 +1,43 @@
 import { describe, expect, it } from 'vitest'
-import { stripEnumerationLabels } from './normalize'
+import { stripEnumerationLabels, stripLeadingQuestionLabel } from './normalize'
+
+describe('stripLeadingQuestionLabel', () => {
+  it('strips a number with an en-dash separator', () => {
+    expect(stripLeadingQuestionLabel('18– A 49-year-old woman has felt tired')).toBe(
+      'A 49-year-old woman has felt tired',
+    )
+  })
+
+  it('strips number-dot, number-paren, and "Q" prefixes', () => {
+    expect(stripLeadingQuestionLabel('5. What is the diagnosis?')).toBe('What is the diagnosis?')
+    expect(stripLeadingQuestionLabel('12) Which drug is contraindicated?')).toBe(
+      'Which drug is contraindicated?',
+    )
+    expect(stripLeadingQuestionLabel('Q7: Choose the best next step')).toBe('Choose the best next step')
+  })
+
+  it('leaves a real leading number that is not an enumeration label', () => {
+    // No separator after the number → content, not a label.
+    expect(stripLeadingQuestionLabel('18 patients were enrolled in a trial')).toBe(
+      '18 patients were enrolled in a trial',
+    )
+    expect(stripLeadingQuestionLabel('3-day history of fatigue is reported')).toBe(
+      '3-day history of fatigue is reported',
+    )
+  })
+
+  it('does not mistake a leading 4-digit year for a label', () => {
+    expect(stripLeadingQuestionLabel('2022. In this study the outcome was')).toBe(
+      '2022. In this study the outcome was',
+    )
+  })
+
+  it('keeps the original when stripping would empty the prompt', () => {
+    // Matches the label pattern fully; the guard returns the original rather
+    // than an empty string so the empty-question flag sees the real text.
+    expect(stripLeadingQuestionLabel('7. ')).toBe('7. ')
+  })
+})
 
 describe('stripEnumerationLabels', () => {
   it('strips a clean sequential "A." "B." "C." "D." set', () => {

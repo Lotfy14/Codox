@@ -60,6 +60,12 @@ export interface RunState {
   stopReason?: string
   /** The step the executor is at / stopped in. */
   step: string
+  /**
+   * When the current step began (ms epoch) — diagnostics only, powers the
+   * debug console's live "elapsed on this step" clock. Never affects the
+   * engine's behaviour or the checkpoint.
+   */
+  stepStartedAt?: number
   /** Set when validation, crops, or the audit say the CSV is not safe. */
   notSafeToImport?: boolean
   /** Set when the audit call itself failed — never an inferred pass. */
