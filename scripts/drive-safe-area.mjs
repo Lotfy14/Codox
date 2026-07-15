@@ -33,19 +33,18 @@ try {
 
   const read = () =>
     page.evaluate(() => {
-      const header = document.querySelector('.ds-sidebar')
+      const stage = document.querySelector('.ds-stage')
       const nav = document.querySelector('.ds-mobile-nav')
       const cs = (el) => (el ? getComputedStyle(el) : null)
       return {
-        headerPadTop: cs(header)?.paddingTop ?? null,
-        navPadBottom: cs(nav)?.paddingBottom ?? null,
+        stageMarginTop: cs(stage)?.marginTop ?? null,
+        navBottom: cs(nav)?.bottom ?? null,
       }
     })
 
-  // Baseline: no injected insets (env resolves to 0 on desktop). Padding is
-  // the plain fallback (max(space-3, 0) = 12px top; max(space-1, 0) = 4px bottom).
+  // Baseline: no injected insets (env resolves to 0 on desktop).
   const before = await read()
-  check('header + nav render on mobile', before.headerPadTop != null && before.navPadBottom != null,
+  check('stage + nav render on mobile', before.stageMarginTop != null && before.navBottom != null,
     JSON.stringify(before))
 
   // Simulate Capacitor SystemBars injecting the real insets as CSS variables.
@@ -56,12 +55,12 @@ try {
   }, { top: TOP, bottom: BOTTOM })
 
   const after = await read()
-  check('header clears the camera (padding-top >= inset-top)',
-    px(after.headerPadTop) >= TOP,
-    `${before.headerPadTop} -> ${after.headerPadTop}, inset ${TOP}`)
-  check('bottom nav clears the home bar (padding-bottom >= inset-bottom)',
-    px(after.navPadBottom) >= BOTTOM,
-    `${before.navPadBottom} -> ${after.navPadBottom}, inset ${BOTTOM}`)
+  check('stage shifts below the camera (margin-top >= inset-top)',
+    px(after.stageMarginTop) >= TOP,
+    `${before.stageMarginTop} -> ${after.stageMarginTop}, inset ${TOP}`)
+  check('bottom nav clears the home bar (bottom >= inset-bottom)',
+    px(after.navBottom) >= BOTTOM,
+    `${before.navBottom} -> ${after.navBottom}, inset ${BOTTOM}`)
 } finally {
   await browser.close()
 }

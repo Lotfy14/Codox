@@ -2428,9 +2428,22 @@
    storage), the rail disappears, and the fixed bottom tab bar carries
    Convert / History / API / Help. */
 @media (max-width: 63.999rem) {
+  html,
+  body {
+    background: #000000;
+  }
+
   .ds-stage {
-    padding: 0 0 calc(4.75rem + var(--safe-bottom));
+    margin-top: var(--safe-top);
+    margin-bottom: var(--safe-bottom);
+    min-height: calc(100dvh - var(--safe-top) - var(--safe-bottom));
+    padding: 0 0 4.75rem;
     background: var(--color-frame);
+  }
+
+  .ds-dialog__overlay {
+    top: var(--safe-top);
+    bottom: var(--safe-bottom);
   }
 
   .app--coachmark .ds-mobile-nav {
@@ -2461,7 +2474,7 @@
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto 1fr auto;
     gap: 0;
-    min-height: calc(100dvh - 4.75rem - var(--safe-bottom));
+    min-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 4.75rem);
     border: 0;
     border-radius: 0;
     padding: 0;
@@ -2491,7 +2504,7 @@
     border: 0;
     border-bottom: 1px solid var(--color-outline);
     border-radius: 0;
-    padding: max(var(--space-3), var(--safe-top)) var(--space-4) var(--space-3);
+    padding: var(--space-3) var(--space-4) var(--space-3);
     background: color-mix(in srgb, var(--color-frame) 94%, transparent);
     box-shadow: none;
   }
@@ -2541,12 +2554,12 @@
 
   .ds-mobile-nav {
     right: 0;
-    bottom: 0;
+    bottom: var(--safe-bottom);
     left: 0;
     gap: 0;
     border-width: 1px 0 0;
     border-radius: var(--radius-card) var(--radius-card) 0 0;
-    padding: var(--space-1) var(--space-2) max(var(--space-1), var(--safe-bottom));
+    padding: var(--space-1) var(--space-2) var(--space-1);
     background: color-mix(in srgb, var(--color-card-fill) 94%, transparent);
     box-shadow: 0 -12px 30px -24px rgb(0 0 0 / 55%);
     backdrop-filter: blur(18px);
@@ -2650,16 +2663,16 @@
 
   .ds-dialog__overlay--drawer .ds-dialog__modal {
     width: 100%;
-    max-height: calc(100dvh - var(--safe-top));
+    max-height: 100%;
     overflow: visible;
   }
 
   .ds-dialog--drawer {
     position: relative;
-    max-height: calc(100dvh - max(3rem, var(--safe-top)));
+    max-height: 100%;
     overflow: auto;
     border-radius: var(--radius-card) var(--radius-card) 0 0;
-    padding: var(--space-8) var(--space-4) max(var(--space-5), var(--safe-bottom));
+    padding: var(--space-8) var(--space-4) var(--space-5);
     animation: ds-drawer-enter 320ms var(--motion-ease-emphasized) both;
     overscroll-behavior: contain;
   }
