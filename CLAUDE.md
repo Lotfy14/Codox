@@ -38,7 +38,12 @@ for why each stack piece was chosen.
    fixed round limit, keep iterating as long as each round makes real
    progress on the review findings. If a round comes back with the same
    problem unfixed (no progress), stop and surface it to the owner instead
-   of writing the fix by hand or looping further. Scope is
+   of writing the fix by hand or looping further. Every `opencode run` is
+   time-boxed (hard timeout on the invocation; ~3 minutes with no output
+   and no diff = stalled → kill it and re-dispatch fresh, never wait it
+   out). Continue a session with `-c` only when the follow-up needs its
+   accumulated context; a small fully-specified fix always goes in a fresh
+   session — stale sessions are killed, never left running. Scope is
    application code (`src/`, shipped config, build scripts) — Claude still
    reads code, runs tests/builds/git to verify GLM's work, writes specs and
    commit messages, and edits documentation (including this file) directly;
