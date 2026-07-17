@@ -5,6 +5,8 @@
  * the device in an exported bundle:
  *
  * - `id` and `group_id` are never exported (internal keying only).
+ * - `needs_review` is never exported (owner-approved 2026-07-17): review
+ *   flags — including the AI-answer provenance flags — stay in-app.
  * - `topic`/`subtopic` appear only when the user provided a topic list
  *   for the run; values come from the topic-matches artifact, blank when
  *   unmatched — never from planner heading text.
@@ -29,7 +31,6 @@ export type ExportColumn =
   | 'options'
   | 'correct_index'
   | 'image_urls'
-  | 'needs_review'
 
 /** Column set for one run, preserving the pinned relative order. */
 export function exportColumns(
@@ -42,7 +43,6 @@ export function exportColumns(
     'options',
     'correct_index',
     'image_urls',
-    'needs_review',
   ]
 }
 

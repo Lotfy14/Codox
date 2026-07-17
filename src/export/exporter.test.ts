@@ -75,7 +75,7 @@ async function exportedCsv(): Promise<string> {
   return new TextDecoder().decode(bytes.subarray(3))
 }
 
-const BASE_HEADER = 'question,options,correct_index,image_urls,needs_review'
+const BASE_HEADER = 'question,options,correct_index,image_urls'
 
 describe('export modes', () => {
   it('with-answers (default) keeps document answers and tutor resolutions', async () => {
@@ -98,7 +98,7 @@ describe('export modes', () => {
     expect((await getRun(runId))?.exportedAt).toBeDefined()
   })
 
-  it('no-answers blanks every correct_index — including resolved rows — and keeps flags', async () => {
+  it('no-answers blanks every correct_index — including resolved rows', async () => {
     const runId = await seedDoneRun([
       row('1', { correct_index: '2', needs_review: '' }),
       row('2'),
@@ -114,8 +114,9 @@ describe('export modes', () => {
     const lines = (await exportedCsv()).trimEnd().split('\r\n')
     expect(lines[1]).not.toContain(',2,')
     expect(lines[2]).not.toContain(',1,')
-    // An unresolved row's flag column still explains its blank answer.
-    expect(lines[3]).toContain('no_answer_key')
+    // Review flags never leave the device — no flag column in the export.
+    expect(lines[0]).not.toContain('needs_review')
+    expect(lines[3]).not.toContain('no_answer_key')
     // Any successful hand-off counts for the export-early law.
     expect((await getRun(runId))?.exportedAt).toBeDefined()
   })
@@ -144,9 +145,10 @@ describe('export modes', () => {
     const lines = (await exportedCsv()).trimEnd().split('\r\n')
     expect(lines[1]).toContain(',2,') // document answer untouched
     expect(lines[2]).toContain(',3,') // certain AI answer filled
-    expect(lines[2]).toContain('ai_answered')
     expect(lines[3]).not.toContain(',0,') // unsure answer never filled
-    expect(lines[3]).toContain('ai_unsure')
+    // Provenance flags are in-app only; the exported CSV has no flag column.
+    expect(lines[2]).not.toContain('ai_answered')
+    expect(lines[3]).not.toContain('ai_unsure')
     // The stored engine output is pristine: AI answers exist only in the CSV.
     const merged = await getArtifact(runId, 'merged-rows')
     expect(merged?.json).toEqual(rows)
@@ -220,7 +222,7 @@ describe('column projection', () => {
     expect((await exportedCsv()).split('\r\n')[0]).toBe(BASE_HEADER)
   })
 
-  it('pre-feature runs (no snapshot) export the base five columns', async () => {
+  it('pre-feature runs (no snapshot) export the base four columns', async () => {
     const runId = await seedDoneRun([row('1', { topic: 'Heading', year: '2001' })])
     expect(await exportRuns([(await getRun(runId))!])).toBe('downloaded')
     const csv = await exportedCsv()

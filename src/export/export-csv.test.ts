@@ -18,26 +18,26 @@ function makeRow(overrides: Partial<MergedRow> = {}): MergedRow {
   }
 }
 
-const BASE_HEADER = 'question,options,correct_index,image_urls,needs_review'
+const BASE_HEADER = 'question,options,correct_index,image_urls'
 
 describe('exportColumns', () => {
-  it('never includes id or group_id, whatever the flags', () => {
+  it('never includes id, group_id, or needs_review, whatever the flags', () => {
     for (const topics of [false, true]) {
       for (const year of [false, true]) {
         const columns = exportColumns({ topics, year })
         expect(columns).not.toContain('id')
         expect(columns).not.toContain('group_id')
+        expect(columns).not.toContain('needs_review')
       }
     }
   })
 
-  it('base flags yield exactly the five always-present columns', () => {
+  it('base flags yield exactly the four always-present columns', () => {
     expect(exportColumns({ topics: false, year: false })).toEqual([
       'question',
       'options',
       'correct_index',
       'image_urls',
-      'needs_review',
     ])
   })
 
@@ -50,7 +50,6 @@ describe('exportColumns', () => {
       'options',
       'correct_index',
       'image_urls',
-      'needs_review',
     ])
     expect(exportColumns({ topics: true, year: false })[0]).toBe('topic')
     expect(exportColumns({ topics: false, year: true })[0]).toBe('year')
@@ -77,7 +76,7 @@ describe('emitExportCsv', () => {
     )
     expect(csv).not.toContain('group01')
     expect(csv.split('\r\n')[1]).toBe(
-      'What is the diagnosis?,"[""Appendicitis"",""Cholecystitis""]",1,"[""images/asset01.jpg""]",',
+      'What is the diagnosis?,"[""Appendicitis"",""Cholecystitis""]",1,"[""images/asset01.jpg""]"',
     )
   })
 
@@ -87,7 +86,7 @@ describe('emitExportCsv', () => {
       exportColumns({ topics: true, year: true }),
     )
     expect(csv.split('\r\n')[1]).toBe(
-      'Surgery,Appendix,2023,What is the diagnosis?,"[""Appendicitis"",""Cholecystitis""]",1,"[""images/asset01.jpg""]",',
+      'Surgery,Appendix,2023,What is the diagnosis?,"[""Appendicitis"",""Cholecystitis""]",1,"[""images/asset01.jpg""]"',
     )
   })
 
