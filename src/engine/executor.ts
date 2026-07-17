@@ -46,6 +46,7 @@ import {
   buildBoxRequest, buildEvidenceRequest, buildFigureDetectRequest, buildIndexRequest,
 } from './calls'
 import { assembleBlueprint } from './assemble'
+import { mapConcurrent } from './concurrency'
 import { localizeIndexWindow, reconcileIndexWindows, type ReconciledQuestion } from './enumerate'
 import { parseBoxResult, parseEvidenceMap, parseFigureDetection, parseIndexWindow, type BoxResult, type EvidenceMap, type IndexWindow } from './index-pass'
 import type { PlanningIssue } from '../state/types'
@@ -114,6 +115,15 @@ export type RunOutcome =
   | { status: 'aborted'; runId: string }
 
 const JPEG = 'image/jpeg'
+
+/**
+ * How many independent Gemini calls may be in flight at once. The shared
+ * controller throttle still enforces the free-tier RPM ceiling; this only
+ * removes the wait-for-the-previous-call latency between independent calls.
+ * Kept small because each in-flight call holds its page images as base64 in
+ * memory (mobile working-set discipline).
+ */
+const CALL_CONCURRENCY = 3
 
 /** A provider failure the engine cannot continue past. */
 class ProviderStop extends Error {
@@ -541,32 +551,43 @@ async function stepPlanAndValidate(
   await updateRun(runId, { plannerModel: PLANNER_MODEL, plannerWindowCount: windows.length, plannerWindowsDone: 0 })
   const indexed: IndexWindow[] = []
   const issues: PlanningIssue[] = []
-  for (let index = 0; index < windows.length; index += 1) {
-    const window = windows[index]
+  // INDEX windows are independent — reconciliation is deterministic and runs
+  // after all of them — so they go out concurrently under the shared RPM
+  // throttle. Outcomes are processed in window order below, so the stitched
+  // result is identical to the sequential path. Progress counts completions.
+  let indexWindowsDone = 0
+  const indexOutcomes = await mapConcurrent(windows, CALL_CONCURRENCY, async (window, index) => {
     const images = await pageImages(runId, window.context.map((page) => page - 1))
     const response = await timed(runId, `index w${index + 1}`, () => call(controller, runId, buildIndexRequest(
       images, window.core.map((page) => window.context.indexOf(page) + 1), PLANNER_MODEL,
     ), signal))
     await putArtifact({ runId, kind: 'index-window', chunkIndex: index, text: response.text })
-    const parsed = wasTruncated(response.finishReason) ? undefined : parseIndexWindow(response.text)
+    indexWindowsDone += 1
+    await updateRun(runId, { plannerWindowsDone: indexWindowsDone })
+    return { response, parsed: wasTruncated(response.finishReason) ? undefined : parseIndexWindow(response.text) }
+  })
+  for (let index = 0; index < windows.length; index += 1) {
+    const window = windows[index]
+    const { response, parsed } = indexOutcomes[index]
     if (parsed === undefined || !parsed.ok) {
-    // A checkpoint from the pre-redesign planner is still a valid, safe
-    // Blueprint. Accept it without consuming a second call so interrupted
-    // older runs and their regression fixtures remain resumable.
-    if ((parsed === undefined || !parsed.ok) && windows.length === 1) {
-      const legacy = validateBlueprint(response.text, new Set(window.context.map((_page, relative) => relative + 1)))
-      if (legacy.ok) {
-        await putArtifact({ runId, kind: 'blueprint-raw', text: response.text })
-        await putArtifact({ runId, kind: 'blueprint-valid', json: rewriteAssetPaths(legacy.blueprint) })
-        return { ok: true, blueprint: rewriteAssetPaths(legacy.blueprint) }
-      issues.push(...window.core.map((page) => ({ kind: 'unreadable_page' as const, page })))
+      // A checkpoint from the pre-redesign planner is still a valid, safe
+      // Blueprint. Accept it without consuming a second call so interrupted
+      // older runs and their regression fixtures remain resumable.
+      if (windows.length === 1) {
+        const legacy = validateBlueprint(response.text, new Set(window.context.map((_page, relative) => relative + 1)))
+        if (legacy.ok) {
+          const blueprint = rewriteAssetPaths(legacy.blueprint)
+          await putArtifact({ runId, kind: 'blueprint-raw', text: response.text })
+          await putArtifact({ runId, kind: 'blueprint-valid', json: blueprint })
+          return { ok: true, blueprint }
+        }
       }
-    }
-      await updateRun(runId, { plannerWindowsDone: index + 1 })
+      // An unresolved window is a visible non-fatal planning issue on its
+      // core pages, never a silent gap in the exam.
+      issues.push(...window.core.map((page) => ({ kind: 'unreadable_page' as const, page })))
       continue
     }
     indexed.push(localizeIndexWindow(parsed.value, window.context, window.core, index))
-    await updateRun(runId, { plannerWindowsDone: index + 1 })
   }
   const reconciled = reconcileIndexWindows(indexed)
   issues.push(...reconciled.issues)
@@ -582,11 +603,12 @@ async function stepPlanAndValidate(
     return stepLegacyPlanAndValidate(runId, controller, signal)
   }
 
-  let evidence: EvidenceMap = {
+  const defaultEvidence: EvidenceMap = {
     type: reconciled.questions.some((row) => row.evidenceState === 'inline') ? 'inline_marks' : 'no_answer_key',
     markingStyle: '', evidence: [],
   }
-  if (answerKeyPageCount > 0 && examPageCount !== undefined) {
+  const runEvidence = async (): Promise<EvidenceMap> => {
+    if (answerKeyPageCount <= 0 || examPageCount === undefined) return defaultEvidence
     const keyPages = allPages.map((page) => (page.pageIndex ?? 0) + 1).filter((page) => page > examPageCount)
     const response = await timed(runId, 'evidence', async () => call(controller, runId, buildEvidenceRequest(
       await pageImages(runId, keyPages.map((page) => page - 1)),
@@ -594,13 +616,12 @@ async function stepPlanAndValidate(
       PLANNER_MODEL,
     ), signal))
     const parsed = wasTruncated(response.finishReason) ? undefined : parseEvidenceMap(response.text)
-    if (parsed?.ok) evidence = parsed.value
+    return parsed?.ok ? parsed.value : defaultEvidence
   }
 
   // Detection is independent of INDEX's observation, so a false index flag
   // cannot suppress a visual. Its result is checkpointed for diagnostics.
-  for (let index = 0; index < windows.length; index += 1) {
-    const window = windows[index]
+  const runFigureDetect = () => mapConcurrent(windows, CALL_CONCURRENCY, async (window, index) => {
     const response = await timed(runId, `figure w${index + 1}`, async () => call(controller, runId, buildFigureDetectRequest(
       await pageImages(runId, window.context.map((page) => page - 1)),
       reconciled.questions.filter((row) => window.core.includes(row.ownerPage)).map((row) => ({ ref: row.ref, ownerPage: row.ownerPage })),
@@ -608,9 +629,8 @@ async function stepPlanAndValidate(
     ), signal))
     await putArtifact({ runId, kind: 'figure-window', chunkIndex: index, text: response.text })
     if (!wasTruncated(response.finishReason)) parseFigureDetection(response.text)
-  }
+  })
 
-  const allBoxes: BoxResult = { questions: [], figures: [] }
   const byPage = new Map<number, typeof reconciled.questions>()
   for (const question of reconciled.questions) {
     const list = byPage.get(question.ownerPage) ?? []
@@ -639,7 +659,13 @@ async function stepPlanAndValidate(
     const parsed = wasTruncated(response.finishReason) ? undefined : parseBoxResult(response.text)
     return { response, parsed }
   }
-  for (const [page, questions] of byPage) {
+  // Each page task returns its own findings; they are folded back in page
+  // order below, so asset numbering and issue order never depend on which
+  // call happened to finish first.
+  const runBoxPages = () => mapConcurrent([...byPage.entries()], CALL_CONCURRENCY, async ([page, questions]) => {
+    const found: BoxResult['questions'] = []
+    const figures: BoxResult['figures'] = []
+    const pageIssues: PlanningIssue[] = []
     let remaining: readonly ReconciledQuestion[] = questions
     let figuresCaptured = false
     let lastReason = 'no box region after retry'
@@ -651,8 +677,8 @@ async function stepPlanAndValidate(
         continue
       }
       const wanted = new Set(remaining.map((row) => row.ref))
-      const found = parsed.value.questions.filter((row) => wanted.has(row.ref))
-      allBoxes.questions.push(...found.map((row) => ({
+      const boxedNow = parsed.value.questions.filter((row) => wanted.has(row.ref))
+      found.push(...boxedNow.map((row) => ({
         ...row, question: onPage(row.question, page), options: row.options === null ? null : onPage(row.options, page),
         caseStem: row.caseStem === null ? null : onPage(row.caseStem, page),
         inlineEvidence: row.inlineEvidence === null ? null : onPage(row.inlineEvidence, page),
@@ -660,15 +686,31 @@ async function stepPlanAndValidate(
       // Figures cover the whole page, not just the requested refs; capture
       // them once so a retry pass cannot duplicate an asset.
       if (!figuresCaptured) {
-        allBoxes.figures.push(...parsed.value.figures.map((row) => ({ ...row, page })))
+        figures.push(...parsed.value.figures.map((row) => ({ ...row, page })))
         figuresCaptured = true
       }
-      const foundRefs = new Set(found.map((row) => row.ref))
+      const foundRefs = new Set(boxedNow.map((row) => row.ref))
       remaining = remaining.filter((row) => !foundRefs.has(row.ref))
     }
     if (remaining.length > 0) {
-      issues.push(...remaining.map((row) => ({ kind: 'unreadable_page' as const, page, rowRef: row.ref, reason: lastReason })))
+      pageIssues.push(...remaining.map((row) => ({ kind: 'unreadable_page' as const, page, rowRef: row.ref, reason: lastReason })))
     }
+    return { found, figures, pageIssues }
+  })
+
+  // Evidence, figure detection, and BOX share no inputs beyond the
+  // reconciled index and never read each other's outputs (they only meet in
+  // assembleBlueprint), so the three passes overlap.
+  const [evidence, , boxOutcomes] = await Promise.all([
+    runEvidence(),
+    runFigureDetect(),
+    runBoxPages(),
+  ])
+  const allBoxes: BoxResult = { questions: [], figures: [] }
+  for (const outcome of boxOutcomes) {
+    allBoxes.questions.push(...outcome.found)
+    allBoxes.figures.push(...outcome.figures)
+    issues.push(...outcome.pageIssues)
   }
   const boxedRefs = new Set(allBoxes.questions.map((q) => q.ref))
   const flaggedRefs = new Set(issues.flatMap((issue) => (issue.rowRef !== undefined ? [issue.rowRef] : [])))
@@ -751,6 +793,9 @@ async function stepCrops(
 
 // ---------------------------------------------------------------- step 5
 
+/** One chunk failed both attempts — unwinds the concurrent worker pool. */
+class WorkerChunkFailed extends Error {}
+
 async function stepWorker(
   runId: string,
   blueprint: Blueprint,
@@ -769,89 +814,98 @@ async function stepWorker(
 
   await updateRun(runId, { chunkCount: chunks.length, chunksDone: 0 })
 
-  const rows: WorkerRow[] = []
-  for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex += 1) {
-    const chunkRows = chunks[chunkIndex]
-
-    // Resume: a chunk already answered and validated is not re-sent.
-    const cached = byChunk.get(chunkIndex)
-    if (cached?.text !== undefined) {
-      const replay = validateWorkerChunk(cached.text, chunkRows)
-      if (replay.ok) {
-        rows.push(...replay.rows)
-        await updateRun(runId, { chunksDone: chunkIndex + 1 })
-        continue
-      }
-      // Drop only this chunk's stale response — the other chunks' cached
-      // responses must survive for the next resume.
-      await clearArtifacts(runId, 'chunk-response', chunkIndex)
-    }
-
-    const reduced = buildReducedBlueprint(blueprint, chunkRows)
-    const pages = chunkPages(reduced).map((page) => page - 1)
-    const cropPaths = reduced.assets.map((asset) => asset.output_path)
-    const images = [
-      ...(await pageImages(runId, pages)),
-      ...(await cropImages(runId, cropPaths)),
-    ]
-
-    await putArtifact({
-      runId,
-      kind: 'chunk-request',
-      chunkIndex,
-      json: { reduced, pages, cropPaths, workerModel },
-    })
-
-    let previousError: string | undefined
-    let lastResponseText: string | undefined
-    let accepted: WorkerRow[] | undefined
-    // Exactly one retry, consumed only by INVALID CONTENT.
-    for (let attempt = 0; attempt < 2 && accepted === undefined; attempt += 1) {
-      const response = await timed(
-        runId,
-        `worker chunk ${chunkIndex + 1}`,
-        () =>
-          call(
-            controller,
-            runId,
-            buildWorkerRequest(reduced, images, workerModel, previousError),
-            signal,
-          ),
-      )
-      lastResponseText = response.text
-      await putArtifact({
-        runId,
-        kind: 'chunk-response',
-        chunkIndex,
-        text: response.text,
-      })
-      if (wasTruncated(response.finishReason)) {
-        previousError = 'your response was truncated; return fewer characters'
-        continue
-      }
-      const validation = validateWorkerChunk(response.text, chunkRows)
-      if (validation.ok) {
-        accepted = validation.rows
-      } else {
-        previousError = validation.errors.join('; ')
-      }
-    }
-
-    if (accepted === undefined) {
-      // The stop reason alone ("worker_chunk_invalid") is undiagnosable from
-      // an exported diagnostics log — record why the chunk failed and what
-      // the model actually returned (logEvent truncates long strings).
-      await logEvent({
-        scope: 'engine', level: 'error', event: 'engine.worker.chunk.fail', runId,
-        reason: previousError, detail: { chunk: chunkIndex + 1, rawResponse: lastResponseText },
-      })
-      return { ok: false }
-    }
-    rows.push(...accepted)
-    await updateRun(runId, { chunksDone: chunkIndex + 1 })
+  // Chunks never read each other's output (merge runs after all of them), so
+  // they go out concurrently. Results are flattened in chunk order, keeping
+  // the merged row order identical to the sequential path. Progress counts
+  // completions, not positions.
+  let chunksCompleted = 0
+  const finishChunk = async (accepted: WorkerRow[]) => {
+    chunksCompleted += 1
+    await updateRun(runId, { chunksDone: chunksCompleted })
+    return accepted
   }
 
-  return { ok: true, rows }
+  let chunkResults: WorkerRow[][]
+  try {
+    chunkResults = await mapConcurrent(chunks, CALL_CONCURRENCY, async (chunkRows, chunkIndex) => {
+      // Resume: a chunk already answered and validated is not re-sent.
+      const cached = byChunk.get(chunkIndex)
+      if (cached?.text !== undefined) {
+        const replay = validateWorkerChunk(cached.text, chunkRows)
+        if (replay.ok) return finishChunk(replay.rows)
+        // Drop only this chunk's stale response — the other chunks' cached
+        // responses must survive for the next resume.
+        await clearArtifacts(runId, 'chunk-response', chunkIndex)
+      }
+
+      const reduced = buildReducedBlueprint(blueprint, chunkRows)
+      const pages = chunkPages(reduced).map((page) => page - 1)
+      const cropPaths = reduced.assets.map((asset) => asset.output_path)
+      const images = [
+        ...(await pageImages(runId, pages)),
+        ...(await cropImages(runId, cropPaths)),
+      ]
+
+      await putArtifact({
+        runId,
+        kind: 'chunk-request',
+        chunkIndex,
+        json: { reduced, pages, cropPaths, workerModel },
+      })
+
+      let previousError: string | undefined
+      let lastResponseText: string | undefined
+      let accepted: WorkerRow[] | undefined
+      // Exactly one retry, consumed only by INVALID CONTENT.
+      for (let attempt = 0; attempt < 2 && accepted === undefined; attempt += 1) {
+        const response = await timed(
+          runId,
+          `worker chunk ${chunkIndex + 1}`,
+          () =>
+            call(
+              controller,
+              runId,
+              buildWorkerRequest(reduced, images, workerModel, previousError),
+              signal,
+            ),
+        )
+        lastResponseText = response.text
+        await putArtifact({
+          runId,
+          kind: 'chunk-response',
+          chunkIndex,
+          text: response.text,
+        })
+        if (wasTruncated(response.finishReason)) {
+          previousError = 'your response was truncated; return fewer characters'
+          continue
+        }
+        const validation = validateWorkerChunk(response.text, chunkRows)
+        if (validation.ok) {
+          accepted = validation.rows
+        } else {
+          previousError = validation.errors.join('; ')
+        }
+      }
+
+      if (accepted === undefined) {
+        // The stop reason alone ("worker_chunk_invalid") is undiagnosable from
+        // an exported diagnostics log — record why the chunk failed and what
+        // the model actually returned (logEvent truncates long strings).
+        await logEvent({
+          scope: 'engine', level: 'error', event: 'engine.worker.chunk.fail', runId,
+          reason: previousError, detail: { chunk: chunkIndex + 1, rawResponse: lastResponseText },
+        })
+        throw new WorkerChunkFailed()
+      }
+      return finishChunk(accepted)
+    })
+  } catch (error) {
+    if (error instanceof WorkerChunkFailed) return { ok: false }
+    throw error
+  }
+
+  return { ok: true, rows: chunkResults.flat() }
 }
 
 // ---------------------------------------------------------------- the run

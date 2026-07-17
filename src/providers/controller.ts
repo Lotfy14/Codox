@@ -78,9 +78,14 @@ export class GeminiController {
   private status: ControllerStatus = { kind: 'idle' }
   private readonly requestTimestamps: number[] = []
   private readonly maxRpm = 14
+  private readonly transientRetryDelaysSeconds: readonly number[]
 
-  constructor(adapter: GeminiAdapter = geminiAdapter) {
+  constructor(
+    adapter: GeminiAdapter = geminiAdapter,
+    transientRetryDelaysSeconds: readonly number[] = TRANSIENT_RETRY_DELAYS_SECONDS,
+  ) {
     this.adapter = adapter
+    this.transientRetryDelaysSeconds = transientRetryDelaysSeconds
   }
 
   getStatus(): ControllerStatus {
@@ -193,7 +198,25 @@ export class GeminiController {
         signal,
       )
 
-      if (result.ok) return result
+      if (result.ok) {
+        // A 200 with an empty body and a normal finish is a provider hiccup
+        // (observed on Flash-Lite: two consecutive empty responses killed a
+        // 30-page run at its last worker chunk). No prompt in this app ever
+        // legitimately answers with nothing, so retry it as transient rather
+        // than letting it consume a content-repair round downstream. An
+        // abnormal finish (SAFETY, MAX_TOKENS…) is deterministic and is
+        // returned for the engine's own gates to judge. After the bounded
+        // retries the empty result is returned unchanged — never an error.
+        const emptyBody =
+          result.text.trim() === '' &&
+          (result.finishReason === undefined || result.finishReason === 'STOP')
+        const retryDelay = this.transientRetryDelaysSeconds[transientAttempt]
+        if (!emptyBody || retryDelay === undefined) return result
+        transientAttempt += 1
+        await waitForResume(retryDelay, signal)
+        if (signal?.aborted) return { ok: false, kind: 'aborted' }
+        continue
+      }
 
       switch (result.kind) {
         case 'wrong-key':
@@ -231,7 +254,7 @@ export class GeminiController {
             result.httpStatus === 408 ||
             result.httpStatus === 499 ||
             (result.httpStatus !== undefined && result.httpStatus >= 500)
-          const defaultWait = TRANSIENT_RETRY_DELAYS_SECONDS[transientAttempt]
+          const defaultWait = this.transientRetryDelaysSeconds[transientAttempt]
           if (!transient || defaultWait === undefined) return result
           const waitSeconds = result.retryAfterSeconds ?? defaultWait
           transientAttempt += 1

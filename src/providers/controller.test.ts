@@ -227,6 +227,52 @@ describe('failure handling', () => {
     expect(completeCallCount()).toBe(3)
   })
 
+  it('retries an empty completion as transient and returns the recovered text', async () => {
+    await saveGeminiKey('working-key')
+    let attempt = 0
+    const { adapter, completeCallCount } = makeAdapter({
+      complete: () => {
+        attempt += 1
+        return attempt < 3
+          ? { ok: true, text: '', finishReason: 'STOP' }
+          : { ok: true, text: '{"rows":[]}', finishReason: 'STOP' }
+      },
+    })
+    const controller = new GeminiController(adapter, [0, 0, 0])
+
+    const result = await controller.runGeminiRequest(request)
+
+    expect(result).toMatchObject({ ok: true, text: '{"rows":[]}' })
+    expect(completeCallCount()).toBe(3)
+  })
+
+  it('returns the empty completion unchanged once transient retries are exhausted', async () => {
+    await saveGeminiKey('working-key')
+    const { adapter, completeCallCount } = makeAdapter({
+      complete: () => ({ ok: true, text: '   ', finishReason: 'STOP' }),
+    })
+    const controller = new GeminiController(adapter, [0, 0, 0])
+
+    const result = await controller.runGeminiRequest(request)
+
+    // Still a success — downstream content validation owns the verdict.
+    expect(result).toMatchObject({ ok: true, text: '   ' })
+    expect(completeCallCount()).toBe(4)
+  })
+
+  it('does not retry an empty completion with an abnormal finish reason', async () => {
+    await saveGeminiKey('working-key')
+    const { adapter, completeCallCount } = makeAdapter({
+      complete: () => ({ ok: true, text: '', finishReason: 'SAFETY' }),
+    })
+    const controller = new GeminiController(adapter, [0, 0, 0])
+
+    const result = await controller.runGeminiRequest(request)
+
+    expect(result).toMatchObject({ ok: true, text: '', finishReason: 'SAFETY' })
+    expect(completeCallCount()).toBe(1)
+  })
+
   it('does not retry a rejected request', async () => {
     await saveGeminiKey('working-key')
     const { adapter, completeCallCount } = makeAdapter({
