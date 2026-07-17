@@ -46,6 +46,14 @@ export function exportColumns(
   ]
 }
 
+/**
+ * Triviadox expects the header `image_url`; the internal pinned schema
+ * key stays `image_urls` — the rename happens only at export time.
+ */
+function headerLabel(column: ExportColumn): string {
+  return column === 'image_urls' ? 'image_url' : column
+}
+
 function cell(row: MergedRow, column: ExportColumn): string {
   if (column === 'options' || column === 'image_urls') {
     return JSON.stringify(row[column])
@@ -58,7 +66,7 @@ export function emitExportCsv(
   rows: readonly MergedRow[],
   columns: readonly ExportColumn[],
 ): string {
-  const lines = [csvLine(columns)]
+  const lines = [csvLine(columns.map(headerLabel))]
   for (const row of rows) {
     lines.push(csvLine(columns.map((column) => cell(row, column))))
   }

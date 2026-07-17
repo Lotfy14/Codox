@@ -18,7 +18,7 @@ function makeRow(overrides: Partial<MergedRow> = {}): MergedRow {
   }
 }
 
-const BASE_HEADER = 'question,options,correct_index,image_urls'
+const BASE_HEADER = 'question,options,correct_index,image_url'
 
 describe('exportColumns', () => {
   it('never includes id, group_id, or needs_review, whatever the flags', () => {

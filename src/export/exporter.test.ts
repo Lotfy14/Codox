@@ -75,7 +75,7 @@ async function exportedCsv(): Promise<string> {
   return new TextDecoder().decode(bytes.subarray(3))
 }
 
-const BASE_HEADER = 'question,options,correct_index,image_urls'
+const BASE_HEADER = 'question,options,correct_index,image_url'
 
 describe('export modes', () => {
   it('with-answers (default) keeps document answers and tutor resolutions', async () => {
