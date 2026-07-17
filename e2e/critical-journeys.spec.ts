@@ -275,8 +275,12 @@ test('critical journey: answer-key PDF → review list/detail → named export �
       }
     }
   })
-  await page.getByRole('button', { name: 'More export options' }).click()
-  await page.getByRole('menuitem', { name: 'Download ZIP file (With answers)' }).click()
+  // The export destination is a Customize setting (default: Triviadox).
+  // Switch it to ZIP so the export saves locally instead of uploading.
+  await page.locator('.ds-sidebar').getByRole('button', { name: 'Customize' }).click()
+  await page.getByRole('radio', { name: /ZIP file/ }).click()
+  await page.locator('.ds-sidebar').getByRole('button', { name: 'Convert' }).click()
+  await page.getByRole('button', { name: 'Download ZIP' }).click()
   await expect(page.getByText(/lives safely outside Codox/)).toBeVisible()
   const savedFile = await page.evaluate(
     () =>

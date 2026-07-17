@@ -4,14 +4,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { MergedRow } from '../engine/types'
 import { db } from '../state/db'
 import { createRun, getArtifact, getRun, putArtifact, updateRun } from '../state/runs'
-import { saveAiAnswerSettings } from '../state/ai-answers-settings'
 import { exportRuns } from './exporter'
 
 /**
  * Drives the real export path (rows → CSV → zip → download) on the web
- * branch, capturing the zip instead of clicking a real download. Verifies
- * the three export modes and that variant exports never mutate the stored
- * engine output.
+ * branch, capturing the zip instead of clicking a real download. The
+ * export always carries the rows exactly as they stand in review and
+ * never mutates the stored engine output.
  */
 
 vi.mock('@capacitor/core', () => ({
@@ -80,8 +79,8 @@ async function exportedCsv(): Promise<string> {
 
 const BASE_HEADER = 'question,options,correct_index,image_url'
 
-describe('export modes', () => {
-  it('with-answers (default) keeps document answers and tutor resolutions', async () => {
+describe('export', () => {
+  it('keeps document answers and tutor resolutions', async () => {
     const runId = await seedDoneRun([
       row('1', { correct_index: '2', needs_review: '' }),
       row('2'),
@@ -101,60 +100,26 @@ describe('export modes', () => {
     expect((await getRun(runId))?.exportedAt).toBeDefined()
   })
 
-  it('no-answers blanks every correct_index — including resolved rows', async () => {
-    const runId = await seedDoneRun([
-      row('1', { correct_index: '2', needs_review: '' }),
-      row('2'),
-      row('3'),
-    ])
-    await putArtifact({ runId, kind: 'review-resolutions', json: { '2': 1 } })
-    const run = await getRun(runId)
-
-    const outcome = await exportRuns([run!], { mode: 'no-answers' })
-
-    expect(outcome).toBe('downloaded')
-    expect(lastDownloadName).toBe('Exam Cx (no answers).zip')
-    const lines = (await exportedCsv()).trimEnd().split('\r\n')
-    expect(lines[1]).not.toContain(',2,')
-    expect(lines[2]).not.toContain(',1,')
-    // Review flags never leave the device — no flag column in the export.
-    expect(lines[0]).not.toContain('needs_review')
-    expect(lines[3]).not.toContain('no_answer_key')
-    // Any successful hand-off counts for the export-early law.
-    expect((await getRun(runId))?.exportedAt).toBeDefined()
-  })
-
-  it('ai-answers applies the saved AI artifact without touching merged-rows', async () => {
-    await saveAiAnswerSettings({ scope: 'unanswered', flagBelow: 'certain' })
-    const rows = [row('1', { correct_index: '2', needs_review: '' }), row('2'), row('3')]
+  it('a saved AI artifact never leaks into the export by itself', async () => {
+    // AI answers reach the CSV only after the tutor approves them in review
+    // (they become ordinary resolutions); the cached artifact alone is inert.
+    const rows = [row('1', { correct_index: '2', needs_review: '' }), row('2')]
     const runId = await seedDoneRun(rows)
     await putArtifact({
       runId,
       kind: 'ai-answers',
       json: {
-        answers: {
-          '2': { index: 3, confidence: 'certain' },
-          '3': { index: 0, confidence: 'unsure' },
-        },
+        answers: { '2': { index: 3, confidence: 'certain' } },
         solvedAt: Date.now(),
       },
     })
     const run = await getRun(runId)
 
-    const outcome = await exportRuns([run!], { mode: 'ai-answers' })
-
-    expect(outcome).toBe('downloaded')
-    expect(lastDownloadName).toBe('Exam Cx (AI answers).zip')
+    expect(await exportRuns([run!])).toBe('downloaded')
     const lines = (await exportedCsv()).trimEnd().split('\r\n')
-    expect(lines[1]).toContain(',2,') // document answer untouched
-    expect(lines[2]).toContain(',3,') // certain AI answer filled
-    expect(lines[3]).not.toContain(',0,') // unsure answer never filled
-    // Provenance flags are in-app only; the exported CSV has no flag column.
-    expect(lines[2]).not.toContain('ai_answered')
-    expect(lines[3]).not.toContain('ai_unsure')
-    // The stored engine output is pristine: AI answers exist only in the CSV.
-    const merged = await getArtifact(runId, 'merged-rows')
-    expect(merged?.json).toEqual(rows)
+    expect(lines[1]).toContain(',2,') // document answer intact
+    expect(lines[2]).not.toContain(',3,') // unapproved AI answer stays out
+    expect(await getArtifact(runId, 'merged-rows').then((a) => a?.json)).toEqual(rows)
   })
 
   it('exports nothing when no run is done', async () => {

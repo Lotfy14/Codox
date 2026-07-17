@@ -10,7 +10,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button, Dialog, ProgressBar } from '../design/components'
 import {
-  aiExportMessages,
+  aiSolveMessages,
   aiReviewMessages,
   appMessages,
 } from '../copy/messages'
@@ -44,11 +44,11 @@ export interface AiReviewDialogProps {
 function statusLine(status: ControllerStatus): string | null {
   if (status.kind === 'paused') {
     return status.reason === 'quota'
-      ? aiExportMessages.solvePausedQuota
-      : aiExportMessages.solveUnreachable
+      ? aiSolveMessages.solvePausedQuota
+      : aiSolveMessages.solveUnreachable
   }
-  if (status.kind === 'wrong-key') return aiExportMessages.solveWrongKey
-  if (status.kind === 'unreachable') return aiExportMessages.solveUnreachable
+  if (status.kind === 'wrong-key') return aiSolveMessages.solveWrongKey
+  if (status.kind === 'unreachable') return aiSolveMessages.solveUnreachable
   return null
 }
 
@@ -114,12 +114,12 @@ export function AiReviewDialog({
       if (!outcome.ok && outcome.failure.kind !== 'aborted') {
         setError(
           outcome.failure.kind === 'wrong-key'
-            ? aiExportMessages.solveWrongKey
-            : aiExportMessages.solveFailed,
+            ? aiSolveMessages.solveWrongKey
+            : aiSolveMessages.solveFailed,
         )
       }
     } catch {
-      setError(aiExportMessages.solveFailed)
+      setError(aiSolveMessages.solveFailed)
     } finally {
       setSolving(false)
       abortRef.current = null
@@ -152,7 +152,7 @@ export function AiReviewDialog({
         {solving ? (
           <>
             <ProgressBar
-              label={aiExportMessages.solving(progress.done, progress.total)}
+              label={aiSolveMessages.solving(progress.done, progress.total)}
               max={Math.max(progress.total, 1)}
               value={progress.done}
             />
@@ -161,7 +161,7 @@ export function AiReviewDialog({
             ) : null}
             <div className="ds-dialog-buttons">
               <Button onPress={() => abortRef.current?.abort()} variant="secondary">
-                {aiExportMessages.cancel}
+                {aiSolveMessages.cancel}
               </Button>
             </div>
           </>
@@ -181,7 +181,7 @@ export function AiReviewDialog({
                     : aiReviewMessages.askRemaining(pendingIds.length)}
                 </Button>
                 <p className="ds-muted">
-                  {aiExportMessages.quotaNote(
+                  {aiSolveMessages.quotaNote(
                     estimateSolverRequests(pendingIds.length),
                   )}
                 </p>

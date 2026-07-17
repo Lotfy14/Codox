@@ -1,16 +1,15 @@
 /**
- * The AI answer solver — the opt-in "Export with AI answers" feature
+ * The AI answer solver — the opt-in "Ask AI" feature of the Review screen
  * (owner-approved sole exception to NEVER-GUESS). Deliberately OUTSIDE the
- * pinned engine path: it runs at export time on a finished run, reads the
- * pristine `merged-rows` artifact, and stores its own answers in a separate
- * `ai-answers` artifact. Engine output is never modified; deterministic
- * code marks every row the AI touches (`ai_answered` / `ai_unsure` /
- * `ai_disagrees`) so provenance survives into the exported CSV.
+ * pinned engine path: it runs on a finished run, reads the pristine
+ * `merged-rows` artifact, and stores its own answers in a separate
+ * `ai-answers` artifact. Engine output is never modified; an AI answer
+ * only reaches a row when the tutor explicitly approves it in review,
+ * where it becomes an ordinary resolution.
  */
 import type { GeminiController } from '../providers/controller'
 import { geminiController } from '../providers/controller'
 import type { ProviderFailure, VisionRequest } from '../providers/types'
-import type { AiAnswerSettings } from '../state/ai-answers-settings'
 import { db } from '../state/db'
 import {
   getArtifact,
@@ -81,30 +80,6 @@ export async function resolvedRows(runId: string): Promise<MergedRow[]> {
   // into) the same options the tutor sees, or its answers can't line up.
   const edited = applyContentEdits(rows, await getEdits(runId))
   return applyResolutions(edited, await getResolutions(runId))
-}
-
-// ---------------------------------------------------------------- scoping
-
-/** The rows the solver targets under a scope. */
-export function targetRows(
-  rows: readonly MergedRow[],
-  scope: AiAnswerSettings['scope'],
-): MergedRow[] {
-  if (scope === 'unanswered') {
-    return rows.filter((row) => row.correct_index === '')
-  }
-  return [...rows]
-}
-
-/** Target rows not yet in the cache — what a solve would actually send. */
-export function pendingRows(
-  rows: readonly MergedRow[],
-  scope: AiAnswerSettings['scope'],
-  cached: AiAnswersArtifact | undefined,
-): MergedRow[] {
-  return targetRows(rows, scope).filter(
-    (row) => cached?.answers[row.id] === undefined,
-  )
 }
 
 /** Gemini request count a solve would make — the dialog's quota note. */
@@ -329,17 +304,6 @@ async function solveChunks(
   return { ok: true, requestsMade }
 }
 
-/** Solves the run's pending target rows under the export scope settings. */
-export async function solveRun(
-  runId: string,
-  settings: AiAnswerSettings,
-  options: SolveOptions = {},
-): Promise<SolveOutcome> {
-  const rows = await resolvedRows(runId)
-  const pending = pendingRows(rows, settings.scope, await readAiAnswers(runId))
-  return solveChunks(runId, pending, options)
-}
-
 /**
  * Solves exactly these rows — the Review screen's "Ask AI" for one
  * question or a whole file. Cached answers for the given rows are re-asked
@@ -354,66 +318,4 @@ export async function solveRows(
   const wanted = new Set(rowIds)
   const rows = await resolvedRows(runId)
   return solveChunks(runId, rows.filter((row) => wanted.has(row.id)), options)
-}
-
-// ---------------------------------------------------------------- applying
-
-function acceptedConfidence(
-  confidence: AiConfidence,
-  flagBelow: AiAnswerSettings['flagBelow'],
-): boolean {
-  if (flagBelow === 'certain') return confidence === 'certain'
-  if (flagBelow === 'likely') return confidence !== 'unsure'
-  return true
-}
-
-/**
- * Applies saved AI answers to the exportable rows — pure, deterministic,
- * used only by the `ai-answers` export mode:
- * - blank row + accepted answer → filled, flagged `ai_answered`
- * - blank row + AI attempted but not accepted → stays blank, `ai_unsure`
- * - `unanswered+verify`: an accepted AI answer disagreeing with a document
- *   answer keeps the document answer and flags `ai_disagrees`
- * - `all`: accepted AI answers override document answers (`ai_answered`)
- * Rows the AI never touched are returned unchanged.
- */
-export function applyAiAnswers(
-  rows: readonly MergedRow[],
-  aiAnswers: AiAnswersArtifact | undefined,
-  settings: AiAnswerSettings,
-): MergedRow[] {
-  return rows.map((row) => {
-    const ai = aiAnswers?.answers[row.id]
-    if (ai === undefined) return row
-
-    const validIndex =
-      ai.index !== null &&
-      Number.isInteger(ai.index) &&
-      ai.index >= 0 &&
-      ai.index < row.options.length
-    const accepted = validIndex && acceptedConfidence(ai.confidence, settings.flagBelow)
-
-    if (row.correct_index === '') {
-      if (accepted) {
-        return { ...row, correct_index: String(ai.index), needs_review: 'ai_answered' }
-      }
-      return { ...row, needs_review: 'ai_unsure' }
-    }
-
-    if (settings.scope === 'all') {
-      if (accepted && String(ai.index) !== row.correct_index) {
-        return { ...row, correct_index: String(ai.index), needs_review: 'ai_answered' }
-      }
-      return row
-    }
-
-    if (settings.scope === 'unanswered+verify') {
-      if (accepted && String(ai.index) !== row.correct_index) {
-        return { ...row, needs_review: 'ai_disagrees' }
-      }
-      return row
-    }
-
-    return row
-  })
 }

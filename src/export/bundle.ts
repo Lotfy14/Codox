@@ -31,18 +31,13 @@ export function uniqueBundleNames(fileNames: readonly string[]): string[] {
 
 /**
  * Human-identifiable archive name derived from the PDFs in the export.
- * `variantSuffix` (e.g. "no answers") marks variant exports on the zip name
- * only — bundle folder and CSV names inside stay contract-exact (§3.4).
+ * Bundle folder and CSV names inside stay contract-exact (§3.4).
  */
-export function exportArchiveName(
-  fileNames: readonly string[],
-  variantSuffix?: string,
-): string {
-  const variant = variantSuffix === undefined ? '' : ` (${variantSuffix})`
+export function exportArchiveName(fileNames: readonly string[]): string {
   const names = uniqueBundleNames(fileNames)
-  if (names.length === 0) return `Codox export Cx${variant}.zip`
-  if (names.length === 1) return `${names[0]} Cx${variant}.zip`
-  return `${names[0]} +${names.length - 1} more Cx${variant}.zip`
+  if (names.length === 0) return 'Codox export Cx.zip'
+  if (names.length === 1) return `${names[0]} Cx.zip`
+  return `${names[0]} +${names.length - 1} more Cx.zip`
 }
 
 export interface BundleInput {

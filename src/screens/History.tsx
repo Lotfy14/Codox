@@ -1,9 +1,15 @@
 import { useMemo, useState } from 'react'
-import { Badge, Button, Dialog, GlassPanel, SplitButton } from '../design/components'
+import { Badge, Button, Dialog, GlassPanel } from '../design/components'
 import type { BadgeTone } from '../design/components'
 import { appMessages, exportMessages, historyMessages } from '../copy/messages'
-import { exportRuns, type ExportMode, type ExportOutcome } from '../export/exporter'
-import { AiExportDialog } from './AiExportDialog'
+import {
+  exportRuns,
+  exportToTriviadox,
+  triviadoxImportUrl,
+  type ExportOutcome,
+} from '../export/exporter'
+import { ExportButton } from './ExportButton'
+import { useCustomizationSettings } from '../state/customization-settings'
 import {
   deleteHistoryRun,
   restoreHistoryRun,
@@ -42,17 +48,14 @@ export function History({ onOpenConvert }: HistoryProps) {
   const [deleteRunId, setDeleteRunId] = useState<string | null>(null)
   const [deleteBusy, setDeleteBusy] = useState(false)
   const [actionBusyId, setActionBusyId] = useState<string | null>(null)
-  const [aiExportRunId, setAiExportRunId] = useState<string | null>(null)
   const [reviewRunId, setReviewRunId] = useState<string | null>(null)
   const [notice, setNotice] = useState<{
     runId: string
     text: string
     tone: 'info' | 'danger' | 'working'
   } | null>(null)
+  const exportTarget = useCustomizationSettings()?.exportTarget ?? 'triviadox'
   const selected = entries?.find((entry) => entry.run.id === deleteRunId)
-  const aiExportRun = entries?.find(
-    (entry) => entry.run.id === aiExportRunId,
-  )?.run
   const reviewRun = entries?.find((entry) => entry.run.id === reviewRunId)?.run
   const reviewRuns = useMemo(() => reviewRun === undefined ? [] : [reviewRun], [reviewRun])
   const reviewSession = useReviewSession(reviewRuns)
@@ -90,12 +93,34 @@ export function History({ onOpenConvert }: HistoryProps) {
     })
   }
 
-  const exportRun = async (run: RunState, mode: ExportMode) => {
+  /** Exports the run as it stands, to the customized destination. */
+  const exportRun = async (run: RunState) => {
     if (actionBusyId !== null) return
     setActionBusyId(run.id)
     setNotice(null)
     try {
-      noticeForOutcome(run.id, await exportRuns([run], { mode }))
+      if (exportTarget === 'triviadox') {
+        const res = await exportToTriviadox([run])
+        if (res.success && res.id) {
+          window.open(triviadoxImportUrl(res.id), '_blank')
+          setNotice({
+            runId: run.id,
+            text: exportMessages.triviadoxDone,
+            tone: 'working',
+          })
+        } else {
+          setNotice({
+            runId: run.id,
+            text:
+              res.error === 'nothing'
+                ? historyMessages.exportUnavailable
+                : historyMessages.exportFailed,
+            tone: res.error === 'nothing' ? 'info' : 'danger',
+          })
+        }
+      } else {
+        noticeForOutcome(run.id, await exportRuns([run]))
+      }
     } catch {
       setNotice({
         runId: run.id,
@@ -150,7 +175,7 @@ export function History({ onOpenConvert }: HistoryProps) {
             </Button>
           </div>
           <ReviewExperience
-            onExport={() => void exportRun(reviewRun, 'with-answers')}
+            onExport={() => void exportRun(reviewRun)}
             runs={reviewRuns}
             session={reviewSession}
           />
@@ -216,33 +241,12 @@ export function History({ onOpenConvert }: HistoryProps) {
                     <Button onPress={() => setReviewRunId(run.id)} variant="quiet">
                       {historyMessages.reviewAction}
                     </Button>
-                    <SplitButton
+                    <ExportButton
                       isPending={actionBusyId === run.id}
-                      items={[
-                        {
-                          id: 'no-answers',
-                          label: exportMessages.withoutAnswers,
-                          description: exportMessages.withoutAnswersHint,
-                        },
-                        {
-                          id: 'ai-answers',
-                          label: exportMessages.withAiAnswers,
-                          description: exportMessages.withAiAnswersHint,
-                        },
-                      ]}
-                      menuLabel={exportMessages.menuLabel}
-                      onAction={(id) =>
-                        id === 'ai-answers'
-                          ? setAiExportRunId(run.id)
-                          : void exportRun(run, 'no-answers')
-                      }
-                      onPress={() => void exportRun(run, 'with-answers')}
+                      onPress={() => void exportRun(run)}
+                      target={exportTarget}
                       variant="secondary"
-                    >
-                      {run.exportedAt === undefined
-                        ? historyMessages.exportAction
-                        : historyMessages.exportAgainAction}
-                    </SplitButton>
+                    />
                   </>
                 ) : null}
                 {!isCurrent && originalKept ? (
@@ -295,16 +299,6 @@ export function History({ onOpenConvert }: HistoryProps) {
         <p className="ds-muted">{historyMessages.deleteBody}</p>
       </Dialog>
 
-      <AiExportDialog
-        isOpen={aiExportRun !== undefined}
-        onExported={(outcome) => {
-          if (aiExportRunId !== null) noticeForOutcome(aiExportRunId, outcome)
-        }}
-        onOpenChange={(open) => {
-          if (!open) setAiExportRunId(null)
-        }}
-        runs={aiExportRun === undefined ? [] : [aiExportRun]}
-      />
     </section>
   )
 }

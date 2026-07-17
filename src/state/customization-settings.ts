@@ -3,19 +3,25 @@ import { db } from './db'
 import type { YearMode } from './types'
 
 /**
- * The Customizations tab's settings — one JSON row in the `meta` table
- * (same pattern as `ai-answers-settings.ts`). These govern which optional
- * inputs the Convert screen shows and which optional columns exports gain;
- * they apply to conversions the user starts next, never to finished runs
- * (runs snapshot their own settings at creation).
+ * The Customizations tab's settings — one JSON row in the `meta` table.
+ * These govern which optional inputs the Convert screen shows, which
+ * optional columns exports gain, and where the Export button sends the
+ * finished set. Column choices apply to conversions the user starts next
+ * (runs snapshot their own settings at creation); the export destination
+ * applies to every export from now on.
  */
 
 /** 'off' hides the topics inputs and the topic/subtopic export columns. */
 export type TopicsMode = 'off' | 'on'
 
+/** Where the Export button sends the finished set. */
+export type ExportTarget = 'triviadox' | 'zip'
+
 export interface CustomizationSettings {
   yearMode: YearMode
   topicsMode: TopicsMode
+  /** 'triviadox' uploads to the Triviadox import page; 'zip' saves locally. */
+  exportTarget: ExportTarget
   /** Shows the Convert screen's step-timing debug console. Off by default. */
   debugConsole: boolean
 }
@@ -30,11 +36,13 @@ const SETTINGS_KEY = 'customizationSettings'
 export const DEFAULT_CUSTOMIZATION_SETTINGS: CustomizationSettings = {
   yearMode: 'type',
   topicsMode: 'on',
+  exportTarget: 'triviadox',
   debugConsole: false,
 }
 
 const YEAR_MODES: readonly YearMode[] = ['off', 'type', 'ai']
 const TOPICS_MODES: readonly TopicsMode[] = ['off', 'on']
+const EXPORT_TARGETS: readonly ExportTarget[] = ['triviadox', 'zip']
 
 function narrow(value: string | undefined): CustomizationSettings {
   if (value === undefined) return DEFAULT_CUSTOMIZATION_SETTINGS
@@ -47,6 +55,9 @@ function narrow(value: string | undefined): CustomizationSettings {
       topicsMode: TOPICS_MODES.includes(parsed.topicsMode as TopicsMode)
         ? (parsed.topicsMode as TopicsMode)
         : DEFAULT_CUSTOMIZATION_SETTINGS.topicsMode,
+      exportTarget: EXPORT_TARGETS.includes(parsed.exportTarget as ExportTarget)
+        ? (parsed.exportTarget as ExportTarget)
+        : DEFAULT_CUSTOMIZATION_SETTINGS.exportTarget,
       debugConsole:
         typeof parsed.debugConsole === 'boolean'
           ? parsed.debugConsole

@@ -22,11 +22,13 @@ describe('customization settings', () => {
     await saveCustomizationSettings({
       yearMode: 'ai',
       topicsMode: 'off',
+      exportTarget: 'zip',
       debugConsole: true,
     })
     expect(await getCustomizationSettings()).toEqual({
       yearMode: 'ai',
       topicsMode: 'off',
+      exportTarget: 'zip',
       debugConsole: true,
     })
   })
@@ -34,11 +36,16 @@ describe('customization settings', () => {
   it('falls back per field on unknown values', async () => {
     await db.meta.put({
       key: 'customizationSettings',
-      value: JSON.stringify({ yearMode: 'guess', topicsMode: 'off' }),
+      value: JSON.stringify({
+        yearMode: 'guess',
+        topicsMode: 'off',
+        exportTarget: 'ftp',
+      }),
     })
     expect(await getCustomizationSettings()).toEqual({
       yearMode: DEFAULT_CUSTOMIZATION_SETTINGS.yearMode,
       topicsMode: 'off',
+      exportTarget: DEFAULT_CUSTOMIZATION_SETTINGS.exportTarget,
       debugConsole: DEFAULT_CUSTOMIZATION_SETTINGS.debugConsole,
     })
   })

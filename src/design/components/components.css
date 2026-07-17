@@ -126,6 +126,16 @@
   gap: var(--space-2);
 }
 
+/* Brand mark inside a button label, e.g. "Export to [Triviadox]". */
+.ds-button__brand-logo {
+  height: 1.25rem;
+  width: auto;
+  border-radius: var(--radius-input);
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: var(--space-2);
+}
+
 .ds-button__spinner {
   width: 1rem;
   height: 1rem;

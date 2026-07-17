@@ -16,12 +16,17 @@ for why each stack piece was chosen.
    ambiguity → blank value + `needs_review` flag. Enforced in deterministic
    code and the audit gate, not just prompts. A confidently wrong answer is
    strictly worse than a blank one.
-   *Sole exception (owner-approved 2026-07-13):* the opt-in **"Export with
-   AI answers"** feature (`src/engine/solver.ts`) answers from model
-   knowledge — at export time only, never inside the engine path. It never
-   modifies `merged-rows`, and deterministic code provenance-flags every row
-   it touches (`ai_answered` / `ai_unsure` / `ai_disagrees`). The extraction
-   engine itself still never guesses.
+   *Sole exception (owner-approved 2026-07-13, reshaped 2026-07-17):* the
+   opt-in **"Ask AI"** feature of the Review screen (`src/engine/solver.ts`)
+   answers from model knowledge — in review only, never inside the engine
+   path and no longer at export time. It never modifies `merged-rows`; an
+   AI answer reaches a row only when the tutor explicitly approves it,
+   becoming an ordinary review resolution. Exports have no variants
+   (owner-approved 2026-07-17): the Export button always ships the
+   questions exactly as they stand in review — blank, tutor-answered, or
+   AI-approved — to the destination chosen in Customize (Triviadox by
+   default, ZIP optionally). The extraction engine itself still never
+   guesses.
 3. **The key stays on-device** — each user brings their own Gemini API key;
    calls go directly from their device to Gemini. No Codox-operated server ever
    sees a key or a page. First run shows a one-line notice that pages are

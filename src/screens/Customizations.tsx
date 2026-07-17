@@ -10,6 +10,7 @@ import { customizeMessages } from '../copy/messages'
 import {
   saveCustomizationSettings,
   useCustomizationSettings,
+  type ExportTarget,
   type TopicsMode,
 } from '../state/customization-settings'
 import type { YearMode } from '../state/types'
@@ -29,6 +30,19 @@ const YEAR_OPTIONS: readonly ChoiceOption<YearMode>[] = [
     value: 'ai',
     label: customizeMessages.yearAi,
     hint: customizeMessages.yearAiHint,
+  },
+]
+
+const EXPORT_OPTIONS: readonly ChoiceOption<ExportTarget>[] = [
+  {
+    value: 'triviadox',
+    label: customizeMessages.exportTriviadox,
+    hint: customizeMessages.exportTriviadoxHint,
+  },
+  {
+    value: 'zip',
+    label: customizeMessages.exportZip,
+    hint: customizeMessages.exportZipHint,
   },
 ]
 
@@ -57,6 +71,20 @@ export function Customizations() {
       </header>
       <div className="ds-stack">
         <p className="ds-muted">{customizeMessages.subtitle}</p>
+        <GlassPanel
+          aria-label={customizeMessages.exportPanelLabel}
+          as="section"
+          padding="compact"
+        >
+          <ChoiceGroup
+            legend={customizeMessages.exportLegend}
+            onChange={(exportTarget) =>
+              void saveCustomizationSettings({ ...settings, exportTarget })
+            }
+            options={EXPORT_OPTIONS}
+            value={settings.exportTarget}
+          />
+        </GlassPanel>
         <GlassPanel
           aria-label={customizeMessages.topicsPanelLabel}
           as="section"

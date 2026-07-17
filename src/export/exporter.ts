@@ -16,14 +16,12 @@ interface FileSaverPlugin {
   saveToDownloads(options: { path: string; fileName: string }): Promise<void>
 }
 const FileSaver = registerPlugin<FileSaverPlugin>('FileSaver')
-import { applyAiAnswers, readAiAnswers } from '../engine/solver'
 import {
   applyTopicMatches,
   readRunTopics,
   readTopicMatches,
 } from '../engine/topic-matcher'
 import type { MergedRow } from '../engine/types'
-import { getAiAnswerSettings } from '../state/ai-answers-settings'
 import { bytesToBase64 } from '../providers/base64'
 import { getArtifact, getArtifacts, updateRun } from '../state/runs'
 import type { RunState } from '../state/types'
@@ -56,54 +54,30 @@ export type ExportOutcome =
   | 'cancelled'
   | 'nothing'
 
-/**
- * What the exported CSVs carry in `correct_index`:
- * - `with-answers` — the default: document answers + tutor resolutions.
- * - `no-answers` — every `correct_index` blanked (a practice set); flags
- *   are untouched. Deterministic, no model involved.
- * - `ai-answers` — the run's saved AI answers applied per the user's AI
- *   settings. The exporter only APPLIES the saved artifact — solving
- *   happened before export, and `merged-rows` itself is never modified.
- */
-export type ExportMode = 'with-answers' | 'no-answers' | 'ai-answers'
-
-export interface ExportOptions {
-  mode?: ExportMode
-}
-
-/** The zip-name suffix marking variant exports; folder names stay §3.4. */
-const VARIANT_SUFFIX: Record<ExportMode, string | undefined> = {
-  'with-answers': undefined,
-  'no-answers': 'no answers',
-  'ai-answers': 'AI answers',
-}
-
 /** Runs that have a bundle to export: finished, rows persisted. */
 export function exportableRuns(runs: readonly RunState[]): RunState[] {
   return runs.filter((run) => run.status === 'done')
 }
 
-async function rowsForMode(
-  run: RunState,
-  rows: MergedRow[],
-  mode: ExportMode,
-): Promise<MergedRow[]> {
-  if (mode === 'no-answers') {
-    return rows.map((row) => ({ ...row, correct_index: '' }))
-  }
-  if (mode === 'ai-answers') {
-    return applyAiAnswers(
-      rows,
-      await readAiAnswers(run.id),
-      await getAiAnswerSettings(),
-    )
-  }
-  return rows
+/**
+ * Where a prepared Triviadox upload gets imported. Exports carry the
+ * questions exactly as they stand in review — answers the tutor blanked,
+ * confirmed, or approved from the AI all ship as-is; there are no export
+ * variants.
+ */
+export function triviadoxImportUrl(id: string): string {
+  return `${triviadoxOrigin()}/management/import?id=${id}`
+}
+
+function triviadoxOrigin(): string {
+  return typeof window !== 'undefined' &&
+    window.location.origin.includes('localhost')
+    ? 'http://localhost:3000'
+    : 'https://triviadox.com'
 }
 
 async function buildBundleInputs(
   runs: readonly RunState[],
-  mode: ExportMode,
 ): Promise<BundleInput[]> {
   const names = uniqueBundleNames(runs.map((run) => run.fileName))
   const bundles: BundleInput[] = []
@@ -119,7 +93,7 @@ async function buildBundleInputs(
     // so resolutions validate against the options the tutor actually saw.
     const edited = applyContentEdits(rows, edits)
     const resolved = applyResolutions(edited, resolutions)
-    let projected = await rowsForMode(run, resolved, mode)
+    let projected = resolved
     // Column projection (owner-approved 2026-07-14): topics come only from
     // the run's snapshot + matches (blank when matching didn't finish —
     // export never waits); year per the run's snapshot; id/group_id never.
@@ -247,16 +221,13 @@ async function deliverZip(
  */
 export async function exportRuns(
   runs: readonly RunState[],
-  options: ExportOptions = {},
 ): Promise<ExportOutcome> {
-  const mode = options.mode ?? 'with-answers'
   const exportable = exportableRuns(runs)
   if (exportable.length === 0) return 'nothing'
-  const bundles = await buildBundleInputs(exportable, mode)
+  const bundles = await buildBundleInputs(exportable)
   const zipped = zipBundles(assembleBundleFiles(bundles))
   const fileName = exportArchiveName(
     exportable.map((run) => run.fileName),
-    VARIANT_SUFFIX[mode],
   )
   const outcome = await deliverZip(zipped, fileName)
   if (outcome === 'shared' || outcome === 'saved' || outcome === 'downloaded') {
@@ -274,13 +245,11 @@ export async function exportRuns(
  */
 export async function exportToTriviadox(
   runs: readonly RunState[],
-  options: ExportOptions = {},
 ): Promise<{ success: boolean; id?: string; error?: string }> {
-  const mode = options.mode ?? 'with-answers'
   const exportable = exportableRuns(runs)
   if (exportable.length === 0) return { success: false, error: 'nothing' }
 
-  const bundles = await buildBundleInputs(exportable, mode)
+  const bundles = await buildBundleInputs(exportable)
   const payload = {
     bundles: bundles.map((b) => ({
       name: b.name,
@@ -292,12 +261,8 @@ export async function exportToTriviadox(
     })),
   }
 
-  const origin = typeof window !== 'undefined' && window.location.origin.includes('localhost')
-    ? 'http://localhost:3000'
-    : 'https://triviadox.com'
-
   try {
-    const res = await fetch(`${origin}/api/import/prepare`, {
+    const res = await fetch(`${triviadoxOrigin()}/api/import/prepare`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

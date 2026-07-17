@@ -270,6 +270,14 @@ export const customizeMessages = {
   topicsOn: 'On',
   topicsOnHint:
     'Convert shows a topic list you can type or read from a topics PDF or image. After conversion, Gemini matches each question to your list — unsure stays blank.',
+  exportPanelLabel: 'Export destination',
+  exportLegend: 'Export',
+  exportTriviadox: 'To Triviadox',
+  exportTriviadoxHint:
+    'The Export button sends the finished questions straight to Triviadox and opens the import page.',
+  exportZip: 'ZIP file',
+  exportZipHint:
+    'The Export button saves a ZIP of the question CSV and images to this device instead.',
   debugPanelLabel: 'Debug console',
   debugLabel: 'Show debug console',
   debugHint:
@@ -413,41 +421,18 @@ export const exportMessages = {
     'Saved. The bundle now lives safely outside Codox — import it into Triviadox whenever you like.',
   whyExportMatters:
     'Codox stores work in the browser, which the system can clear to free space. An exported bundle is the copy nothing can take away.',
-  menuLabel: 'More export options',
-  withoutAnswers: 'Export without answers',
-  withoutAnswersHint: 'A practice set — every answer column left blank.',
-  withAiAnswers: 'Export with AI answers…',
-  withAiAnswersHint: 'Gemini answers questions from its own knowledge.',
+  triviadoxDone: 'Exported successfully! Opening Triviadox…',
+  exportToPrefix: 'Export to',
+  triviadoxName: 'Triviadox',
+  downloadZip: 'Download ZIP',
 } as const
 
-export const aiExportMessages = {
-  title: 'Export with AI answers',
-  description:
-    'Gemini answers from its own knowledge, not from your document. Every AI-filled row is marked ai_answered in the CSV, so you can always tell these answers apart.',
-  scopeLegend: 'Which questions should the AI answer?',
-  scopeUnanswered: 'Only unanswered questions',
-  scopeUnansweredHint:
-    'Answers found in the document or confirmed by you stay untouched.',
-  scopeVerify: 'Unanswered + double-check the rest',
-  scopeVerifyHint:
-    'Also compares document answers with its own; disagreements are flagged, never changed.',
-  scopeAll: 'Every question',
-  scopeAllHint:
-    'AI answers replace document answers too. Uses the most quota.',
-  thresholdLegend: 'When unsure, the AI should…',
-  thresholdCertain: 'Only answer when certain',
-  thresholdCertainHint: 'Anything less stays blank and flagged for you.',
-  thresholdLikely: 'Answer when certain or likely',
-  thresholdLikelyHint: 'Blank only when the AI says it would be guessing.',
-  thresholdNever: 'Answer whenever it can',
-  thresholdNeverHint: 'Accepts every answer the AI gives, however unsure.',
+/** Shared copy for asking Gemini to answer questions (the Review screen). */
+export const aiSolveMessages = {
   quotaNote: (requests: number) =>
     requests === 0
       ? 'Using saved AI answers — no new Gemini requests.'
       : `About ${requests} Gemini request${requests === 1 ? '' : 's'} against your key.`,
-  savedAnswersNote: (when: string) =>
-    `Saved AI answers from ${when} cover these questions.`,
-  reSolve: 'Ask Gemini again',
   solving: (done: number, total: number) =>
     `Asking Gemini… ${done}/${total}`,
   solvePausedQuota:
@@ -458,7 +443,6 @@ export const aiExportMessages = {
     'Gemini rejected the saved API key. Fix the key, then try again.',
   solveFailed:
     'Gemini could not answer right now. Answers so far are saved — try again in a moment.',
-  confirm: 'Answer and export',
   cancel: 'Cancel',
 } as const
 
@@ -531,8 +515,6 @@ export const historyMessages = {
   useAgainAction: 'Use PDF again',
   reviewAction: 'Review answers',
   backToHistory: 'Back to history',
-  exportAction: 'Export bundle',
-  exportAgainAction: 'Export again',
   exportComplete: 'Bundle saved outside Codox.',
   exportDownloaded:
     'Bundle saved to your browser’s Downloads folder.',

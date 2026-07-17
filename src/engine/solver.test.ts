@@ -5,17 +5,12 @@ import type { GeminiAdapter, VisionResult } from '../providers/types'
 import { saveGeminiKey } from '../state/credentials'
 import { db } from '../state/db'
 import { createRun, getRun, putArtifact, updateRun } from '../state/runs'
-import type { AiAnswerSettings } from '../state/ai-answers-settings'
 import {
-  applyAiAnswers,
   clearAiAnswers,
-  pendingRows,
   readAiAnswers,
   solveRows,
-  solveRun,
   SOLVER_MODEL,
   validateSolverChunk,
-  type AiAnswersArtifact,
 } from './solver'
 import type { MergedRow } from './types'
 
@@ -69,8 +64,6 @@ function row(id: string, fill: Partial<MergedRow> = {}): MergedRow {
   }
 }
 
-const SETTINGS: AiAnswerSettings = { scope: 'unanswered', flagBelow: 'certain' }
-
 async function seedRun(rows: MergedRow[]): Promise<string> {
   const runId = await createRun({
     jobId: 'current',
@@ -102,8 +95,8 @@ beforeEach(async () => {
   await saveGeminiKey('local-key')
 })
 
-describe('solveRun', () => {
-  it('solves only the unanswered rows, caches the answers, and counts usage', async () => {
+describe('solveRows', () => {
+  it('solves the requested rows, caches the answers, and counts usage', async () => {
     const runId = await seedRun([
       row('1', { correct_index: '2', needs_review: '' }),
       row('2'),
@@ -119,7 +112,7 @@ describe('solveRun', () => {
       ),
     )
 
-    const outcome = await solveRun(runId, SETTINGS, {
+    const outcome = await solveRows(runId, ['2', '3'], {
       controller: new GeminiController(script.adapter),
     })
 
@@ -128,9 +121,6 @@ describe('solveRun', () => {
     expect(script.calls[0].modelId).toBe('gemini-3.1-flash-lite')
     expect(script.calls[0].modelId).toBe(SOLVER_MODEL)
     expect(script.calls[0].prompt.startsWith('You are answering multiple-choice')).toBe(true)
-    // Only the two blank rows were sent.
-    expect(script.calls[0].prompt).toContain('Question 2?')
-    expect(script.calls[0].prompt).not.toContain('Question 1?')
     const cached = await readAiAnswers(runId)
     expect(cached?.answers).toEqual({
       '2': { index: 1, confidence: 'certain' },
@@ -150,7 +140,7 @@ describe('solveRun', () => {
     const script = scriptedAdapter()
     script.push(ok(answersJson([{ id: '1', index: 0, confidence: 'likely' }])))
 
-    await solveRun(runId, SETTINGS, {
+    await solveRows(runId, ['1'], {
       controller: new GeminiController(script.adapter),
     })
 
@@ -177,7 +167,7 @@ describe('solveRun', () => {
       })))),
     )
 
-    await solveRun(runId, SETTINGS, {
+    await solveRows(runId, rows.map((entry) => entry.id), {
       controller: new GeminiController(script.adapter),
     })
 
@@ -196,7 +186,7 @@ describe('solveRun', () => {
       ok(answersJson([{ id: 'foreign', index: 0, confidence: 'certain' }])),
     )
 
-    const outcome = await solveRun(runId, SETTINGS, {
+    const outcome = await solveRows(runId, ['1'], {
       controller: new GeminiController(script.adapter),
     })
 
@@ -209,26 +199,21 @@ describe('solveRun', () => {
     })
   })
 
-  it('cached answers are never re-asked; clearing them re-solves', async () => {
+  it('clearing the cached answers drops the artifact', async () => {
     const runId = await seedRun([row('1')])
     const script = scriptedAdapter()
     script.push(ok(answersJson([{ id: '1', index: 2, confidence: 'certain' }])))
-    const controller = new GeminiController(script.adapter)
 
-    await solveRun(runId, SETTINGS, { controller })
-    const again = await solveRun(runId, SETTINGS, { controller })
-
-    expect(again).toEqual({ ok: true, requestsMade: 0 })
-    expect(script.calls).toHaveLength(1)
+    await solveRows(runId, ['1'], {
+      controller: new GeminiController(script.adapter),
+    })
+    expect((await readAiAnswers(runId))?.answers['1']).toEqual({
+      index: 2,
+      confidence: 'certain',
+    })
 
     await clearAiAnswers(runId)
-    script.push(ok(answersJson([{ id: '1', index: 0, confidence: 'likely' }])))
-    await solveRun(runId, SETTINGS, { controller })
-    expect(script.calls).toHaveLength(2)
-    expect((await readAiAnswers(runId))?.answers['1']).toEqual({
-      index: 0,
-      confidence: 'likely',
-    })
+    expect(await readAiAnswers(runId)).toBeUndefined()
   })
 
   it('a provider stop returns the failure; answered chunks stay cached', async () => {
@@ -244,7 +229,7 @@ describe('solveRun', () => {
       { ok: false, kind: 'wrong-key', httpStatus: 400 },
     )
 
-    const outcome = await solveRun(runId, SETTINGS, {
+    const outcome = await solveRows(runId, rows.map((r) => r.id), {
       controller: new GeminiController(script.adapter),
     })
 
@@ -253,10 +238,6 @@ describe('solveRun', () => {
     // The first chunk's ten answers survived the stop.
     expect(Object.keys((await readAiAnswers(runId))?.answers ?? {})).toHaveLength(10)
   })
-
-})
-
-describe('solveRows', () => {
   it('sends exactly the requested rows, answered or not', async () => {
     const runId = await seedRun([
       row('1', { correct_index: '2', needs_review: '' }),
@@ -354,112 +335,3 @@ describe('validateSolverChunk', () => {
   })
 })
 
-describe('applyAiAnswers', () => {
-  const artifact = (
-    answers: AiAnswersArtifact['answers'],
-  ): AiAnswersArtifact => ({ answers, solvedAt: 1 })
-
-  const blank = row('b')
-  const answered = row('a', { correct_index: '1', needs_review: '' })
-
-  it('fills accepted answers on blank rows and flags provenance', () => {
-    const [applied] = applyAiAnswers(
-      [blank],
-      artifact({ b: { index: 2, confidence: 'certain' } }),
-      { scope: 'unanswered', flagBelow: 'certain' },
-    )
-    expect(applied.correct_index).toBe('2')
-    expect(applied.needs_review).toBe('ai_answered')
-  })
-
-  it('below-threshold answers stay blank and read ai_unsure', () => {
-    const [applied] = applyAiAnswers(
-      [blank],
-      artifact({ b: { index: 2, confidence: 'likely' } }),
-      { scope: 'unanswered', flagBelow: 'certain' },
-    )
-    expect(applied.correct_index).toBe('')
-    expect(applied.needs_review).toBe('ai_unsure')
-  })
-
-  it('flagBelow relaxes the threshold', () => {
-    const likely = artifact({ b: { index: 2, confidence: 'likely' } })
-    expect(
-      applyAiAnswers([blank], likely, { scope: 'unanswered', flagBelow: 'likely' })[0]
-        .correct_index,
-    ).toBe('2')
-    const unsureWithIndex = artifact({ b: { index: 1, confidence: 'unsure' } })
-    expect(
-      applyAiAnswers([blank], unsureWithIndex, { scope: 'unanswered', flagBelow: 'never' })[0]
-        .correct_index,
-    ).toBe('1')
-  })
-
-  it('a null index never fills, whatever the threshold', () => {
-    const [applied] = applyAiAnswers(
-      [blank],
-      artifact({ b: { index: null, confidence: 'certain' } }),
-      { scope: 'unanswered', flagBelow: 'never' },
-    )
-    expect(applied.correct_index).toBe('')
-    expect(applied.needs_review).toBe('ai_unsure')
-  })
-
-  it('verify mode flags disagreements but never overrides the document', () => {
-    const [applied] = applyAiAnswers(
-      [answered],
-      artifact({ a: { index: 2, confidence: 'certain' } }),
-      { scope: 'unanswered+verify', flagBelow: 'certain' },
-    )
-    expect(applied.correct_index).toBe('1')
-    expect(applied.needs_review).toBe('ai_disagrees')
-
-    const [agreeing] = applyAiAnswers(
-      [answered],
-      artifact({ a: { index: 1, confidence: 'certain' } }),
-      { scope: 'unanswered+verify', flagBelow: 'certain' },
-    )
-    expect(agreeing.needs_review).toBe('')
-  })
-
-  it('scope all overrides document answers with accepted AI answers', () => {
-    const [applied] = applyAiAnswers(
-      [answered],
-      artifact({ a: { index: 2, confidence: 'certain' } }),
-      { scope: 'all', flagBelow: 'certain' },
-    )
-    expect(applied.correct_index).toBe('2')
-    expect(applied.needs_review).toBe('ai_answered')
-  })
-
-  it('rows without an AI entry are returned untouched', () => {
-    const [applied] = applyAiAnswers([blank], artifact({}), {
-      scope: 'unanswered',
-      flagBelow: 'never',
-    })
-    expect(applied).toEqual(blank)
-  })
-
-  it('an out-of-range cached index is treated as no answer', () => {
-    const [applied] = applyAiAnswers(
-      [blank],
-      artifact({ b: { index: 99, confidence: 'certain' } }),
-      { scope: 'unanswered', flagBelow: 'certain' },
-    )
-    expect(applied.correct_index).toBe('')
-    expect(applied.needs_review).toBe('ai_unsure')
-  })
-})
-
-describe('pendingRows', () => {
-  it('subtracts cached answers from the scope’s targets', () => {
-    const rows = [row('1'), row('2', { correct_index: '0', needs_review: '' })]
-    const cached: AiAnswersArtifact = {
-      answers: { '1': { index: 0, confidence: 'certain' } },
-      solvedAt: 1,
-    }
-    expect(pendingRows(rows, 'unanswered', cached)).toHaveLength(0)
-    expect(pendingRows(rows, 'unanswered', undefined)).toHaveLength(1)
-    expect(pendingRows(rows, 'all', cached).map((r) => r.id)).toEqual(['2'])
-  })
-})

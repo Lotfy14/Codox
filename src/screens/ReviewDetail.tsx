@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Badge, Button, GlassPanel } from '../design/components'
 import {
-  aiExportMessages,
   aiReviewMessages,
+  aiSolveMessages,
   exportMessages,
   reviewMessages,
 } from '../copy/messages'
 import type { RunState, TopicItem } from '../state/types'
-import type { ExportMode } from '../export/exporter'
+import { useCustomizationSettings } from '../state/customization-settings'
+import { ExportButton } from './ExportButton'
 import type { AiAnswer } from '../engine/solver'
 import { solveRows } from '../engine/solver'
 import type { MergedRow } from '../engine/types'
@@ -49,7 +50,7 @@ export interface ReviewDetailProps {
   runTopics: TopicItem[] | undefined
   onNavigate: (rowId: string) => void
   onBack: () => void
-  onExport: (mode: ExportMode, type: 'triviadox' | 'zip') => void
+  onExport: () => void
   exported: boolean
   filter: ReviewFilter
 }
@@ -84,6 +85,7 @@ export function ReviewDetail({
   const [editing, setEditing] = useState(false)
   const confirmId = useId()
   const offline = useOffline()
+  const exportTarget = useCustomizationSettings()?.exportTarget ?? 'triviadox'
   const source = useSourceUrls(run.id, reviewRow)
   const answer = reviewRow === undefined ? { index: null, source: 'none' as const } : answerSource(reviewRow, resolutions, aiAnswers)
   const seededAnswer = answer.index === null ? undefined : answer.index
@@ -176,12 +178,12 @@ export function ReviewDetail({
       if (!outcome.ok && outcome.failure.kind !== 'aborted') {
         setAskError(
           outcome.failure.kind === 'wrong-key'
-            ? aiExportMessages.solveWrongKey
-            : aiExportMessages.solveFailed,
+            ? aiSolveMessages.solveWrongKey
+            : aiSolveMessages.solveFailed,
         )
       }
     } catch {
-      setAskError(aiExportMessages.solveFailed)
+      setAskError(aiSolveMessages.solveFailed)
     } finally {
       setAskingRowId((current) => (current === rowId ? null : current))
     }
@@ -243,34 +245,7 @@ export function ReviewDetail({
     return () => window.removeEventListener('keydown', handleKey)
   }, [aiIndex, allResolved, askAi, askingRowId, confirm, confirmId, currentIndex, editing, goTo, reviewRow, savedAnswer, applyAiAnswer])
 
-  if (allResolved || reviewRow === undefined) {
-    return (
-      <section aria-labelledby="review-done-heading" className="review-done">
-        <GlassPanel as="div" padding="spacious">
-          <p aria-hidden="true" className="review-done-mark">✓</p>
-          <h2 id="review-done-heading">{reviewMessages.allResolved}</h2>
-          {exported ? (
-            <p className="ds-inline-note ds-inline-note--working" role="status">
-              {exportMessages.exportDone}
-            </p>
-          ) : null}
-          <div className="review-done-actions">
-            <Button onPress={() => onExport('with-answers', 'triviadox')}>
-              {exported ? 'Export to Triviadox again' : 'Export to Triviadox'}
-            </Button>
-            <Button onPress={() => onExport('with-answers', 'zip')} variant="secondary">
-              Download ZIP
-            </Button>
-            <Button onPress={onBack}>{reviewMessages.backToList}</Button>
-          </div>
-        </GlassPanel>
-      </section>
-    )
-  }
-
-  const imageUrl = wholePage ? source.page : (source.crop ?? source.page)
-  const displayQuestion = reviewRow.row.question.replace(/^\s*case\s*stem\s*:\s*/i, '')
-  const rowEdit = edits[reviewRow.row.id]
+  const rowEdit = reviewRow === undefined ? undefined : edits[reviewRow.row.id]
 
   const baseline = useMemo(() => {
     if (!reviewRow) return { topic: '', subtopic: '', year: '' }
@@ -296,6 +271,29 @@ export function ReviewDetail({
       setEditYear(rowEdit?.year ?? baseline.year)
     }
   }, [editing, reviewRow, rowEdit, baseline, resolutions])
+
+  if (allResolved || reviewRow === undefined) {
+    return (
+      <section aria-labelledby="review-done-heading" className="review-done">
+        <GlassPanel as="div" padding="spacious">
+          <p aria-hidden="true" className="review-done-mark">✓</p>
+          <h2 id="review-done-heading">{reviewMessages.allResolved}</h2>
+          {exported ? (
+            <p className="ds-inline-note ds-inline-note--working" role="status">
+              {exportMessages.exportDone}
+            </p>
+          ) : null}
+          <div className="review-done-actions">
+            <ExportButton onPress={onExport} target={exportTarget} />
+            <Button onPress={onBack}>{reviewMessages.backToList}</Button>
+          </div>
+        </GlassPanel>
+      </section>
+    )
+  }
+
+  const imageUrl = wholePage ? source.page : (source.crop ?? source.page)
+  const displayQuestion = reviewRow.row.question.replace(/^\s*case\s*stem\s*:\s*/i, '')
 
   const validation =
     editQuestion.trim() === ''
