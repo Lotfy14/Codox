@@ -160,7 +160,7 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
             ? 'http://localhost:3000'
             : 'https://triviadox.com'
           window.open(`${origin}/management/import?id=${res.id}`, '_blank')
-          setExportNotice({ text: 'Exported successfully! Opening Triviadox...', tone: 'success' })
+          setExportNotice({ text: 'Exported successfully! Opening Triviadox...', tone: 'info' })
         } else if (res.error === 'nothing') {
           setExportNotice({ text: exportMessages.nothingToExport, tone: 'info' })
         } else {

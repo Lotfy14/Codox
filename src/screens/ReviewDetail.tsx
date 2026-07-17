@@ -3,7 +3,6 @@ import { Badge, Button, GlassPanel } from '../design/components'
 import {
   aiExportMessages,
   aiReviewMessages,
-  convertMessages,
   exportMessages,
   reviewMessages,
 } from '../copy/messages'

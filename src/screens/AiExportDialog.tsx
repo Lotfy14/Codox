@@ -17,7 +17,7 @@ import {
   resolvedRows,
   solveRun,
 } from '../engine/solver'
-import { exportRuns, exportToTriviadox, exportableRuns, type ExportOutcome } from '../export/exporter'
+import { exportToTriviadox, exportableRuns, type ExportOutcome } from '../export/exporter'
 import { geminiController } from '../providers/controller'
 import type { ControllerStatus } from '../providers/controller'
 import {

@@ -275,7 +275,8 @@ test('critical journey: answer-key PDF → review list/detail → named export �
       }
     }
   })
-  await page.getByRole('button', { name: 'Export as-is' }).click()
+  await page.getByRole('button', { name: 'More export options' }).click()
+  await page.getByRole('menuitem', { name: 'Download ZIP file (With answers)' }).click()
   await expect(page.getByText(/lives safely outside Codox/)).toBeVisible()
   const savedFile = await page.evaluate(
     () =>
