@@ -8,7 +8,7 @@
  */
 import { DEFAULT_GEMINI_VISION_MODEL } from '../providers/gemini'
 import type { VisionRequest } from '../providers/types'
-import { BOX_PROMPT, EVIDENCE_PROMPT, FIGURE_DETECT_PROMPT, INDEX_PROMPT } from './prompts'
+import { BOX_BATCH_PROMPT, BOX_PROMPT, EVIDENCE_PROMPT, FIGURE_DETECT_PROMPT, INDEX_PROMPT } from './prompts'
 import { AUDIT_PROMPT, PLANNER_PROMPT, WORKER_PROMPT } from './prompts'
 import type { AuditReport, Blueprint, MergedRow, ReducedBlueprint } from './types'
 
@@ -253,28 +253,52 @@ export function buildFigureDetectRequest(
   }, plannerModel)
 }
 
+export interface BoxTaskRef {
+  ref: string;
+  printedLabel: string;
+  anchor: string;
+  optionsPresent: boolean;
+  hasCase: boolean;
+  hasInlineEvidence: boolean;
+}
+
+const BOX_RESPONSE_SCHEMA = {
+  type: 'OBJECT', properties: {
+    questions: { type: 'ARRAY', items: { type: 'OBJECT', properties: {
+      ref: { type: 'STRING' }, question: REGION_SCHEMA, options: REGION_SCHEMA,
+      case_stem: REGION_SCHEMA, inline_evidence: REGION_SCHEMA,
+    }, required: ['ref','question','options','case_stem','inline_evidence'] } },
+    figures: { type: 'ARRAY', items: { type: 'OBJECT', properties: {
+      page: { type: 'INTEGER' }, linked_refs: { type: 'ARRAY', items: { type: 'STRING' } },
+      box_2d: { type: 'ARRAY', items: { type: 'NUMBER' }, minItems: 4, maxItems: 4 }, anchor: { type: 'STRING' },
+    }, required: ['page','linked_refs','box_2d','anchor'] } },
+  }, required: ['questions','figures'],
+}
+
 export function buildBoxRequest(
   pages: readonly CallImage[],
-  refs: readonly {
-    ref: string;
-    printedLabel: string;
-    anchor: string;
-    optionsPresent: boolean;
-    hasCase: boolean;
-    hasInlineEvidence: boolean;
-  }[],
+  refs: readonly BoxTaskRef[],
   plannerModel = PLANNER_MODEL,
 ): VisionRequest {
-  return structuredPlannerRequest(BOX_PROMPT + '\n\nPAGE TASKS:\n' + JSON.stringify(refs), pages, {
-    type: 'OBJECT', properties: {
-      questions: { type: 'ARRAY', items: { type: 'OBJECT', properties: {
-        ref: { type: 'STRING' }, question: REGION_SCHEMA, options: REGION_SCHEMA,
-        case_stem: REGION_SCHEMA, inline_evidence: REGION_SCHEMA,
-      }, required: ['ref','question','options','case_stem','inline_evidence'] } },
-      figures: { type: 'ARRAY', items: { type: 'OBJECT', properties: {
-        page: { type: 'INTEGER' }, linked_refs: { type: 'ARRAY', items: { type: 'STRING' } },
-        box_2d: { type: 'ARRAY', items: { type: 'NUMBER' }, minItems: 4, maxItems: 4 }, anchor: { type: 'STRING' },
-      }, required: ['page','linked_refs','box_2d','anchor'] } },
-    }, required: ['questions','figures'],
-  }, plannerModel)
+  return structuredPlannerRequest(
+    BOX_PROMPT + '\n\nPAGE TASKS:\n' + JSON.stringify(refs),
+    pages, BOX_RESPONSE_SCHEMA, plannerModel,
+  )
+}
+
+/**
+ * Several pages in one BOX call (Customize's "Pages per box request" > 1,
+ * owner-approved 2026-07-17). Each ref carries the 1-based image number of
+ * the page it lives on; the response's figure pages are those same relative
+ * numbers, mapped back to absolute pages by the executor.
+ */
+export function buildBoxBatchRequest(
+  pages: readonly CallImage[],
+  refs: readonly (BoxTaskRef & { page: number })[],
+  plannerModel = PLANNER_MODEL,
+): VisionRequest {
+  return structuredPlannerRequest(
+    BOX_BATCH_PROMPT + '\n\nPAGE TASKS:\n' + JSON.stringify(refs),
+    pages, BOX_RESPONSE_SCHEMA, plannerModel,
+  )
 }

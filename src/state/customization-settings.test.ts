@@ -24,12 +24,14 @@ describe('customization settings', () => {
       topicsMode: 'off',
       exportTarget: 'zip',
       debugConsole: true,
+      boxPagesPerCall: 4,
     })
     expect(await getCustomizationSettings()).toEqual({
       yearMode: 'ai',
       topicsMode: 'off',
       exportTarget: 'zip',
       debugConsole: true,
+      boxPagesPerCall: 4,
     })
   })
 
@@ -40,6 +42,7 @@ describe('customization settings', () => {
         yearMode: 'guess',
         topicsMode: 'off',
         exportTarget: 'ftp',
+        boxPagesPerCall: 99,
       }),
     })
     expect(await getCustomizationSettings()).toEqual({
@@ -47,6 +50,7 @@ describe('customization settings', () => {
       topicsMode: 'off',
       exportTarget: DEFAULT_CUSTOMIZATION_SETTINGS.exportTarget,
       debugConsole: DEFAULT_CUSTOMIZATION_SETTINGS.debugConsole,
+      boxPagesPerCall: DEFAULT_CUSTOMIZATION_SETTINGS.boxPagesPerCall,
     })
   })
 

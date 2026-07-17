@@ -43,7 +43,7 @@ import {
   type CallImage,
 } from './calls'
 import {
-  buildBoxRequest, buildEvidenceRequest, buildFigureDetectRequest, buildIndexRequest,
+  buildBoxBatchRequest, buildBoxRequest, buildEvidenceRequest, buildFigureDetectRequest, buildIndexRequest,
 } from './calls'
 import { assembleBlueprint } from './assemble'
 import { mapConcurrent } from './concurrency'
@@ -93,6 +93,11 @@ export interface ExecutorOptions {
   /** Intake page counts make render checkpoints complete and resumable. */
   examPageCount?: number
   answerKeyPageCount?: number
+  /**
+   * Pages per BOX call (Customize's "Pages per box request", 1–10).
+   * 1 (default) keeps the per-page pass; higher spends fewer requests.
+   */
+  boxPagesPerCall?: number
 }
 
 export type RunOutcome =
@@ -537,7 +542,7 @@ async function planOneWindow(
  * checkpoint compatibility fallback, never as a new request format. */
 async function stepPlanAndValidate(
   runId: string, controller: GeminiController, signal: AbortSignal | undefined,
-  examPageCount?: number, answerKeyPageCount = 0,
+  examPageCount?: number, answerKeyPageCount = 0, boxPagesPerCall = 1,
 ): Promise<{ ok: true; blueprint: Blueprint } | { ok: false; reason: PlannerStop }> {
   const cached = await getArtifact(runId, 'blueprint-valid')
   if (cached?.json !== undefined) return { ok: true, blueprint: cached.json as Blueprint }
@@ -637,63 +642,91 @@ async function stepPlanAndValidate(
     list.push(question); byPage.set(question.ownerPage, list)
   }
   const onPage = <T extends { page: number }>(value: T, page: number): T => ({ ...value, page })
-  // BOX one page for a set of refs. A ref the model silently omits becomes a
-  // blank review card downstream, so a page keeps retrying the refs the last
-  // pass dropped (BOX_ATTEMPTS total) before those refs are flagged and left
-  // to the whole-page fallback. A full-page failure (truncation/parse error)
-  // is retried the same way.
+  // BOX batches of question-bearing pages (Customize's "Pages per box
+  // request"; 1 keeps today's per-page pass). A ref the model silently omits
+  // becomes a blank review card downstream, so a batch keeps retrying the
+  // refs the last pass dropped (BOX_ATTEMPTS total) before those refs are
+  // flagged and left to the whole-page fallback. A full failure
+  // (truncation/parse error) is retried the same way.
   const BOX_ATTEMPTS = 2
-  const boxAttempt = async (page: number, refs: readonly ReconciledQuestion[], attempt: number) => {
-    const response = await timed(runId, `box p${page}${attempt > 0 ? ` retry${attempt}` : ''}`, async () => call(controller, runId, buildBoxRequest(
-      await pageImages(runId, [page - 1]),
-      refs.map((row) => ({
+  const batchSize = Math.max(1, Math.min(10, Math.floor(boxPagesPerCall)))
+  const pageEntries = [...byPage.entries()]
+  const batches: Array<typeof pageEntries> = []
+  for (let start = 0; start < pageEntries.length; start += batchSize) {
+    batches.push(pageEntries.slice(start, start + batchSize))
+  }
+  const boxAttempt = async (batchPages: readonly number[], refs: readonly ReconciledQuestion[], attempt: number) => {
+    const span = batchPages.length > 1 ? `-${batchPages[batchPages.length - 1]}` : ''
+    const response = await timed(runId, `box p${batchPages[0]}${span}${attempt > 0 ? ` retry${attempt}` : ''}`, async () => {
+      const images = await pageImages(runId, batchPages.map((page) => page - 1))
+      const tasks = refs.map((row) => ({
         ref: row.ref,
         printedLabel: row.printedLabel,
         anchor: row.anchor,
         optionsPresent: row.optionsPresent,
         hasCase: row.caseStemKey !== null,
         hasInlineEvidence: row.evidenceState === 'inline'
-      })),
-      PLANNER_MODEL,
-    ), signal))
+      }))
+      const request = batchPages.length === 1
+        ? buildBoxRequest(images, tasks, PLANNER_MODEL)
+        : buildBoxBatchRequest(images, tasks.map((task, index) => ({
+            ...task, page: batchPages.indexOf(refs[index].ownerPage) + 1,
+          })), PLANNER_MODEL)
+      return call(controller, runId, request, signal)
+    })
     const parsed = wasTruncated(response.finishReason) ? undefined : parseBoxResult(response.text)
     return { response, parsed }
   }
-  // Each page task returns its own findings; they are folded back in page
+  // Each batch task returns its own findings; they are folded back in page
   // order below, so asset numbering and issue order never depend on which
   // call happened to finish first.
-  const runBoxPages = () => mapConcurrent([...byPage.entries()], CALL_CONCURRENCY, async ([page, questions]) => {
+  const runBoxBatches = () => mapConcurrent(batches, CALL_CONCURRENCY, async (batch) => {
+    const batchPages = batch.map(([page]) => page)
     const found: BoxResult['questions'] = []
     const figures: BoxResult['figures'] = []
     const pageIssues: PlanningIssue[] = []
-    let remaining: readonly ReconciledQuestion[] = questions
+    // Batched figures report the relative image number; a lone page keeps
+    // the code-owned stamp exactly as before.
+    const absoluteFigurePage = (relative: number): number | undefined =>
+      batchPages.length === 1 ? batchPages[0] : batchPages[relative - 1]
+    let remaining: readonly ReconciledQuestion[] = batch.flatMap(([, questions]) => questions)
     let figuresCaptured = false
     let lastReason = 'no box region after retry'
     for (let attempt = 0; attempt < BOX_ATTEMPTS && remaining.length > 0; attempt += 1) {
-      const { response, parsed } = await boxAttempt(page, remaining, attempt)
+      const { response, parsed } = await boxAttempt(batchPages, remaining, attempt)
       if (parsed === undefined || !parsed.ok) {
         lastReason = parsed === undefined ? 'BOX response was truncated' : parsed.errors.join('; ')
-        await logEvent({ scope: 'engine', level: 'warn', event: 'engine.box.page.fail', runId, page, reason: lastReason, detail: { attempt, rawResponse: response.text } })
+        await logEvent({ scope: 'engine', level: 'warn', event: 'engine.box.page.fail', runId, page: batchPages[0], reason: lastReason, detail: { attempt, pages: batchPages, rawResponse: response.text } })
         continue
       }
-      const wanted = new Set(remaining.map((row) => row.ref))
-      const boxedNow = parsed.value.questions.filter((row) => wanted.has(row.ref))
-      found.push(...boxedNow.map((row) => ({
-        ...row, question: onPage(row.question, page), options: row.options === null ? null : onPage(row.options, page),
-        caseStem: row.caseStem === null ? null : onPage(row.caseStem, page),
-        inlineEvidence: row.inlineEvidence === null ? null : onPage(row.inlineEvidence, page),
-      })))
-      // Figures cover the whole page, not just the requested refs; capture
-      // them once so a retry pass cannot duplicate an asset.
+      const ownerByRef = new Map(remaining.map((row) => [row.ref, row.ownerPage]))
+      const boxedNow = parsed.value.questions.filter((row) => ownerByRef.has(row.ref))
+      found.push(...boxedNow.map((row) => {
+        // Question regions are stamped with the ref's known owner page —
+        // code-owned, never the model's page field.
+        const owner = ownerByRef.get(row.ref) as number
+        return {
+          ...row, question: onPage(row.question, owner), options: row.options === null ? null : onPage(row.options, owner),
+          caseStem: row.caseStem === null ? null : onPage(row.caseStem, owner),
+          inlineEvidence: row.inlineEvidence === null ? null : onPage(row.inlineEvidence, owner),
+        }
+      }))
+      // Figures cover the whole batch, not just the requested refs; capture
+      // them once so a retry pass cannot duplicate an asset. A figure whose
+      // page falls outside the batch is dropped — its rows keep their text
+      // (NEVER-GUESS covers invented pages too).
       if (!figuresCaptured) {
-        figures.push(...parsed.value.figures.map((row) => ({ ...row, page })))
+        figures.push(...parsed.value.figures.flatMap((row) => {
+          const page = absoluteFigurePage(row.page)
+          return page === undefined ? [] : [{ ...row, page }]
+        }))
         figuresCaptured = true
       }
       const foundRefs = new Set(boxedNow.map((row) => row.ref))
       remaining = remaining.filter((row) => !foundRefs.has(row.ref))
     }
     if (remaining.length > 0) {
-      pageIssues.push(...remaining.map((row) => ({ kind: 'unreadable_page' as const, page, rowRef: row.ref, reason: lastReason })))
+      pageIssues.push(...remaining.map((row) => ({ kind: 'unreadable_page' as const, page: row.ownerPage, rowRef: row.ref, reason: lastReason })))
     }
     return { found, figures, pageIssues }
   })
@@ -704,7 +737,7 @@ async function stepPlanAndValidate(
   const [evidence, , boxOutcomes] = await Promise.all([
     runEvidence(),
     runFigureDetect(),
-    runBoxPages(),
+    runBoxBatches(),
   ])
   const allBoxes: BoxResult = { questions: [], figures: [] }
   for (const outcome of boxOutcomes) {
@@ -941,6 +974,7 @@ export async function executeRun(
     await updateRun(runId, { step: 'planner', stepStartedAt: Date.now() })
     const planned = await stepPlanAndValidate(
       runId, controller, signal, render.examPageCount, render.answerKeyPageCount,
+      options.boxPagesPerCall,
     )
     if (!planned.ok) return stop(runId, 'planner', planned.reason)
     const blueprint = planned.blueprint

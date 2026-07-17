@@ -1705,6 +1705,33 @@
   font-weight: 600;
 }
 
+/* The Gemini daily free-tier tally strip between the banner and the frame. */
+.ds-quota-strip {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-1) var(--space-3) var(--space-2);
+}
+
+.ds-quota-strip .ds-storage-meter {
+  width: 100%;
+  max-width: 30rem;
+}
+
+/* With a strip (or banner) above the frame, the desktop shell must yield
+   the strip's height instead of clipping the frame's bottom edge. */
+@media (min-width: 64rem) {
+  .ds-stage {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ds-frame {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+  }
+}
+
 .ds-panel-head {
   display: flex;
   align-items: center;

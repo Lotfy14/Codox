@@ -2,6 +2,7 @@ import {
   getGeminiCredential,
   recordKeyValidation,
 } from '../state/credentials'
+import { recordDailyRequest } from '../state/quota'
 import { geminiAdapter } from './gemini'
 import type { KeyValidationStatus } from '../state/types'
 import type {
@@ -72,20 +73,44 @@ function toValidationStatus(failure: ProviderFailure): KeyValidationStatus {
   }
 }
 
+export interface GeminiControllerOptions {
+  /** Waits between transient retries (5xx and empty completions). */
+  transientRetryDelaysSeconds?: readonly number[]
+  /** Requests allowed per pacing window. */
+  maxRpm?: number
+  /**
+   * The pacing window. Deliberately LONGER than Google's 60s: we can only
+   * pace when requests START, but Google counts when they ARRIVE — a small
+   * request sent right after a slow multi-megabyte page upload can land in
+   * the same provider minute as requests from our previous window. The
+   * padding absorbs that arrival compression (observed as >14 requests in
+   * an AI Studio minute during the BOX pass).
+   */
+  rpmWindowMs?: number
+  /** Minimum gap between request starts; breaks up concurrent-call bursts. */
+  minRequestSpacingMs?: number
+}
+
 export class GeminiController {
   private readonly adapter: GeminiAdapter
   private readonly listeners = new Set<Listener>()
   private status: ControllerStatus = { kind: 'idle' }
   private readonly requestTimestamps: number[] = []
-  private readonly maxRpm = 14
+  private readonly maxRpm: number
+  private readonly rpmWindowMs: number
+  private readonly minRequestSpacingMs: number
   private readonly transientRetryDelaysSeconds: readonly number[]
 
   constructor(
     adapter: GeminiAdapter = geminiAdapter,
-    transientRetryDelaysSeconds: readonly number[] = TRANSIENT_RETRY_DELAYS_SECONDS,
+    options: GeminiControllerOptions = {},
   ) {
     this.adapter = adapter
-    this.transientRetryDelaysSeconds = transientRetryDelaysSeconds
+    this.maxRpm = options.maxRpm ?? 14
+    this.rpmWindowMs = options.rpmWindowMs ?? 70_000
+    this.minRequestSpacingMs = options.minRequestSpacingMs ?? 1_000
+    this.transientRetryDelaysSeconds =
+      options.transientRetryDelaysSeconds ?? TRANSIENT_RETRY_DELAYS_SECONDS
   }
 
   getStatus(): ControllerStatus {
@@ -144,6 +169,8 @@ export class GeminiController {
     if (credential === undefined) return MISSING_KEY_FAILURE
 
     const result = await this.adapter.validateKey(credential.apiKey, signal)
+    // The key check is a real (tiny) generation, so it counts too.
+    if (result.ok) await recordDailyRequest()
     if (!result.ok && result.kind === 'aborted') return result
     await recordKeyValidation(
       result.ok ? 'working' : toValidationStatus(result),
@@ -199,6 +226,9 @@ export class GeminiController {
       )
 
       if (result.ok) {
+        // Every answered generation counts against the key's daily free
+        // allowance (429/offline attempts never reached generation).
+        await recordDailyRequest()
         // A 200 with an empty body and a normal finish is a provider hiccup
         // (observed on Flash-Lite: two consecutive empty responses killed a
         // 30-page run at its last worker chunk). No prompt in this app ever
@@ -271,41 +301,51 @@ export class GeminiController {
       if (signal?.aborted) return
 
       const now = Date.now()
-      // Remove timestamps older than 60 seconds
-      while (this.requestTimestamps.length > 0 && now - this.requestTimestamps[0] >= 60000) {
+      while (
+        this.requestTimestamps.length > 0 &&
+        now - this.requestTimestamps[0] >= this.rpmWindowMs
+      ) {
         this.requestTimestamps.shift()
       }
 
       if (this.requestTimestamps.length < this.maxRpm) {
-        this.requestTimestamps.push(now)
-        return
+        const last = this.requestTimestamps[this.requestTimestamps.length - 1]
+        if (last === undefined || now - last >= this.minRequestSpacingMs) {
+          this.requestTimestamps.push(now)
+          return
+        }
+        // Spacing wait: sub-second, so no paused state — a blink of
+        // "paused" for every request would read as constant trouble.
+        await sleepMs(last + this.minRequestSpacingMs - now, signal)
+        continue
       }
 
       const oldest = this.requestTimestamps[0]
-      const elapsed = now - oldest
-      const waitMs = Math.max(0, 60000 - elapsed) + 100
-
-      if (waitMs > 0) {
-        this.emit({
-          type: 'paused',
-          reason: 'quota',
-          resumesAt: now + waitMs,
-        })
-        await new Promise<void>((resolve) => {
-          let timer: number | undefined
-          const onDone = () => {
-            if (timer !== undefined) clearTimeout(timer)
-            signal?.removeEventListener('abort', onDone)
-            resolve()
-          }
-          timer = setTimeout(onDone, waitMs) as unknown as number
-          signal?.addEventListener('abort', onDone, { once: true })
-        })
-        if (signal?.aborted) return
-        this.emit({ type: 'resumed' })
-      }
+      const waitMs = Math.max(0, this.rpmWindowMs - (now - oldest)) + 100
+      this.emit({
+        type: 'paused',
+        reason: 'quota',
+        resumesAt: now + waitMs,
+      })
+      await sleepMs(waitMs, signal)
+      if (signal?.aborted) return
+      this.emit({ type: 'resumed' })
     }
   }
+}
+
+/** Sleeps for `ms`, resolving early if the abort signal fires. */
+function sleepMs(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    let timer: number | undefined
+    const onDone = () => {
+      if (timer !== undefined) clearTimeout(timer)
+      signal?.removeEventListener('abort', onDone)
+      resolve()
+    }
+    timer = setTimeout(onDone, ms) as unknown as number
+    signal?.addEventListener('abort', onDone, { once: true })
+  })
 }
 
 /**

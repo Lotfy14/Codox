@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from './db'
 import { logEvent } from './diagnostics'
+import { resetDailyQuota } from './quota'
 import type { GeminiCredential, KeyValidationStatus } from './types'
 
 /**
@@ -25,7 +26,11 @@ export async function getGeminiCredential(): Promise<
  * validation result are overwritten — replacement, never accumulation.
  */
 export async function saveGeminiKey(apiKey: string): Promise<void> {
+  const previous = await db.credentials.get(GEMINI_CREDENTIAL_ID)
   await db.credentials.put({ id: GEMINI_CREDENTIAL_ID, apiKey })
+  // A different key brings its own daily allowance; re-saving the same key
+  // (a re-validation) keeps the tally.
+  if (previous?.apiKey !== apiKey) await resetDailyQuota()
 }
 
 export async function removeGeminiKey(): Promise<void> {

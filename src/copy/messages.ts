@@ -89,6 +89,7 @@ export const appMessages = {
   railDiagnostics: 'Diagnostics',
   railPrivacy: 'Privacy',
   storageLabel: 'On-device storage',
+  quotaLabel: 'Gemini free requests today',
   apiDialogTitle: 'Gemini API key',
   helpDialogTitle: 'Help',
   privacyDialogTitle: 'Privacy',
@@ -282,6 +283,12 @@ export const customizeMessages = {
   debugLabel: 'Show debug console',
   debugHint:
     'Adds a timing panel to the Convert screen that shows each conversion step and how long it took — useful for finding what makes a run slow. Off by default; nothing is sent anywhere.',
+  boxPanelLabel: 'Box requests',
+  boxLabel: 'Pages per box request',
+  boxHint:
+    'How many pages each box-drawing request covers during conversion. 1 is the default and most accurate. Higher values spend fewer requests on big exams — useful against the daily free limit — but box accuracy can drop, so raise this only if you keep running out of quota.',
+  boxOption: (count: number) =>
+    count === 1 ? '1 page (default)' : `${count} pages`,
 } as const
 
 export const debugMessages = {

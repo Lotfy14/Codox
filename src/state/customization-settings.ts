@@ -24,7 +24,16 @@ export interface CustomizationSettings {
   exportTarget: ExportTarget
   /** Shows the Convert screen's step-timing debug console. Off by default. */
   debugConsole: boolean
+  /**
+   * Pages sent per box-drawing request during conversion. 1 (the default)
+   * is today's most-accurate per-page pass; higher values spend fewer
+   * requests on big exams at some cost in box accuracy.
+   */
+  boxPagesPerCall: number
 }
+
+export const BOX_PAGES_MIN = 1
+export const BOX_PAGES_MAX = 10
 
 const SETTINGS_KEY = 'customizationSettings'
 
@@ -38,6 +47,7 @@ export const DEFAULT_CUSTOMIZATION_SETTINGS: CustomizationSettings = {
   topicsMode: 'on',
   exportTarget: 'triviadox',
   debugConsole: false,
+  boxPagesPerCall: BOX_PAGES_MIN,
 }
 
 const YEAR_MODES: readonly YearMode[] = ['off', 'type', 'ai']
@@ -62,6 +72,13 @@ function narrow(value: string | undefined): CustomizationSettings {
         typeof parsed.debugConsole === 'boolean'
           ? parsed.debugConsole
           : DEFAULT_CUSTOMIZATION_SETTINGS.debugConsole,
+      boxPagesPerCall:
+        typeof parsed.boxPagesPerCall === 'number' &&
+        Number.isInteger(parsed.boxPagesPerCall) &&
+        parsed.boxPagesPerCall >= BOX_PAGES_MIN &&
+        parsed.boxPagesPerCall <= BOX_PAGES_MAX
+          ? parsed.boxPagesPerCall
+          : DEFAULT_CUSTOMIZATION_SETTINGS.boxPagesPerCall,
     }
   } catch {
     return DEFAULT_CUSTOMIZATION_SETTINGS

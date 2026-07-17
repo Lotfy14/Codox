@@ -4,10 +4,12 @@
  * inputs plus the exported CSV's optional columns. They apply to
  * conversions started next; finished runs keep their own snapshot.
  */
-import { ChoiceGroup, GlassPanel, Toggle } from '../design/components'
-import type { ChoiceOption } from '../design/components'
+import { ChoiceGroup, GlassPanel, Select, Toggle } from '../design/components'
+import type { ChoiceOption, SelectOption } from '../design/components'
 import { customizeMessages } from '../copy/messages'
 import {
+  BOX_PAGES_MAX,
+  BOX_PAGES_MIN,
   saveCustomizationSettings,
   useCustomizationSettings,
   type ExportTarget,
@@ -45,6 +47,14 @@ const EXPORT_OPTIONS: readonly ChoiceOption<ExportTarget>[] = [
     hint: customizeMessages.exportZipHint,
   },
 ]
+
+const BOX_PAGES_OPTIONS: readonly SelectOption<number>[] = Array.from(
+  { length: BOX_PAGES_MAX - BOX_PAGES_MIN + 1 },
+  (_item, index) => {
+    const count = BOX_PAGES_MIN + index
+    return { id: count, label: customizeMessages.boxOption(count) }
+  },
+)
 
 const TOPICS_OPTIONS: readonly ChoiceOption<TopicsMode>[] = [
   {
@@ -111,6 +121,25 @@ export function Customizations() {
             }
             options={YEAR_OPTIONS}
             value={settings.yearMode}
+          />
+        </GlassPanel>
+        <GlassPanel
+          aria-label={customizeMessages.boxPanelLabel}
+          as="section"
+          padding="compact"
+        >
+          <Select<number>
+            description={customizeMessages.boxHint}
+            label={customizeMessages.boxLabel}
+            onChange={(key) => {
+              if (key === null) return
+              void saveCustomizationSettings({
+                ...settings,
+                boxPagesPerCall: key,
+              })
+            }}
+            options={BOX_PAGES_OPTIONS}
+            value={settings.boxPagesPerCall}
           />
         </GlassPanel>
         <GlassPanel

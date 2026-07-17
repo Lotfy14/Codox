@@ -21,8 +21,32 @@ import {
   dismissApiCoachmark,
   useApiCoachmarkDismissed,
 } from './state/settings'
+import { useGeminiCredential } from './state/credentials'
+import { useDailyQuota } from './state/quota'
 import { useStorageEstimate } from './state/storage'
 import { UpdateBanner } from './UpdateBanner.tsx'
+
+/**
+ * The Gemini free-tier tally above the frame: requests this device sent
+ * today against AI Studio's daily allowance. Device-local — other devices
+ * on the same key are invisible to it. Resets at 00:00 UTC and whenever
+ * the stored key is replaced. Hidden until a key exists.
+ */
+function DailyQuotaStrip() {
+  const credential = useGeminiCredential()
+  const quota = useDailyQuota()
+  if (credential === null || credential === undefined) return null
+  return (
+    <div className="ds-quota-strip">
+      <StorageMeter
+        formatValue={(value) => `${Math.round(value)}`}
+        label={appMessages.quotaLabel}
+        total={quota.limit}
+        used={quota.used}
+      />
+    </div>
+  )
+}
 
 type OpenDialog = 'api' | 'help' | 'privacy' | 'diagnostics' | null
 type MobileNavItem = AppTab | Exclude<OpenDialog, null | 'privacy'>
@@ -138,6 +162,7 @@ function App() {
   return (
     <div className={`ds-stage${showCoachmark ? ' app--coachmark' : ''}`}>
       <UpdateBanner />
+      <DailyQuotaStrip />
       <div className="ds-frame">
         <aside className="ds-sidebar">
           <div className="ds-brand">

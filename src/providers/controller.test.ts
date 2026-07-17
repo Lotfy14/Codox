@@ -219,7 +219,7 @@ describe('failure handling', () => {
           : { ok: true, text: 'recovered' }
       },
     })
-    const controller = new GeminiController(adapter)
+    const controller = new GeminiController(adapter, { minRequestSpacingMs: 0 })
 
     const result = await controller.runGeminiRequest(request)
 
@@ -238,7 +238,10 @@ describe('failure handling', () => {
           : { ok: true, text: '{"rows":[]}', finishReason: 'STOP' }
       },
     })
-    const controller = new GeminiController(adapter, [0, 0, 0])
+    const controller = new GeminiController(adapter, {
+      transientRetryDelaysSeconds: [0, 0, 0],
+      minRequestSpacingMs: 0,
+    })
 
     const result = await controller.runGeminiRequest(request)
 
@@ -251,7 +254,10 @@ describe('failure handling', () => {
     const { adapter, completeCallCount } = makeAdapter({
       complete: () => ({ ok: true, text: '   ', finishReason: 'STOP' }),
     })
-    const controller = new GeminiController(adapter, [0, 0, 0])
+    const controller = new GeminiController(adapter, {
+      transientRetryDelaysSeconds: [0, 0, 0],
+      minRequestSpacingMs: 0,
+    })
 
     const result = await controller.runGeminiRequest(request)
 
@@ -265,7 +271,10 @@ describe('failure handling', () => {
     const { adapter, completeCallCount } = makeAdapter({
       complete: () => ({ ok: true, text: '', finishReason: 'SAFETY' }),
     })
-    const controller = new GeminiController(adapter, [0, 0, 0])
+    const controller = new GeminiController(adapter, {
+      transientRetryDelaysSeconds: [0, 0, 0],
+      minRequestSpacingMs: 0,
+    })
 
     const result = await controller.runGeminiRequest(request)
 
@@ -307,7 +316,7 @@ describe('failure handling', () => {
           : { ok: true, text: 'done' }
       },
     })
-    const controller = new GeminiController(adapter)
+    const controller = new GeminiController(adapter, { minRequestSpacingMs: 0 })
     const events: ControllerEvent[] = []
     controller.subscribe((event) => events.push(event))
 
@@ -343,7 +352,7 @@ describe('failure handling', () => {
           : { ok: true, text: 'done' }
       },
     })
-    const controller = new GeminiController(adapter)
+    const controller = new GeminiController(adapter, { minRequestSpacingMs: 0 })
     const events: ControllerEvent[] = []
     controller.subscribe((event) => events.push(event))
 
@@ -363,7 +372,7 @@ describe('failure handling', () => {
           : { ok: true, text: 'back' }
       },
     })
-    const controller = new GeminiController(adapter)
+    const controller = new GeminiController(adapter, { minRequestSpacingMs: 0 })
     const events: ControllerEvent[] = []
     controller.subscribe((event) => events.push(event))
 
@@ -400,6 +409,43 @@ describe('failure handling', () => {
     const result = await pending
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.kind).toBe('aborted')
+  })
+
+  it('holds the RPM cap: a request past the window limit waits the window out', async () => {
+    await saveGeminiKey('paced-key')
+    const { adapter, completeCallCount } = makeAdapter({})
+    const controller = new GeminiController(adapter, {
+      maxRpm: 2,
+      rpmWindowMs: 250,
+      minRequestSpacingMs: 0,
+    })
+
+    const start = Date.now()
+    await controller.runGeminiRequest(request)
+    await controller.runGeminiRequest(request)
+    await controller.runGeminiRequest(request)
+
+    expect(completeCallCount()).toBe(3)
+    // The third request cannot start until the first leaves the window.
+    expect(Date.now() - start).toBeGreaterThanOrEqual(250)
+  })
+
+  it('spaces out request starts even when the window has room', async () => {
+    await saveGeminiKey('paced-key')
+    const { adapter, completeCallCount } = makeAdapter({})
+    const controller = new GeminiController(adapter, {
+      maxRpm: 10,
+      rpmWindowMs: 5_000,
+      minRequestSpacingMs: 100,
+    })
+
+    const start = Date.now()
+    await controller.runGeminiRequest(request)
+    await controller.runGeminiRequest(request)
+    await controller.runGeminiRequest(request)
+
+    expect(completeCallCount()).toBe(3)
+    expect(Date.now() - start).toBeGreaterThanOrEqual(200)
   })
 
   it('a probe failure never marks the key wrong unless it was a real auth failure', async () => {

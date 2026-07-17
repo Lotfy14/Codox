@@ -140,6 +140,9 @@ export function useConversion(jobId: string): ConversionState {
       const aborter = new AbortController()
       abortRef.current = aborter
       try {
+        // Engine-shaping settings are read once per batch, at drive time, so
+        // start, retry, and resume all honor the current Customize choices.
+        const settings = await getCustomizationSettings()
         for (const item of queue) {
           if (aborter.signal.aborted) break
           try {
@@ -150,6 +153,7 @@ export function useConversion(jobId: string): ConversionState {
               examPageCount: item.examPageCount,
               answerKeyBytes: item.answerKey?.bytes,
               answerKeyPageCount: item.answerKey?.pageCount,
+              boxPagesPerCall: settings.boxPagesPerCall,
             })
             setOutcomes((previous) => [...previous, outcome])
             // Label the finished run against the user's topic list before

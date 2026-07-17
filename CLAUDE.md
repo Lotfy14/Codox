@@ -101,7 +101,12 @@ replaced by INDEX, EVIDENCE / KEY MAP, FIGURE DETECT, and BOX prompts. INDEX
 enumerates exam-page question slots without geometry; deterministic code
 reconciles identities and assembles the pinned Blueprint. Evidence and figures
 are observed separately, and an unresolved page is a visible non-fatal planning
-issue rather than a reason to discard clean rows.
+issue rather than a reason to discard clean rows. *(2026-07-17, owner-approved:)*
+a BOX_BATCH variant covers several pages per BOX call when the user raises
+Customize's "Pages per box request" above 1 — an opt-in accuracy-for-quota
+trade; 1 (the default) keeps the original single-page BOX prompt byte-identical.
+Question regions are always stamped with the ref's code-known owner page; only
+figure pages come from the model, validated against the batch.
 
 *Worker output split + code-owned assembly (owner-approved 2026-07-15):* the
 worker no longer assembles the `question` string. It returns the shared case
