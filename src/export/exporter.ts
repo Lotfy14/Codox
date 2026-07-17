@@ -155,7 +155,12 @@ async function buildBundleInputs(
 
 /** True on devices where the share sheet is the natural "save this". */
 function preferShareSheet(): boolean {
-  return window.matchMedia('(pointer: coarse)').matches
+  // iOS (iPhone/iPad) browsers prefer the native share sheet for file exports.
+  // Android browsers have a robust download manager and prefer standard downloads.
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.maxTouchPoints > 1 && navigator.userAgent.includes('Macintosh'))
+  );
 }
 
 async function deliverZip(
