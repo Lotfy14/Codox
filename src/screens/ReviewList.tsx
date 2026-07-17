@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Badge, Button, GlassInput } from '../design/components'
-import { reviewMessages } from '../copy/messages'
+import { aiReviewMessages, reviewMessages } from '../copy/messages'
+import type { AiAnswer } from '../engine/solver'
 import { effectiveAnswer, type Resolutions, type ReviewRow } from './review-data'
 import {
   isUnresolvedFlag,
@@ -15,23 +16,41 @@ export interface ReviewListProps {
   reviewRows: readonly ReviewRow[]
   filteredRows: readonly ReviewRow[]
   resolutions: Resolutions
+  aiAnswers: Record<string, AiAnswer> | undefined
   filter: ReviewFilter
   search: string
   onFilterChange: (filter: ReviewFilter) => void
   onSearchChange: (search: string) => void
   onOpenRow: (rowId: string) => void
+  onOpenAiDialog: () => void
   focusRowId: string | null
+}
+
+/** The AI's valid pick for a row, or null (unsure / never asked). */
+function aiPick(
+  reviewRow: ReviewRow,
+  aiAnswers: Record<string, AiAnswer> | undefined,
+): number | null {
+  const ai = aiAnswers?.[reviewRow.row.id]
+  if (ai === undefined || ai.index === null) return null
+  return Number.isInteger(ai.index) &&
+    ai.index >= 0 &&
+    ai.index < reviewRow.row.options.length
+    ? ai.index
+    : null
 }
 
 export function ReviewList({
   reviewRows,
   filteredRows,
   resolutions,
+  aiAnswers,
   filter,
   search,
   onFilterChange,
   onSearchChange,
   onOpenRow,
+  onOpenAiDialog,
   focusRowId,
 }: ReviewListProps) {
   const rowRefs = useRef(new Map<string, HTMLButtonElement>())
@@ -101,6 +120,9 @@ export function ReviewList({
               ? reviewMessages.showAllFilter
               : reviewMessages.needsReviewFilter(unresolvedCount)}
           </Button>
+          <Button onPress={onOpenAiDialog} variant="secondary">
+            {aiReviewMessages.openDialog}
+          </Button>
         </div>
         <p aria-live="polite" className="ds-muted review-list__hint">{jumpHint}</p>
       </header>
@@ -112,6 +134,7 @@ export function ReviewList({
           {filteredRows.map((reviewRow, index) => {
             const answer = effectiveAnswer(reviewRow, resolutions)
             const flagged = isUnresolvedFlag(reviewRow, resolutions)
+            const ai = aiPick(reviewRow, aiAnswers)
             return (
               <button
                   aria-posinset={index + 1}
@@ -133,6 +156,13 @@ export function ReviewList({
                   <span className="review-list-row__num">{reviewRow.questionNumber}</span>
                   <span className="review-list-row__text">{reviewRow.row.question}</span>
                   {flagged ? <Badge tone="warning">{reviewMessages.needsReviewFilter(1)}</Badge> : null}
+                  {ai !== null && ai !== answer ? (
+                    <Badge tone={answer === null ? 'primary' : 'warning'}>
+                      {answer === null
+                        ? aiReviewMessages.chipSuggests(answerLetters[ai] ?? String(ai + 1))
+                        : aiReviewMessages.chipDiffers(answerLetters[ai] ?? String(ai + 1))}
+                    </Badge>
+                  ) : null}
                   <span className="review-list-row__answer">
                     {answer === null ? reviewMessages.answerBlank : (answerLetters[answer] ?? answer + 1)}
                   </span>

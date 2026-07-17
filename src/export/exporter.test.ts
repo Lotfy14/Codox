@@ -232,3 +232,69 @@ describe('column projection', () => {
     expect(csv).not.toContain('2001')
   })
 })
+
+describe('review edits at export', () => {
+  it('content edits reach the CSV; merged-rows stays pristine', async () => {
+    const rows = [row('1', { correct_index: '2', needs_review: '' }), row('2')]
+    const runId = await seedDoneRun(rows)
+    // Row 1: option 0 removed — the extracted answer follows its option.
+    await putArtifact({
+      runId,
+      kind: 'review-edits',
+      json: {
+        '1': {
+          question: 'Rewritten question 1?',
+          options: ['Beta', 'Gamma', 'Delta'],
+          correctIndex: '1',
+        },
+      },
+    })
+    const run = await getRun(runId)
+
+    expect(await exportRuns([run!])).toBe('downloaded')
+    const lines = (await exportedCsv()).trimEnd().split('\r\n')
+    expect(lines[1].startsWith('Rewritten question 1?,')).toBe(true)
+    expect(lines[1]).not.toContain('Alpha')
+    expect(lines[1]).toContain(',1,')
+    expect(lines[2].startsWith('Question 2?,')).toBe(true)
+    expect(await getArtifact(runId, 'merged-rows').then((a) => a?.json)).toEqual(rows)
+  })
+
+  it('an edited topic or year forces its column and beats the matcher', async () => {
+    const runId = await seedDoneRun([
+      row('1', { topic: 'Heading', year: '2001' }),
+      row('2'),
+    ])
+    // No topics list, yearMode off — the columns exist only via the edit.
+    await putArtifact({
+      runId,
+      kind: 'review-edits',
+      json: { '2': { topic: 'Surgery', subtopic: 'Hernia', year: '2023' } },
+    })
+    const run = await getRun(runId)
+
+    expect(await exportRuns([run!])).toBe('downloaded')
+    const lines = (await exportedCsv()).trimEnd().split('\r\n')
+    expect(lines[0]).toBe(`topic,subtopic,year,${BASE_HEADER}`)
+    // The unedited row stays blank — planner heading text never leaks.
+    expect(lines[1].startsWith(',,,Question 1?')).toBe(true)
+    expect(lines[2].startsWith('Surgery,Hernia,2023,Question 2?')).toBe(true)
+  })
+
+  it('resolutions validate against the edited options', async () => {
+    const runId = await seedDoneRun([row('1')])
+    await putArtifact({
+      runId,
+      kind: 'review-edits',
+      json: { '1': { options: ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon'] } },
+    })
+    // Index 4 only exists in the edited list — it must be honored.
+    await putArtifact({ runId, kind: 'review-resolutions', json: { '1': 4 } })
+    const run = await getRun(runId)
+
+    expect(await exportRuns([run!])).toBe('downloaded')
+    const lines = (await exportedCsv()).trimEnd().split('\r\n')
+    expect(lines[1]).toContain('Epsilon')
+    expect(lines[1]).toContain(',4,')
+  })
+})

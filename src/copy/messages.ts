@@ -367,6 +367,37 @@ export const reviewMessages = {
   offlineIsFine:
     'You are offline. Reviewing works fully offline — export whenever you finish.',
   allResolved: 'All flags resolved. Your answers are in — export the bundle.',
+  edit: 'Edit (E)',
+  editedBadge: 'Edited',
+  editHeading: (questionNumber: number) => `Edit question ${questionNumber}`,
+  editQuestionLabel: 'Question text',
+  editOptionsLegend: 'Answer options — mark the correct one',
+  editOptionLabel: (letter: string) => `Option ${letter} text`,
+  editOptionCorrect: (letter: string) => `Option ${letter} is correct`,
+  editRemoveOption: (letter: string) => `Remove option ${letter}`,
+  editAddOption: 'Add option',
+  editNoCorrect:
+    'No answer is marked correct — this question stays flagged for review.',
+  editAnswerCleared:
+    'The correct option was removed, so the answer is now blank.',
+  editValidationEmptyQuestion: 'The question text cannot be empty.',
+  editValidationEmptyOption: 'Options cannot be empty — write text or remove them.',
+  editValidationTooFewOptions: 'A question needs at least two options.',
+  editTopicLabel: 'Topic',
+  editSubtopicLabel: 'Subtopic',
+  editYearLabel: 'Year',
+  editMetaHint:
+    'Topic, subtopic and year go into the exported CSV when set — leave blank to omit.',
+  editPicturesLegend: 'Linked pictures',
+  editNoPictures: 'No pictures are linked to this question.',
+  editRemovePicture: (position: number) => `Unlink picture ${position}`,
+  editAddPicture: 'Link a picture from this file',
+  editNoPicturesAvailable:
+    'This file has no other extracted pictures to link.',
+  editPictureAlt: (path: string) => `Extracted picture ${path}`,
+  editSave: 'Save changes',
+  editCancel: 'Cancel',
+  editRevert: 'Remove all edits on this question',
 } as const
 
 export const exportMessages = {
@@ -429,6 +460,58 @@ export const aiExportMessages = {
     'Gemini could not answer right now. Answers so far are saved — try again in a moment.',
   confirm: 'Answer and export',
   cancel: 'Cancel',
+} as const
+
+export const aiReviewMessages = {
+  openDialog: 'AI answers…',
+  dialogTitle: 'AI answers',
+  dialogDescription:
+    'Gemini answers from its own knowledge, not from your document. AI answers are kept separate — nothing changes until you approve it.',
+  noneYet: 'The AI has not looked at this file yet.',
+  coverage: (answered: number, total: number) =>
+    `The AI has looked at ${answered} of ${total} questions.`,
+  askAll: (count: number) =>
+    `Ask AI about all ${count} questions`,
+  askRemaining: (count: number) =>
+    count === 1
+      ? 'Ask AI about the remaining question'
+      : `Ask AI about the ${count} remaining questions`,
+  askAgainAll: 'Ask everything again',
+  applyLegend: 'Switch to AI answers',
+  summaryFill: (count: number) =>
+    `${count} unanswered question${count === 1 ? ' gets' : 's get'} the AI's answer.`,
+  summaryDiffer: (count: number) =>
+    count === 1
+      ? '1 existing answer is replaced by the AI’s different pick.'
+      : `${count} existing answers are replaced by the AI’s different picks.`,
+  summaryAgree: (count: number) =>
+    `The AI agrees with ${count} existing answer${count === 1 ? '' : 's'} — ${count === 1 ? 'it stays' : 'they stay'} as ${count === 1 ? 'it is' : 'they are'}.`,
+  summaryUnsure: (count: number) =>
+    `${count} stay${count === 1 ? 's' : ''} untouched — the AI was not sure enough.`,
+  applyButton: (count: number) =>
+    `Switch ${count} answer${count === 1 ? '' : 's'} to AI`,
+  nothingToApply:
+    'Nothing to switch — the AI has no confident answer that differs from what you already have.',
+  appliedNote: (count: number) =>
+    `${count} answer${count === 1 ? '' : 's'} switched to AI. You can still change any of them on its question.`,
+  close: 'Close',
+  // Detail-view suggestion strip
+  stripLabel: 'AI answer',
+  askOne: 'Ask AI (A)',
+  asking: 'Asking Gemini…',
+  askAgainOne: 'Ask again',
+  suggestion: (letter: string) => `AI answer: ${letter}`,
+  confidence: {
+    certain: 'confident',
+    likely: 'likely',
+    unsure: 'unsure',
+  } as Record<string, string>,
+  useAi: 'Use AI answer (A)',
+  aiAgrees: 'The AI agrees with this answer.',
+  aiUnsure: 'The AI was not sure about this one.',
+  // List chips
+  chipSuggests: (letter: string) => `AI: ${letter}`,
+  chipDiffers: (letter: string) => `AI picked ${letter}`,
 } as const
 
 export const historyMessages = {

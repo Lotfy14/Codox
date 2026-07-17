@@ -2,14 +2,22 @@
  * Review data layer. The engine's merged rows are read-only history; a
  * review resolution is the user's own answer, stored separately
  * (`review-resolutions` artifact) and applied deterministically at export.
- * NEVER-GUESS stays intact: only an explicit human pick ever fills a
- * blank `correct_index`.
+ * Row edits (edit mode) follow the same pattern in their own
+ * `review-edits` artifact — see `review-edits.ts`. NEVER-GUESS stays
+ * intact: only an explicit human pick ever fills a blank `correct_index`.
  */
 import { useLiveQuery } from 'dexie-react-hooks'
+import { assetJpegPath } from '../engine/blueprint'
 import type { Blueprint, Box2d, MergedRow, PlannedRow } from '../engine/types'
 import type { AiAnswer } from '../engine/solver'
 import { db } from '../state/db'
 import { getArtifact, putArtifact } from '../state/runs'
+import {
+  applyContentEdits,
+  applyMetaEdits,
+  getEdits,
+  type Edits,
+} from './review-edits'
 
 /** The four tutor-facing flag explanations (reviewMessages.whyFlagged). */
 export type FlagCategory =
@@ -42,6 +50,8 @@ export interface ReviewRow {
 export interface ReviewData {
   rows: MergedRow[]
   reviewRows: ReviewRow[]
+  /** Blueprint figure regions by bundle crop path — edit mode's picker. */
+  figureByPath: Record<string, ReviewFigure>
 }
 
 export function flaggedRows(data: ReviewData): ReviewRow[] {
@@ -124,9 +134,11 @@ export async function loadReviewData(runId: string): Promise<ReviewData> {
     (blueprint?.planned_rows ?? []).map((row) => [row.id, row]),
   )
   const figuresByRow = new Map<string, ReviewFigure[]>()
+  const figureByPath: Record<string, ReviewFigure> = {}
   for (const asset of blueprint?.assets ?? []) {
     if (asset.page < 1) continue
     const figure: ReviewFigure = { pageIndex: asset.page - 1, box: asset.box_2d }
+    figureByPath[assetJpegPath(asset.output_path)] = figure
     for (const rowId of asset.linked_row_ids) {
       const list = figuresByRow.get(rowId)
       if (list === undefined) figuresByRow.set(rowId, [figure])
@@ -146,7 +158,41 @@ export async function loadReviewData(runId: string): Promise<ReviewData> {
       figures: figuresByRow.get(row.id) ?? [],
     }
   })
-  return { rows, reviewRows }
+  return { rows, reviewRows, figureByPath }
+}
+
+/**
+ * The review rows as the tutor sees them: content and metadata edits
+ * applied, the flag category recomputed against the edited row, and
+ * linked figures following an edited picture list. The underlying
+ * `merged-rows` artifact stays pristine.
+ */
+export function applyEditsToReviewRows(
+  reviewRows: readonly ReviewRow[],
+  edits: Edits,
+  figureByPath: Record<string, ReviewFigure>,
+): ReviewRow[] {
+  return reviewRows.map((reviewRow) => {
+    const edit = edits[reviewRow.row.id]
+    if (edit === undefined) return reviewRow
+    const [row] = applyMetaEdits(
+      applyContentEdits([reviewRow.row], edits),
+      edits,
+    )
+    return {
+      ...reviewRow,
+      row,
+      category: isFlagged(row)
+        ? flagCategory(row.needs_review, row.correct_index)
+        : null,
+      figures:
+        edit.imageUrls === undefined
+          ? reviewRow.figures
+          : edit.imageUrls.flatMap((path) =>
+              figureByPath[path] === undefined ? [] : [figureByPath[path]],
+            ),
+    }
+  })
 }
 
 /** rowId → the option index the tutor confirmed. */
@@ -234,6 +280,99 @@ export async function saveResolution(
 }
 
 /**
+ * What a bulk "switch to AI answers" would do, row by row — pure, so the
+ * confirm dialog can state exactly what the user is approving before a
+ * single resolution is written. Only confident AI answers (`certain` /
+ * `likely` with a valid option index) are eligible; `unsure` ones are
+ * counted but never applied in bulk — those stay for one-by-one review.
+ */
+export interface AiApplyPlan {
+  /** rowId → the AI option index a confirm would save as a resolution. */
+  picks: Record<string, number>
+  /** Rows with no current answer the AI would fill. */
+  fillCount: number
+  /** Rows whose current answer the AI would replace. */
+  differCount: number
+  /** Rows where the AI agrees with the current answer — left untouched. */
+  agreeCount: number
+  /** Rows the AI answered without confidence — left untouched. */
+  unsureCount: number
+}
+
+export function aiApplyPlan(
+  rows: readonly ReviewRow[],
+  resolutions: Resolutions,
+  aiAnswers: Readonly<Record<string, AiAnswer>>,
+): AiApplyPlan {
+  const plan: AiApplyPlan = {
+    picks: {},
+    fillCount: 0,
+    differCount: 0,
+    agreeCount: 0,
+    unsureCount: 0,
+  }
+  for (const reviewRow of rows) {
+    const ai = aiAnswers[reviewRow.row.id]
+    if (ai === undefined) continue
+    const valid =
+      ai.index !== null &&
+      Number.isInteger(ai.index) &&
+      ai.index >= 0 &&
+      ai.index < reviewRow.row.options.length
+    if (!valid || ai.confidence === 'unsure') {
+      plan.unsureCount += 1
+      continue
+    }
+    const current = effectiveAnswer(reviewRow, resolutions)
+    if (current === ai.index) {
+      plan.agreeCount += 1
+    } else if (current === null) {
+      plan.fillCount += 1
+      plan.picks[reviewRow.row.id] = ai.index as number
+    } else {
+      plan.differCount += 1
+      plan.picks[reviewRow.row.id] = ai.index as number
+    }
+  }
+  return plan
+}
+
+/**
+ * Saves many confirmed answers at once — the bulk "switch to AI" apply.
+ * Callers must only pass picks the user explicitly approved; each pick is
+ * an ordinary resolution, indistinguishable from a hand-confirmed one.
+ */
+export async function saveResolutions(
+  runId: string,
+  picks: Readonly<Record<string, number>>,
+): Promise<void> {
+  if (Object.keys(picks).length === 0) return
+  const artifact = await getArtifact(runId, 'review-resolutions')
+  if (artifact === undefined) {
+    await putArtifact({ runId, kind: 'review-resolutions', json: { ...picks } })
+    return
+  }
+  const current = (artifact.json as Record<string, number> | undefined) ?? {}
+  await db.runArtifacts.update(artifact.id, {
+    json: { ...current, ...picks },
+  })
+}
+
+/** Removes one row's confirmed answer (edit mode deleted its option). */
+export async function clearResolution(
+  runId: string,
+  rowId: string,
+): Promise<void> {
+  const artifact = await getArtifact(runId, 'review-resolutions')
+  if (artifact === undefined) return
+  const current = (artifact.json as Record<string, number> | undefined) ?? {}
+  if (!(rowId in current)) return
+  const next = { ...current }
+  delete next[rowId]
+  await db.runArtifacts.update(artifact.id, { json: next })
+}
+
+/**
  * The exported rows: engine output plus the tutor's confirmed answers.
  * Deterministic code owns this — a resolution must be a valid 0-based
  * index into that row's options or it is ignored and the flag stays.
@@ -276,7 +415,11 @@ export function useUnresolvedCounts(
     for (const runId of runIds) {
       const merged = await getArtifact(runId, 'merged-rows')
       const rows = (merged?.json as MergedRow[] | undefined) ?? []
-      counts[runId] = unresolvedCount(rows, await getResolutions(runId))
+      // Edit-mode content edits first — an edit can blank an orphaned
+      // answer (re-flagging the row), and resolutions validate against
+      // the edited options, exactly as export applies them.
+      const edited = applyContentEdits(rows, await getEdits(runId))
+      counts[runId] = unresolvedCount(edited, await getResolutions(runId))
     }
     return counts
   }, [runIds.join('|')])

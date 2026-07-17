@@ -20,6 +20,7 @@ import {
 } from '../state/runs'
 import { bytesToBase64 } from '../providers/base64'
 import { applyResolutions, getResolutions } from '../screens/review-data'
+import { applyContentEdits, getEdits } from '../screens/review-edits'
 import { wasTruncated } from './calls'
 import { isRecord, parseModelJson } from './json'
 import { SOLVER_PROMPT } from './solver-prompt'
@@ -72,11 +73,14 @@ export async function clearAiAnswers(runId: string): Promise<void> {
   if (artifact !== undefined) await db.runArtifacts.delete(artifact.id)
 }
 
-/** The run's exportable rows with the tutor's confirmed answers applied. */
+/** The run's exportable rows with the tutor's edits and answers applied. */
 export async function resolvedRows(runId: string): Promise<MergedRow[]> {
   const merged = await getArtifact(runId, 'merged-rows')
   const rows = (merged?.json as MergedRow[] | undefined) ?? []
-  return applyResolutions(rows, await getResolutions(runId))
+  // Content edits first, mirroring export: the solver must see (and index
+  // into) the same options the tutor sees, or its answers can't line up.
+  const edited = applyContentEdits(rows, await getEdits(runId))
+  return applyResolutions(edited, await getResolutions(runId))
 }
 
 // ---------------------------------------------------------------- scoping
@@ -257,23 +261,21 @@ async function saveAnswers(
 }
 
 /**
- * Solves the run's pending target rows in chunks, caching each chunk as it
- * lands (an abort keeps everything already answered). Quota, rate-limit and
- * offline pauses are absorbed by the controller exactly like engine calls.
- * Every request contains formatted question text, includes any referenced
- * image crops, and is pinned to the low-cost solver model.
+ * Solves the given rows in chunks, caching each chunk as it lands (an
+ * abort keeps everything already answered). Quota, rate-limit and offline
+ * pauses are absorbed by the controller exactly like engine calls. Every
+ * request contains formatted question text, includes any referenced image
+ * crops, and is pinned to the low-cost solver model.
  */
-export async function solveRun(
+async function solveChunks(
   runId: string,
-  settings: AiAnswerSettings,
-  options: SolveOptions = {},
+  pending: readonly MergedRow[],
+  options: SolveOptions,
 ): Promise<SolveOutcome> {
   const controller = options.controller ?? geminiController
   const chunkSize = options.chunkSize ?? DEFAULT_CHUNK_SIZE
   const { signal, onProgress } = options
 
-  const rows = await resolvedRows(runId)
-  const pending = pendingRows(rows, settings.scope, await readAiAnswers(runId))
   const chunkCount = Math.ceil(pending.length / chunkSize)
   onProgress?.(0, chunkCount)
 
@@ -325,6 +327,33 @@ export async function solveRun(
   }
 
   return { ok: true, requestsMade }
+}
+
+/** Solves the run's pending target rows under the export scope settings. */
+export async function solveRun(
+  runId: string,
+  settings: AiAnswerSettings,
+  options: SolveOptions = {},
+): Promise<SolveOutcome> {
+  const rows = await resolvedRows(runId)
+  const pending = pendingRows(rows, settings.scope, await readAiAnswers(runId))
+  return solveChunks(runId, pending, options)
+}
+
+/**
+ * Solves exactly these rows — the Review screen's "Ask AI" for one
+ * question or a whole file. Cached answers for the given rows are re-asked
+ * and overwritten; rows not listed are untouched. Answers land in the same
+ * separate `ai-answers` artifact and never modify engine output.
+ */
+export async function solveRows(
+  runId: string,
+  rowIds: readonly string[],
+  options: SolveOptions = {},
+): Promise<SolveOutcome> {
+  const wanted = new Set(rowIds)
+  const rows = await resolvedRows(runId)
+  return solveChunks(runId, rows.filter((row) => wanted.has(row.id)), options)
 }
 
 // ---------------------------------------------------------------- applying

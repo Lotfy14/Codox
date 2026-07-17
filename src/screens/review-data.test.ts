@@ -4,6 +4,7 @@ import type { Blueprint, MergedRow } from '../engine/types'
 import { db } from '../state/db'
 import { getArtifact, putArtifact } from '../state/runs'
 import {
+  aiApplyPlan,
   answerSource,
   applyResolutions,
   effectiveAnswer,
@@ -13,6 +14,7 @@ import {
   isFlagged,
   loadReviewData,
   saveResolution,
+  saveResolutions,
   unresolvedCount,
 } from './review-data'
 
@@ -325,5 +327,69 @@ describe('answerSource', () => {
     expect(
       answerSource(reviewRow(makeRow({ id: '1', correct_index: '' })), {}, { '1': { index: null, confidence: 'unsure' } }),
     ).toEqual({ index: null, source: 'none' })
+  })
+})
+
+describe('aiApplyPlan (the bulk-switch approval summary)', () => {
+  const reviewRow = (row: MergedRow) => ({
+    row,
+    questionNumber: 1,
+    category: null,
+    pageIndex: null,
+    box: null,
+    figures: [],
+  })
+
+  it('splits rows into fill / differ / agree / unsure and picks only fill+differ', () => {
+    const rows = [
+      reviewRow(makeRow({ id: 'blank' })),
+      reviewRow(makeRow({ id: 'differs', correct_index: '0', needs_review: '' })),
+      reviewRow(makeRow({ id: 'agrees', correct_index: '2', needs_review: '' })),
+      reviewRow(makeRow({ id: 'shy' })),
+      reviewRow(makeRow({ id: 'untouched' })),
+    ]
+    const plan = aiApplyPlan(rows, {}, {
+      blank: { index: 1, confidence: 'certain' },
+      differs: { index: 2, confidence: 'likely' },
+      agrees: { index: 2, confidence: 'certain' },
+      shy: { index: null, confidence: 'unsure' },
+    })
+    expect(plan).toEqual({
+      picks: { blank: 1, differs: 2 },
+      fillCount: 1,
+      differCount: 1,
+      agreeCount: 1,
+      unsureCount: 1,
+    })
+  })
+
+  it('an unsure confidence or invalid index is never applied in bulk', () => {
+    const rows = [reviewRow(makeRow({ id: 'a' })), reviewRow(makeRow({ id: 'b' }))]
+    const plan = aiApplyPlan(rows, {}, {
+      a: { index: 1, confidence: 'unsure' },
+      b: { index: 99, confidence: 'certain' },
+    })
+    expect(plan.picks).toEqual({})
+    expect(plan.unsureCount).toBe(2)
+  })
+
+  it('a human resolution is the current answer the AI is compared against', () => {
+    const rows = [reviewRow(makeRow({ id: 'r', correct_index: '0', needs_review: '' }))]
+    const agreeing = aiApplyPlan(rows, { r: 2 }, { r: { index: 2, confidence: 'certain' } })
+    expect(agreeing.agreeCount).toBe(1)
+    expect(agreeing.picks).toEqual({})
+  })
+})
+
+describe('saveResolutions (bulk apply)', () => {
+  it('merges many approved picks into the resolutions artifact at once', async () => {
+    await saveResolution('run-bulk', 'kept', 0)
+    await saveResolutions('run-bulk', { a: 1, b: 2 })
+    expect(await getResolutions('run-bulk')).toEqual({ kept: 0, a: 1, b: 2 })
+  })
+
+  it('an empty pick set writes nothing', async () => {
+    await saveResolutions('run-empty', {})
+    expect(await getResolutions('run-empty')).toEqual({})
   })
 })

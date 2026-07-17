@@ -11,6 +11,7 @@ import {
   clearAiAnswers,
   pendingRows,
   readAiAnswers,
+  solveRows,
   solveRun,
   SOLVER_MODEL,
   validateSolverChunk,
@@ -253,6 +254,75 @@ describe('solveRun', () => {
     expect(Object.keys((await readAiAnswers(runId))?.answers ?? {})).toHaveLength(10)
   })
 
+})
+
+describe('solveRows', () => {
+  it('sends exactly the requested rows, answered or not', async () => {
+    const runId = await seedRun([
+      row('1', { correct_index: '2', needs_review: '' }),
+      row('2'),
+      row('3'),
+    ])
+    const script = scriptedAdapter()
+    script.push(
+      ok(
+        answersJson([
+          { id: '1', index: 0, confidence: 'certain' },
+          { id: '3', index: 1, confidence: 'likely' },
+        ]),
+      ),
+    )
+
+    const outcome = await solveRows(runId, ['1', '3'], {
+      controller: new GeminiController(script.adapter),
+    })
+
+    expect(outcome).toEqual({ ok: true, requestsMade: 1 })
+    expect(script.calls).toHaveLength(1)
+    expect(script.calls[0].prompt).toContain('Question 1?')
+    expect(script.calls[0].prompt).toContain('Question 3?')
+    expect(script.calls[0].prompt).not.toContain('Question 2?')
+    expect((await readAiAnswers(runId))?.answers).toEqual({
+      '1': { index: 0, confidence: 'certain' },
+      '3': { index: 1, confidence: 'likely' },
+    })
+  })
+
+  it('re-asks a cached row and overwrites only its answer', async () => {
+    const runId = await seedRun([row('1'), row('2')])
+    const script = scriptedAdapter()
+    const controller = new GeminiController(script.adapter)
+    script.push(
+      ok(
+        answersJson([
+          { id: '1', index: 0, confidence: 'likely' },
+          { id: '2', index: 1, confidence: 'certain' },
+        ]),
+      ),
+      ok(answersJson([{ id: '1', index: 2, confidence: 'certain' }])),
+    )
+
+    await solveRows(runId, ['1', '2'], { controller })
+    await solveRows(runId, ['1'], { controller })
+
+    expect(script.calls).toHaveLength(2)
+    expect((await readAiAnswers(runId))?.answers).toEqual({
+      '1': { index: 2, confidence: 'certain' },
+      '2': { index: 1, confidence: 'certain' },
+    })
+  })
+
+  it('unknown row ids are ignored — no request is made', async () => {
+    const runId = await seedRun([row('1')])
+    const script = scriptedAdapter()
+
+    const outcome = await solveRows(runId, ['nope'], {
+      controller: new GeminiController(script.adapter),
+    })
+
+    expect(outcome).toEqual({ ok: true, requestsMade: 0 })
+    expect(script.calls).toHaveLength(0)
+  })
 })
 
 describe('validateSolverChunk', () => {

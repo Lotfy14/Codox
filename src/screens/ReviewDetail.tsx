@@ -1,14 +1,26 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
-import { Button, GlassPanel } from '../design/components'
-import { convertMessages, exportMessages, reviewMessages } from '../copy/messages'
-import type { RunState } from '../state/types'
+import { Badge, Button, GlassPanel } from '../design/components'
+import {
+  aiExportMessages,
+  aiReviewMessages,
+  convertMessages,
+  exportMessages,
+  reviewMessages,
+} from '../copy/messages'
+import type { RunState, TopicItem } from '../state/types'
 import type { AiAnswer } from '../engine/solver'
+import { solveRows } from '../engine/solver'
+import type { MergedRow } from '../engine/types'
+import type { TopicMatchesArtifact } from '../engine/topic-matcher'
 import {
   answerSource,
+  effectiveAnswer,
   saveResolution,
   type Resolutions,
   type ReviewRow,
 } from './review-data'
+import type { Edits } from './review-edits'
+import { ReviewRowEditor } from './ReviewRowEditor'
 import { isUnresolvedFlag, type ReviewFilter } from './review-filter'
 import {
   isActivationTarget,
@@ -25,6 +37,11 @@ export interface ReviewDetailProps {
   currentRowId: string
   resolutions: Resolutions
   aiAnswers: Record<string, AiAnswer> | undefined
+  /** The engine's untouched merged rows — edit mode diffs against them. */
+  pristineRows: readonly MergedRow[]
+  edits: Edits
+  topicMatches: TopicMatchesArtifact | undefined
+  runTopics: TopicItem[] | undefined
   onNavigate: (rowId: string) => void
   onBack: () => void
   onExport: () => void
@@ -38,6 +55,10 @@ export function ReviewDetail({
   currentRowId,
   resolutions,
   aiAnswers,
+  pristineRows,
+  edits,
+  topicMatches,
+  runTopics,
   onNavigate,
   onBack,
   onExport,
@@ -55,17 +76,39 @@ export function ReviewDetail({
   const resolvedCount = flagged.length - unresolved.length
   const [wholePage, setWholePage] = useState(false)
   const [justResolved, setJustResolved] = useState(false)
+  const [editing, setEditing] = useState(false)
   const confirmId = useId()
   const offline = useOffline()
   const source = useSourceUrls(run.id, reviewRow)
   const answer = reviewRow === undefined ? { index: null, source: 'none' as const } : answerSource(reviewRow, resolutions, aiAnswers)
   const seededAnswer = answer.index === null ? undefined : answer.index
   const [selected, setSelected] = useState<number | undefined>(seededAnswer)
+  const [askingRowId, setAskingRowId] = useState<string | null>(null)
+  const [askError, setAskError] = useState<string | null>(null)
+
+  // The AI's stored answer for this question — display-only until the
+  // tutor approves it (NEVER-GUESS: approval is the human decision).
+  const ai = reviewRow === undefined ? undefined : aiAnswers?.[reviewRow.row.id]
+  const aiIndex =
+    reviewRow !== undefined &&
+    ai !== undefined &&
+    ai.index !== null &&
+    Number.isInteger(ai.index) &&
+    ai.index >= 0 &&
+    ai.index < reviewRow.row.options.length
+      ? ai.index
+      : null
+  const savedAnswer = reviewRow === undefined ? null : effectiveAnswer(reviewRow, resolutions)
 
   useEffect(() => {
     setSelected(seededAnswer)
     setWholePage(false)
   }, [currentRowId, seededAnswer])
+
+  useEffect(() => {
+    setEditing(false)
+    setAskError(null)
+  }, [currentRowId])
 
   const goTo = useCallback((index: number) => {
     const target = orderedRows[index]
@@ -75,9 +118,9 @@ export function ReviewDetail({
   const tickTimer = useRef<number | undefined>(undefined)
   useEffect(() => () => window.clearTimeout(tickTimer.current), [])
 
-  const confirm = useCallback(() => {
-    if (reviewRow === undefined || selected === undefined) return
-    void saveResolution(run.id, reviewRow.row.id, selected)
+  const confirmIndex = useCallback((pick: number) => {
+    if (reviewRow === undefined) return
+    void saveResolution(run.id, reviewRow.row.id, pick)
     setJustResolved(true)
     window.clearTimeout(tickTimer.current)
     tickTimer.current = window.setTimeout(() => setJustResolved(false), 360)
@@ -97,12 +140,53 @@ export function ReviewDetail({
       index < currentIndex && isUnresolvedFlag(row, resolutions),
     )
     if (wrapped !== -1) goTo(wrapped)
-  }, [currentIndex, filter, goTo, orderedRows, resolutions, reviewRow, run.id, selected])
+  }, [currentIndex, filter, goTo, orderedRows, resolutions, reviewRow, run.id])
+
+  const confirm = useCallback(() => {
+    if (selected !== undefined) confirmIndex(selected)
+  }, [confirmIndex, selected])
+
+  /** One Gemini request for this question only; the answer is cached. */
+  const askAi = useCallback(async () => {
+    if (reviewRow === undefined || askingRowId !== null) return
+    const rowId = reviewRow.row.id
+    setAskingRowId(rowId)
+    setAskError(null)
+    try {
+      const outcome = await solveRows(run.id, [rowId])
+      if (!outcome.ok && outcome.failure.kind !== 'aborted') {
+        setAskError(
+          outcome.failure.kind === 'wrong-key'
+            ? aiExportMessages.solveWrongKey
+            : aiExportMessages.solveFailed,
+        )
+      }
+    } catch {
+      setAskError(aiExportMessages.solveFailed)
+    } finally {
+      setAskingRowId((current) => (current === rowId ? null : current))
+    }
+  }, [askingRowId, reviewRow, run.id])
+
+  /** The explicit approval: saves the AI's pick as the tutor's answer. */
+  const applyAiAnswer = useCallback(() => {
+    if (aiIndex === null) return
+    setSelected(aiIndex)
+    confirmIndex(aiIndex)
+  }, [aiIndex, confirmIndex])
 
   useEffect(() => {
     if (allResolved || reviewRow === undefined) return
     const handleKey = (event: KeyboardEvent) => {
       if (event.altKey || event.ctrlKey || event.metaKey || isTypingTarget(event.target)) return
+      if (editing) {
+        // Edit mode owns the keyboard: only Escape (cancel) is global.
+        if (event.key === 'Escape') {
+          setEditing(false)
+          event.preventDefault()
+        }
+        return
+      }
       const optionIndex = Number.parseInt(event.key, 10) - 1
       if (
         Number.isInteger(optionIndex) &&
@@ -121,6 +205,16 @@ export function ReviewDetail({
       } else if (event.key === 'w') {
         setWholePage((current) => !current)
         event.preventDefault()
+      } else if (event.key === 'e') {
+        setEditing(true)
+        event.preventDefault()
+      } else if (event.key === 'a') {
+        // The natural AI action: approve a differing suggestion, else ask.
+        if (askingRowId === null) {
+          if (aiIndex !== null && aiIndex !== savedAnswer) applyAiAnswer()
+          else void askAi()
+        }
+        event.preventDefault()
       } else if (event.key === 'Enter' && !isActivationTarget(event.target)) {
         confirm()
         event.preventDefault()
@@ -128,10 +222,8 @@ export function ReviewDetail({
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  }, [allResolved, confirm, confirmId, currentIndex, goTo, reviewRow])
+  }, [aiIndex, allResolved, askAi, askingRowId, confirm, confirmId, currentIndex, editing, goTo, reviewRow, savedAnswer, applyAiAnswer])
 
-  const imageUrl = wholePage ? source.page : (source.crop ?? source.page)
-  const displayQuestion = reviewRow.row.question.replace(/^\s*case\s*stem\s*:\s*/i, '')
   if (allResolved || reviewRow === undefined) {
     return (
       <section aria-labelledby="review-done-heading" className="review-done">
@@ -154,6 +246,9 @@ export function ReviewDetail({
     )
   }
 
+  const imageUrl = wholePage ? source.page : (source.crop ?? source.page)
+  const displayQuestion = reviewRow.row.question.replace(/^\s*case\s*stem\s*:\s*/i, '')
+  const rowEdit = edits[reviewRow.row.id]
   const figureCrops = source.figures.map((url, index) => (
     <figure className="review-paper review-paper--figure" key={url}>
       <figcaption className="review-paper__label">
@@ -202,65 +297,142 @@ export function ReviewDetail({
           aria-label={`Question ${reviewRow.questionNumber}`}
           className={`review__question ${justResolved ? 'review__question--tick' : ''}`}
         >
-          <h3>{displayQuestion}</h3>
-          {imageUrl !== null ? (
-            <button
-              aria-label={wholePage ? reviewMessages.questionArea : reviewMessages.wholePage}
-              aria-pressed={wholePage}
-              className="review__mobile-source"
-              data-whole-page={wholePage || undefined}
-              disabled={source.crop === null || source.page === null}
-              onClick={() => setWholePage((current) => !current)}
-              type="button"
-            >
-              <figure className="review-paper">
-                <figcaption className="review-paper__label">
-                  {reviewMessages.pageCaption(
-                    (reviewRow.pageIndex ?? 0) + 1,
-                    run.fileName,
-                    wholePage,
-                  )}
-                </figcaption>
-                <img alt={reviewMessages.sourceAlt(reviewRow.questionNumber)} src={imageUrl} />
-              </figure>
-            </button>
-          ) : null}
-          {figureCrops.length > 0 ? (
-            <div className="review__mobile-figures">{figureCrops}</div>
-          ) : null}
-          <div aria-label={reviewMessages.pickAnswer} className="review__options" role="radiogroup">
-            {reviewRow.row.options.map((option, index) => (
-              <button
-                aria-checked={selected === index}
-                className="review-option"
-                data-ai={answer.source === 'ai' && index === answer.index ? true : undefined}
-                key={`${reviewRow.row.id}-${index}`}
-                onClick={() => setSelected(index)}
-                role="radio"
-                type="button"
-              >
-                <span aria-hidden="true" className="review-option__letter">
-                  {optionLetters[index] ?? index + 1}
-                </span>
-                <span>{option}</span>
-                {answer.source === 'ai' && index === answer.index ? (
-                  <span className="review-option__tag">AI</span>
+          {editing ? (
+            <ReviewRowEditor
+              aiAnswer={aiAnswers?.[reviewRow.row.id]}
+              baseline={{
+                topic: topicMatches?.matches[reviewRow.row.id]?.topic ?? '',
+                subtopic: topicMatches?.matches[reviewRow.row.id]?.subtopic ?? '',
+                year: run.yearMode === 'type'
+                  ? (run.typedYear ?? '')
+                  : run.yearMode === 'ai'
+                    ? (pristineRows.find((row) => row.id === reviewRow.row.id)?.year ?? '')
+                    : '',
+              }}
+              edit={rowEdit}
+              initialCorrect={effectiveAnswer(reviewRow, resolutions)}
+              key={reviewRow.row.id}
+              onClose={() => setEditing(false)}
+              pristineRow={pristineRows.find((row) => row.id === reviewRow.row.id) ?? reviewRow.row}
+              reviewRow={reviewRow}
+              run={run}
+              runTopics={runTopics}
+              storedResolution={resolutions[reviewRow.row.id]}
+            />
+          ) : (
+            <>
+              <h3>
+                {displayQuestion}
+                {rowEdit !== undefined ? (
+                  <Badge className="review__edited-badge" tone="primary">
+                    {reviewMessages.editedBadge}
+                  </Badge>
                 ) : null}
-                <kbd aria-hidden="true">{index + 1}</kbd>
-              </button>
-            ))}
-          </div>
-          <div className="review__actions">
-            <Button id={confirmId} isDisabled={selected === undefined} onPress={confirm}>
-              {reviewMessages.confirm}
-            </Button>
-            <Button isDisabled={currentIndex === 0} onPress={() => goTo(currentIndex - 1)} variant="quiet">
-              {reviewMessages.previous}
-            </Button>
-            <Button isDisabled={currentIndex === orderedRows.length - 1} onPress={() => goTo(currentIndex + 1)} variant="quiet">
-              {reviewMessages.next}
-            </Button>
-          </div>
+              </h3>
+              {imageUrl !== null ? (
+                <button
+                  aria-label={wholePage ? reviewMessages.questionArea : reviewMessages.wholePage}
+                  aria-pressed={wholePage}
+                  className="review__mobile-source"
+                  data-whole-page={wholePage || undefined}
+                  disabled={source.crop === null || source.page === null}
+                  onClick={() => setWholePage((current) => !current)}
+                  type="button"
+                >
+                  <figure className="review-paper">
+                    <figcaption className="review-paper__label">
+                      {reviewMessages.pageCaption(
+                        (reviewRow.pageIndex ?? 0) + 1,
+                        run.fileName,
+                        wholePage,
+                      )}
+                    </figcaption>
+                    <img alt={reviewMessages.sourceAlt(reviewRow.questionNumber)} src={imageUrl} />
+                  </figure>
+                </button>
+              ) : null}
+              {figureCrops.length > 0 ? (
+                <div className="review__mobile-figures">{figureCrops}</div>
+              ) : null}
+              <div aria-label={reviewMessages.pickAnswer} className="review__options" role="radiogroup">
+                {reviewRow.row.options.map((option, index) => (
+                  <button
+                    aria-checked={selected === index}
+                    className="review-option"
+                    data-ai={aiIndex === index ? true : undefined}
+                    key={`${reviewRow.row.id}-${index}`}
+                    onClick={() => setSelected(index)}
+                    role="radio"
+                    type="button"
+                  >
+                    <span aria-hidden="true" className="review-option__letter">
+                      {optionLetters[index] ?? index + 1}
+                    </span>
+                    <span>{option}</span>
+                    {aiIndex === index ? (
+                      <span className="review-option__tag">AI</span>
+                    ) : null}
+                    <kbd aria-hidden="true">{index + 1}</kbd>
+                  </button>
+                ))}
+              </div>
+              <div aria-label={aiReviewMessages.stripLabel} className="review-ai" role="group">
+                {askingRowId === reviewRow.row.id ? (
+                  <span className="ds-muted" role="status">{aiReviewMessages.asking}</span>
+                ) : ai === undefined ? (
+                  <Button isDisabled={offline} onPress={() => void askAi()} variant="quiet">
+                    {aiReviewMessages.askOne}
+                  </Button>
+                ) : aiIndex === null ? (
+                  <>
+                    <span className="ds-muted">{aiReviewMessages.aiUnsure}</span>
+                    <Button isDisabled={offline} onPress={() => void askAi()} variant="quiet">
+                      {aiReviewMessages.askAgainOne}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <span className="review-ai__pick">
+                      {aiReviewMessages.suggestion(optionLetters[aiIndex] ?? String(aiIndex + 1))}
+                      <span className="review-ai__confidence">
+                        {' · '}
+                        {aiReviewMessages.confidence[ai.confidence] ?? ai.confidence}
+                      </span>
+                    </span>
+                    {aiIndex === savedAnswer ? (
+                      <span className="ds-muted">{aiReviewMessages.aiAgrees}</span>
+                    ) : (
+                      <Button onPress={applyAiAnswer} variant="secondary">
+                        {aiReviewMessages.useAi}
+                      </Button>
+                    )}
+                    <Button isDisabled={offline} onPress={() => void askAi()} variant="quiet">
+                      {aiReviewMessages.askAgainOne}
+                    </Button>
+                  </>
+                )}
+                {askError !== null ? (
+                  <span className="ds-inline-note ds-inline-note--danger" role="alert">
+                    {askError}
+                  </span>
+                ) : null}
+              </div>
+              <div className="review__actions">
+                <Button id={confirmId} isDisabled={selected === undefined} onPress={confirm}>
+                  {reviewMessages.confirm}
+                </Button>
+                <Button onPress={() => setEditing(true)} variant="secondary">
+                  {reviewMessages.edit}
+                </Button>
+                <Button isDisabled={currentIndex === 0} onPress={() => goTo(currentIndex - 1)} variant="quiet">
+                  {reviewMessages.previous}
+                </Button>
+                <Button isDisabled={currentIndex === orderedRows.length - 1} onPress={() => goTo(currentIndex + 1)} variant="quiet">
+                  {reviewMessages.next}
+                </Button>
+              </div>
+            </>
+          )}
         </section>
       </div>
 

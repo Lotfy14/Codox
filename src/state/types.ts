@@ -148,6 +148,7 @@ export type RunArtifactKind =
   | 'csv'
   | 'audit-report'
   | 'review-resolutions'
+  | 'review-edits'
   | 'ai-answers'
   | 'topics-list'
   | 'topic-matches'

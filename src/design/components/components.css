@@ -2247,6 +2247,180 @@
   flex-wrap: wrap;
 }
 
+/* The AI suggestion strip — visually apart from the document's options:
+   the AI's opinion lives in its own dashed box until the tutor approves. */
+.review-ai {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding: var(--space-2) var(--space-3);
+  border: 1px dashed var(--color-warning-border);
+  border-radius: var(--radius-row);
+  background: var(--color-warning-surface);
+}
+
+.review-ai__pick {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-warning-foreground);
+}
+
+.review-ai__confidence {
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}
+
+/* The AI dialog's "switch to AI answers" summary */
+.ai-review-apply {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.ai-review-apply__heading {
+  margin: 0;
+  font-family: var(--font-family-heading);
+  font-weight: var(--font-weight-label);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-strong);
+}
+
+.ai-review-apply__summary {
+  margin: 0;
+  padding-left: var(--space-4);
+  display: grid;
+  gap: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.review__edited-badge {
+  margin-left: var(--space-2);
+  vertical-align: middle;
+}
+
+/* Edit mode: the question card becomes a form over the same fields. */
+.review-editor {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.review-editor__heading {
+  margin: 0;
+  font-family: var(--font-family-heading);
+  font-weight: var(--font-weight-heading);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-heading);
+  color: var(--color-text-strong);
+}
+
+.review-editor__field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.review-editor__question {
+  resize: vertical;
+  font: inherit;
+  line-height: var(--line-height-body);
+}
+
+.review-editor__group {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.review-editor__group legend {
+  padding: 0;
+  margin-bottom: var(--space-1);
+}
+
+.review-editor__options {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.review-editor__option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.review-editor__option-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.review-editor__correct {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--color-primary);
+}
+
+.review-editor__option-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.review-editor__meta {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+}
+
+.review-editor__hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: var(--font-size-xs);
+}
+
+.review-editor__pictures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.review-editor__picture {
+  display: grid;
+  gap: var(--space-1);
+  align-items: center;
+  padding: var(--space-2);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-input);
+  background: var(--color-surface-elevated);
+  color: var(--color-text-strong);
+}
+
+.review-editor__picture:hover {
+  background: var(--color-row-hover);
+}
+
+.review-editor__picture[aria-pressed='true'] {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.review-editor__picture img {
+  display: block;
+  max-width: 10rem;
+  max-height: 6rem;
+  object-fit: contain;
+}
+
+.review-editor__picture--missing {
+  grid-auto-flow: column;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 48rem) {
+  .review-editor__meta {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .review-done {
   display: grid;
   justify-items: stretch;

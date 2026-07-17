@@ -23,6 +23,13 @@ import { bytesToBase64 } from '../providers/base64'
 import { getArtifact, getArtifacts, updateRun } from '../state/runs'
 import type { RunState } from '../state/types'
 import { applyResolutions, getResolutions } from '../screens/review-data'
+import {
+  applyContentEdits,
+  applyMetaEdits,
+  editsSetTopic,
+  editsSetYear,
+  getEdits,
+} from '../screens/review-edits'
 import { emitExportCsv, exportColumns } from './export-csv'
 import {
   assembleBundleFiles,
@@ -102,24 +109,38 @@ async function buildBundleInputs(
     }
     const rows = merged.json as MergedRow[]
     const resolutions = await getResolutions(run.id)
-    const resolved = applyResolutions(rows, resolutions)
+    const edits = await getEdits(run.id)
+    // Content edits (question/options/pictures/answer override) go first
+    // so resolutions validate against the options the tutor actually saw.
+    const edited = applyContentEdits(rows, edits)
+    const resolved = applyResolutions(edited, resolutions)
     let projected = await rowsForMode(run, resolved, mode)
     // Column projection (owner-approved 2026-07-14): topics come only from
     // the run's snapshot + matches (blank when matching didn't finish —
     // export never waits); year per the run's snapshot; id/group_id never.
+    // A tutor's explicit topic/subtopic/year edit also counts: it forces
+    // its column and, applied last, wins over the matcher and the run's
+    // year mode. Planner heading text still never reaches the CSV — with
+    // no topic list the baseline under an edit is blank, not the planner's.
     const hasTopics = (await readRunTopics(run.id)) !== undefined
-    if (hasTopics) {
-      projected = applyTopicMatches(projected, await readTopicMatches(run.id))
+    if (hasTopics || editsSetTopic(edits)) {
+      projected = applyTopicMatches(
+        projected,
+        hasTopics ? await readTopicMatches(run.id) : undefined,
+      )
     }
     const typedYear = run.yearMode === 'type' ? (run.typedYear ?? '') : ''
     if (typedYear !== '') {
       projected = projected.map((row) => ({ ...row, year: typedYear }))
+    } else if (run.yearMode !== 'ai' && editsSetYear(edits)) {
+      projected = projected.map((row) => ({ ...row, year: '' }))
     }
+    projected = applyMetaEdits(projected, edits)
     const csvText = emitExportCsv(
       projected,
       exportColumns({
-        topics: hasTopics,
-        year: run.yearMode === 'ai' || typedYear !== '',
+        topics: hasTopics || editsSetTopic(edits),
+        year: run.yearMode === 'ai' || typedYear !== '' || editsSetYear(edits),
       }),
     )
     const crops = (await getArtifacts(run.id, 'crop')).flatMap((crop) =>

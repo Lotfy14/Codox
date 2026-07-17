@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { boxToCropBox } from '../engine/boxes'
-import { getPageArtifact } from '../state/runs'
+import { getArtifacts, getPageArtifact } from '../state/runs'
 import type { ReviewRow } from './review-data'
 
 interface SourceUrls {
@@ -36,6 +36,49 @@ export function useOffline(): boolean {
     }
   }, [])
   return offline
+}
+
+/** One extracted picture the tutor can link: bundle path + preview URL. */
+export interface CropAsset {
+  path: string
+  url: string
+}
+
+/**
+ * The run's stored figure crops as object URLs — edit mode's linked-picture
+ * picker. Loads only while `enabled` (crops are read once, URLs revoked on
+ * close) so the review screen itself never pays for it.
+ */
+export function useCropAssets(runId: string, enabled: boolean): CropAsset[] {
+  const [assets, setAssets] = useState<CropAsset[]>([])
+
+  useEffect(() => {
+    if (!enabled) return
+    let cancelled = false
+    const created: string[] = []
+    void getArtifacts(runId, 'crop').then((crops) => {
+      const list = crops.flatMap((crop) => {
+        if (crop.path === undefined || crop.bytes === undefined) return []
+        const url = URL.createObjectURL(
+          new Blob([crop.bytes as Uint8Array<ArrayBuffer>], { type: 'image/jpeg' }),
+        )
+        created.push(url)
+        return [{ path: crop.path, url }]
+      })
+      if (cancelled) {
+        for (const url of created) URL.revokeObjectURL(url)
+        return
+      }
+      setAssets(list)
+    })
+    return () => {
+      cancelled = true
+      for (const url of created) URL.revokeObjectURL(url)
+      setAssets([])
+    }
+  }, [runId, enabled])
+
+  return assets
 }
 
 export function useSourceUrls(

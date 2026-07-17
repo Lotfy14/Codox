@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { readRunTopics, readTopicMatches } from '../engine/topic-matcher'
 import type { RunState } from '../state/types'
 import {
+  applyEditsToReviewRows,
   loadReviewData,
   useAiAnswers,
   useResolutions,
   type ReviewData,
 } from './review-data'
+import { useEdits } from './review-edits'
 import {
   filterReviewRows,
   isUnresolvedFlag,
@@ -50,30 +54,42 @@ export function useReviewSession(runs: readonly RunState[]) {
 
   const activeRun = doneRuns.find((run) => run.id === activeRunId) ?? doneRuns[0]
   const data = activeRun === undefined ? undefined : dataCache[activeRun.id]
-  const resolutions = useResolutions(activeRun?.id ?? '__no_review_run__')
-  const aiAnswers = useAiAnswers(activeRun?.id ?? '__no_review_run__')
+  const liveRunId = activeRun?.id ?? '__no_review_run__'
+  const resolutions = useResolutions(liveRunId)
+  const aiAnswers = useAiAnswers(liveRunId)
+  const edits = useEdits(liveRunId)
+  const topicMatches = useLiveQuery(() => readTopicMatches(liveRunId), [liveRunId])
+  const runTopics = useLiveQuery(() => readRunTopics(liveRunId), [liveRunId])
+  // Everything downstream (list, search, detail) sees the edited rows;
+  // the pristine merged rows stay available as `data.rows` for edit mode.
+  const reviewRows = useMemo(
+    () => data === undefined || edits === undefined
+      ? undefined
+      : applyEditsToReviewRows(data.reviewRows, edits, data.figureByPath),
+    [data, edits],
+  )
   const controls = controlsByRun[activeRunId] ?? { filter: 'all', search: '' }
   const filteredRows = useMemo(
-    () => data === undefined || resolutions === undefined
+    () => reviewRows === undefined || resolutions === undefined
       ? []
       : filterReviewRows(
-          data.reviewRows,
+          reviewRows,
           controls.filter,
           parseSearch(controls.search),
           resolutions,
         ),
-    [controls.filter, controls.search, data, resolutions],
+    [controls.filter, controls.search, reviewRows, resolutions],
   )
 
   const orderedRowsForDetail = useMemo(() => {
-    if (view.kind !== 'detail' || data === undefined) return filteredRows
+    if (view.kind !== 'detail' || reviewRows === undefined) return filteredRows
     if (filteredRows.some((row) => row.row.id === view.rowId)) return filteredRows
-    const current = data.reviewRows.find((row) => row.row.id === view.rowId)
+    const current = reviewRows.find((row) => row.row.id === view.rowId)
     if (current === undefined) return filteredRows
     const pinned = [...filteredRows]
     pinned.splice(Math.min(view.pinnedIndex, pinned.length), 0, current)
     return pinned
-  }, [data, filteredRows, view])
+  }, [filteredRows, reviewRows, view])
 
   const updateControls = useCallback((update: Partial<ReviewControls>) => {
     if (activeRunId === '') return
@@ -125,18 +141,18 @@ export function useReviewSession(runs: readonly RunState[]) {
     if (
       pendingNeedsReview === null ||
       pendingNeedsReview !== activeRunId ||
-      data === undefined ||
+      reviewRows === undefined ||
       resolutions === undefined
     ) return
-    const first = data.reviewRows.find((row) => isUnresolvedFlag(row, resolutions))
+    const first = reviewRows.find((row) => isUnresolvedFlag(row, resolutions))
     setPendingNeedsReview(null)
     if (first === undefined) {
       setView({ kind: 'list' })
       return
     }
-    const index = data.reviewRows.filter((row) => isUnresolvedFlag(row, resolutions)).indexOf(first)
+    const index = reviewRows.filter((row) => isUnresolvedFlag(row, resolutions)).indexOf(first)
     setView({ kind: 'detail', rowId: first.row.id, pinnedIndex: index })
-  }, [activeRunId, data, pendingNeedsReview, resolutions])
+  }, [activeRunId, pendingNeedsReview, resolutions, reviewRows])
 
   return {
     activeRun,
@@ -145,6 +161,7 @@ export function useReviewSession(runs: readonly RunState[]) {
     back,
     controls,
     data,
+    edits,
     filteredRows,
     focusRowId,
     navigate,
@@ -152,9 +169,12 @@ export function useReviewSession(runs: readonly RunState[]) {
     openRow,
     orderedRowsForDetail,
     resolutions,
+    reviewRows,
+    runTopics,
     selectRun,
     setFilter: (filter: ReviewFilter) => updateControls({ filter }),
     setSearch: (search: string) => updateControls({ search }),
+    topicMatches,
     view,
   }
 }
