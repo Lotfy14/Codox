@@ -104,13 +104,22 @@ export async function getCropByPath(
   return crops.find((crop) => crop.path === path)
 }
 
-/** Drops a step's outputs so the executor re-runs it (repair/retry paths). */
+/**
+ * Drops a step's outputs so the executor re-runs it (repair/retry paths).
+ * With `chunkIndex`, only that chunk's artifacts are dropped — other chunks'
+ * cached responses stay resumable.
+ */
 export async function clearArtifacts(
   runId: string,
   kind: RunArtifactKind,
+  chunkIndex?: number,
 ): Promise<void> {
   const rows = await getArtifacts(runId, kind)
-  await db.runArtifacts.bulkDelete(rows.map((row) => row.id))
+  const targets =
+    chunkIndex === undefined
+      ? rows
+      : rows.filter((row) => row.chunkIndex === chunkIndex)
+  await db.runArtifacts.bulkDelete(targets.map((row) => row.id))
 }
 
 export async function deleteRun(runId: string): Promise<void> {

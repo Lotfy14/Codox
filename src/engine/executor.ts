@@ -782,7 +782,9 @@ async function stepWorker(
         await updateRun(runId, { chunksDone: chunkIndex + 1 })
         continue
       }
-      await clearArtifacts(runId, 'chunk-response')
+      // Drop only this chunk's stale response — the other chunks' cached
+      // responses must survive for the next resume.
+      await clearArtifacts(runId, 'chunk-response', chunkIndex)
     }
 
     const reduced = buildReducedBlueprint(blueprint, chunkRows)
@@ -801,6 +803,7 @@ async function stepWorker(
     })
 
     let previousError: string | undefined
+    let lastResponseText: string | undefined
     let accepted: WorkerRow[] | undefined
     // Exactly one retry, consumed only by INVALID CONTENT.
     for (let attempt = 0; attempt < 2 && accepted === undefined; attempt += 1) {
@@ -815,6 +818,7 @@ async function stepWorker(
             signal,
           ),
       )
+      lastResponseText = response.text
       await putArtifact({
         runId,
         kind: 'chunk-response',
@@ -833,7 +837,16 @@ async function stepWorker(
       }
     }
 
-    if (accepted === undefined) return { ok: false }
+    if (accepted === undefined) {
+      // The stop reason alone ("worker_chunk_invalid") is undiagnosable from
+      // an exported diagnostics log — record why the chunk failed and what
+      // the model actually returned (logEvent truncates long strings).
+      await logEvent({
+        scope: 'engine', level: 'error', event: 'engine.worker.chunk.fail', runId,
+        reason: previousError, detail: { chunk: chunkIndex + 1, rawResponse: lastResponseText },
+      })
+      return { ok: false }
+    }
     rows.push(...accepted)
     await updateRun(runId, { chunksDone: chunkIndex + 1 })
   }

@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from './db'
-import { createRun, stopJobRuns } from './runs'
+import { clearArtifacts, createRun, getArtifacts, putArtifact, stopJobRuns } from './runs'
 import type { RunState } from './types'
 
 const JOB = 'current'
@@ -19,6 +19,7 @@ async function addRun(status: RunState['status']): Promise<string> {
 
 beforeEach(async () => {
   await db.runs.clear()
+  await db.runArtifacts.clear()
 })
 
 describe('stopJobRuns', () => {
@@ -35,5 +36,30 @@ describe('stopJobRuns', () => {
     expect((await db.runs.get(pausedId))?.status).toBe('stopped')
     expect((await db.runs.get(doneId))?.status).toBe('done')
     expect((await db.runs.get(stoppedId))?.stopReason).toBeUndefined()
+  })
+})
+
+describe('clearArtifacts', () => {
+  it('with a chunkIndex drops only that chunk, keeping other chunks resumable', async () => {
+    const runId = 'run-1'
+    await putArtifact({ runId, kind: 'chunk-response', chunkIndex: 0, text: 'chunk 0' })
+    await putArtifact({ runId, kind: 'chunk-response', chunkIndex: 1, text: 'chunk 1 attempt 1' })
+    await putArtifact({ runId, kind: 'chunk-response', chunkIndex: 1, text: 'chunk 1 attempt 2' })
+    await putArtifact({ runId, kind: 'chunk-response', chunkIndex: 2, text: 'chunk 2' })
+
+    await clearArtifacts(runId, 'chunk-response', 1)
+
+    const remaining = await getArtifacts(runId, 'chunk-response')
+    expect(remaining.map((artifact) => artifact.chunkIndex)).toEqual([0, 2])
+  })
+
+  it('without a chunkIndex still drops the whole kind', async () => {
+    const runId = 'run-1'
+    await putArtifact({ runId, kind: 'chunk-response', chunkIndex: 0, text: 'chunk 0' })
+    await putArtifact({ runId, kind: 'chunk-response', chunkIndex: 1, text: 'chunk 1' })
+
+    await clearArtifacts(runId, 'chunk-response')
+
+    expect(await getArtifacts(runId, 'chunk-response')).toEqual([])
   })
 })
