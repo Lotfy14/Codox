@@ -14,7 +14,10 @@ import { exportRuns } from './exporter'
  */
 
 vi.mock('@capacitor/core', () => ({
-  Capacitor: { isNativePlatform: () => false },
+  Capacitor: { isNativePlatform: () => false, getPlatform: () => 'web' },
+  registerPlugin: () => ({
+    saveToDownloads: () => Promise.resolve(),
+  }),
 }))
 
 vi.mock('browser-fs-access', () => ({

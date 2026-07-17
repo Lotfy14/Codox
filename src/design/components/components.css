@@ -2301,14 +2301,14 @@
 /* Edit mode: the question card becomes a form over the same fields. */
 .review-editor {
   display: grid;
-  gap: var(--space-4);
+  gap: var(--space-3);
 }
 
 .review-editor__heading {
   margin: 0;
   font-family: var(--font-family-heading);
   font-weight: var(--font-weight-heading);
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-md);
   line-height: var(--line-height-heading);
   color: var(--color-text-strong);
 }
@@ -2321,6 +2321,7 @@
 .review-editor__question {
   resize: vertical;
   font: inherit;
+  font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
 }
 
@@ -2339,7 +2340,7 @@
 
 .review-editor__options {
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
 
 .review-editor__option {
@@ -2355,8 +2356,8 @@
 
 .review-editor__correct {
   flex: none;
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.125rem;
+  height: 1.125rem;
   accent-color: var(--color-primary);
 }
 
@@ -2382,11 +2383,19 @@
   gap: var(--space-2);
 }
 
+.review-editor__pictures--unlinked {
+  padding: var(--space-2);
+  border: 1px dashed var(--color-outline);
+  border-radius: var(--radius-input);
+  background: var(--color-row);
+  margin-top: var(--space-2);
+}
+
 .review-editor__picture {
   display: grid;
   gap: var(--space-1);
   align-items: center;
-  padding: var(--space-2);
+  padding: 0.375rem;
   border: 1px solid var(--color-control-border);
   border-radius: var(--radius-input);
   background: var(--color-surface-elevated);
@@ -2404,15 +2413,63 @@
 
 .review-editor__picture img {
   display: block;
-  max-width: 10rem;
-  max-height: 6rem;
+  max-width: 8rem;
+  max-height: 5rem;
   object-fit: contain;
+}
+
+.review-editor__picture--compact {
+  padding: var(--space-1);
+}
+
+.review-editor__picture--compact img {
+  max-width: 6rem;
+  max-height: 4rem;
 }
 
 .review-editor__picture--missing {
   grid-auto-flow: column;
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
+}
+
+/* Compact input and button overrides specifically inside review-editor */
+.review-editor .ds-glass-input__control,
+.review-editor .glass-input {
+  min-height: 2.25rem;
+  padding: 6px var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
+.review-editor textarea.review-editor__question {
+  min-height: unset;
+  padding: var(--space-2);
+}
+
+.review-editor .ds-button {
+  min-height: 2.25rem;
+  padding: 6px var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
+.review-editor .ds-button--quiet {
+  min-height: 2rem;
+  width: 2rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.review-editor .review-option__letter {
+  width: 1.5rem;
+  height: 1.5rem;
+  font-size: var(--font-size-xs);
+}
+
+.review-editor__toggle-pictures {
+  margin-top: var(--space-1);
+  justify-self: start;
 }
 
 @media (max-width: 48rem) {

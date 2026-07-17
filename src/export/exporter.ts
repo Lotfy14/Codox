@@ -9,8 +9,13 @@
  * Export-early law: a successful hand-off stamps `exportedAt` on every
  * exported run; a cancelled share sheet or save dialog does not.
  */
-import { Capacitor } from '@capacitor/core'
+import { Capacitor, registerPlugin } from '@capacitor/core'
 import { fileSave } from 'browser-fs-access'
+
+interface FileSaverPlugin {
+  saveToDownloads(options: { path: string; fileName: string }): Promise<void>
+}
+const FileSaver = registerPlugin<FileSaverPlugin>('FileSaver')
 import { applyAiAnswers, readAiAnswers } from '../engine/solver'
 import {
   applyTopicMatches,
@@ -179,6 +184,17 @@ async function deliverZip(
       data: bytesToBase64(bytes),
       directory: Directory.Cache,
     })
+    if (Capacitor.getPlatform() === 'android') {
+      try {
+        await FileSaver.saveToDownloads({
+          path: written.uri,
+          fileName,
+        })
+        return 'downloaded'
+      } catch (error) {
+        console.error('FileSaver failed, falling back to Share sheet:', error)
+      }
+    }
     try {
       await Share.share({ files: [written.uri] })
       return 'shared'
