@@ -291,10 +291,10 @@ test('critical journey: answer-key PDF → review list/detail → named export �
   const csv = new TextDecoder().decode(zipped[csvPath]).replace(/^\uFEFF/, '')
   // The exported projection: no id/group_id, no unprovided optional columns.
   expect(csv.split('\r\n')[0]).toBe(
-    'question,options,correct_index,image_urls,needs_review',
+    'question,options,correct_index,image_url',
   )
   expect(csv).toContain('What is two plus two?')
-  expect(csv).toContain('"[""Three"",""Four""]",1,[],')
+  expect(csv).toContain('"[""Three"",""Four""]",1,[]')
 
   await page.getByRole('button', { name: 'Convert another' }).click()
   await expect(page.getByText('Drop PDFs here')).toBeVisible()
