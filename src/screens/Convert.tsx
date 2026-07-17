@@ -24,6 +24,7 @@ import { isBatchRunning, runProgress } from '../engine/progress'
 import {
   exportableRuns,
   exportRuns,
+  exportToTriviadox,
   type ExportMode,
   type ExportOutcome,
 } from '../export/exporter'
@@ -144,12 +145,30 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
     }
   }
 
-  const handleExport = async (mode: ExportMode = 'with-answers') => {
+  const handleExport = async (
+    mode: ExportMode = 'with-answers',
+    type: 'triviadox' | 'zip' = 'triviadox',
+  ) => {
     if (exportBusy) return
     setExportBusy(true)
     setExportNotice(null)
     try {
-      noticeForOutcome(await exportRuns(runs, { mode }))
+      if (type === 'triviadox') {
+        const res = await exportToTriviadox(runs, { mode })
+        if (res.success && res.id) {
+          const origin = typeof window !== 'undefined' && window.location.origin.includes('localhost')
+            ? 'http://localhost:3000'
+            : 'https://triviadox.com'
+          window.open(`${origin}/management/import?id=${res.id}`, '_blank')
+          setExportNotice({ text: 'Exported successfully! Opening Triviadox...', tone: 'success' })
+        } else if (res.error === 'nothing') {
+          setExportNotice({ text: exportMessages.nothingToExport, tone: 'info' })
+        } else {
+          setExportNotice({ text: `Export failed: ${res.error}`, tone: 'danger' })
+        }
+      } else {
+        noticeForOutcome(await exportRuns(runs, { mode }))
+      }
     } catch {
       setExportNotice({ text: exportMessages.failed, tone: 'danger' })
     } finally {
@@ -334,7 +353,7 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
           />
         ) : reviewSession.view.kind === 'detail' ? (
           <ReviewExperience
-            onExport={() => void handleExport()}
+            onExport={(mode, type) => void handleExport(mode, type)}
             runs={runs}
             session={reviewSession}
           />
@@ -346,7 +365,7 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
               matching={conversion.isMatching}
               onAiExport={() => setAiExportOpen(true)}
               onConvertAnother={() => void startFreshConversion()}
-              onExport={(mode) => void handleExport(mode)}
+              onExport={(mode, type) => void handleExport(mode, type)}
               onOpenReview={reviewSession.openNeedsReview}
               onRequestApiKey={onRequestApiKey}
               onRetry={(runIds) => void conversion.retry(runIds)}
@@ -358,7 +377,7 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
               topicMatchIssue={conversion.topicMatchIssue}
             />
             <ReviewExperience
-              onExport={() => void handleExport()}
+              onExport={(mode, type) => void handleExport(mode, type)}
               runs={runs}
               session={reviewSession}
             />
@@ -661,13 +680,23 @@ function RunningStage({
 const exportMenuItems = [
   {
     id: 'no-answers',
-    label: exportMessages.withoutAnswers,
-    description: exportMessages.withoutAnswersHint,
+    label: 'Export to Triviadox (No answers)',
+    description: 'Export directly to Triviadox as a practice set with empty answers.',
   },
   {
     id: 'ai-answers',
-    label: exportMessages.withAiAnswers,
-    description: exportMessages.withAiAnswersHint,
+    label: 'Export to Triviadox with AI answers…',
+    description: 'Gemini answers questions from its own knowledge and exports.',
+  },
+  {
+    id: 'download-zip',
+    label: 'Download ZIP file (With answers)',
+    description: 'Save exam CSV and cropped images locally as a ZIP archive.',
+  },
+  {
+    id: 'download-zip-no-answers',
+    label: 'Download ZIP (No answers)',
+    description: 'Save ZIP locally with all correct answers blanked.',
   },
 ] as const
 
@@ -691,7 +720,7 @@ function DoneStage({
   matching: boolean
   onAiExport: () => void
   onConvertAnother: () => void
-  onExport: (mode: ExportMode) => void
+  onExport: (mode: ExportMode, type: 'triviadox' | 'zip') => void
   onOpenReview: (runId: string) => void
   onRequestApiKey: () => void
   onRetry: (runIds: readonly string[]) => void
@@ -813,13 +842,16 @@ function DoneStage({
                 isDisabled={exportBusy || done.length === 0}
                 items={exportMenuItems}
                 menuLabel={exportMessages.menuLabel}
-                onAction={(id) =>
-                  id === 'ai-answers' ? onAiExport() : onExport('no-answers')
-                }
-                onPress={() => onExport('with-answers')}
+                onAction={(id) => {
+                  if (id === 'ai-answers') onAiExport()
+                  else if (id === 'no-answers') onExport('no-answers', 'triviadox')
+                  else if (id === 'download-zip') onExport('with-answers', 'zip')
+                  else if (id === 'download-zip-no-answers') onExport('no-answers', 'zip')
+                }}
+                onPress={() => onExport('with-answers', 'triviadox')}
                 variant="secondary"
               >
-                {exported ? convertMessages.exportAgain : convertMessages.exportAsIs}
+                {exported ? 'Export to Triviadox again' : 'Export to Triviadox as-is'}
               </SplitButton>
             </>
           ) : (
@@ -827,12 +859,15 @@ function DoneStage({
               isDisabled={exportBusy || done.length === 0}
               items={exportMenuItems}
               menuLabel={exportMessages.menuLabel}
-              onAction={(id) =>
-                id === 'ai-answers' ? onAiExport() : onExport('no-answers')
-              }
-              onPress={() => onExport('with-answers')}
+              onAction={(id) => {
+                if (id === 'ai-answers') onAiExport()
+                else if (id === 'no-answers') onExport('no-answers', 'triviadox')
+                else if (id === 'download-zip') onExport('with-answers', 'zip')
+                else if (id === 'download-zip-no-answers') onExport('no-answers', 'zip')
+              }}
+              onPress={() => onExport('with-answers', 'triviadox')}
             >
-              {exported ? convertMessages.exportAgain : convertMessages.exportBundle}
+              {exported ? 'Export to Triviadox again' : 'Export to Triviadox'}
             </SplitButton>
           )}
           <Button

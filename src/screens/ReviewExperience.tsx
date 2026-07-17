@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { TabNav } from '../design/components'
 import { reviewMessages } from '../copy/messages'
 import type { RunState } from '../state/types'
+import type { ExportMode } from '../export/exporter'
 import { AiReviewDialog } from './AiReviewDialog'
 import { ReviewDetail } from './ReviewDetail'
 import { ReviewList } from './ReviewList'
@@ -14,7 +15,7 @@ export function ReviewExperience({
 }: {
   runs: readonly RunState[]
   session: ReviewSession
-  onExport: () => void
+  onExport: (mode: ExportMode, type: 'triviadox' | 'zip') => void
 }) {
   const [aiDialogOpen, setAiDialogOpen] = useState(false)
   const doneRuns = runs.filter((run) => run.status === 'done')

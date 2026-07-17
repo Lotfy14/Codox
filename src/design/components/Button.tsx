@@ -12,6 +12,7 @@ export interface ButtonProps
   extends Omit<AriaButtonProps, 'children' | 'className' | 'isPending'> {
   children: ReactNode;
   className?: string;
+  title?: string;
   /** Alias for isPending, matching the app's loading language. */
   isLoading?: boolean;
   /** The React Aria name for an in-flight action. */

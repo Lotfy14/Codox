@@ -17,7 +17,7 @@ import {
   resolvedRows,
   solveRun,
 } from '../engine/solver'
-import { exportRuns, exportableRuns, type ExportOutcome } from '../export/exporter'
+import { exportRuns, exportToTriviadox, exportableRuns, type ExportOutcome } from '../export/exporter'
 import { geminiController } from '../providers/controller'
 import type { ControllerStatus } from '../providers/controller'
 import {
@@ -207,9 +207,17 @@ export function AiExportDialog({
         base += chunks
       }
 
-      const outcome = await exportRuns([...runs], { mode: 'ai-answers' })
+      const res = await exportToTriviadox([...runs], { mode: 'ai-answers' })
       onOpenChange(false)
-      onExported(outcome)
+      if (res.success && res.id) {
+        const origin = typeof window !== 'undefined' && window.location.origin.includes('localhost')
+          ? 'http://localhost:3000'
+          : 'https://triviadox.com'
+        window.open(`${origin}/management/import?id=${res.id}`, '_blank')
+        onExported('shared')
+      } else {
+        onExported('cancelled')
+      }
     } catch {
       setError(aiExportMessages.solveFailed)
       setPhase('configure')

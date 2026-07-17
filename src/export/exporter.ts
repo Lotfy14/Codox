@@ -267,3 +267,60 @@ export async function exportRuns(
   }
   return outcome
 }
+
+/**
+ * Serializes the finalized run data (CSV + base64 crop images) and uploads it
+ * to the temporary preparation endpoint on Triviadox.
+ */
+export async function exportToTriviadox(
+  runs: readonly RunState[],
+  options: ExportOptions = {},
+): Promise<{ success: boolean; id?: string; error?: string }> {
+  const mode = options.mode ?? 'with-answers'
+  const exportable = exportableRuns(runs)
+  if (exportable.length === 0) return { success: false, error: 'nothing' }
+
+  const bundles = await buildBundleInputs(exportable, mode)
+  const payload = {
+    bundles: bundles.map((b) => ({
+      name: b.name,
+      csvText: b.csvText,
+      crops: b.crops.map((c) => ({
+        name: c.path,
+        base64: bytesToBase64(c.bytes),
+      })),
+    })),
+  }
+
+  const origin = typeof window !== 'undefined' && window.location.origin.includes('localhost')
+    ? 'http://localhost:3000'
+    : 'https://triviadox.com'
+
+  try {
+    const res = await fetch(`${origin}/api/import/prepare`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}))
+      return { success: false, error: errJson.error || `HTTP error ${res.status}` }
+    }
+
+    const json = await res.json()
+    if (!json.id) {
+      return { success: false, error: 'No ID returned from server' }
+    }
+
+    const stamp = Date.now()
+    for (const run of exportable) {
+      await updateRun(run.id, { exportedAt: stamp })
+    }
+
+    return { success: true, id: json.id }
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error' }
+  }
+}
+

@@ -8,6 +8,7 @@ import {
   reviewMessages,
 } from '../copy/messages'
 import type { RunState, TopicItem } from '../state/types'
+import type { ExportMode } from '../export/exporter'
 import type { AiAnswer } from '../engine/solver'
 import { solveRows } from '../engine/solver'
 import type { MergedRow } from '../engine/types'
@@ -44,7 +45,7 @@ export interface ReviewDetailProps {
   runTopics: TopicItem[] | undefined
   onNavigate: (rowId: string) => void
   onBack: () => void
-  onExport: () => void
+  onExport: (mode: ExportMode, type: 'triviadox' | 'zip') => void
   exported: boolean
   filter: ReviewFilter
 }
@@ -236,8 +237,11 @@ export function ReviewDetail({
             </p>
           ) : null}
           <div className="review-done-actions">
-            <Button onPress={onExport}>
-              {exported ? convertMessages.exportAgain : convertMessages.exportBundle}
+            <Button onPress={() => onExport('with-answers', 'triviadox')}>
+              {exported ? 'Export to Triviadox again' : 'Export to Triviadox'}
+            </Button>
+            <Button onPress={() => onExport('with-answers', 'zip')} variant="secondary">
+              Download ZIP
             </Button>
             <Button onPress={onBack}>{reviewMessages.backToList}</Button>
           </div>
@@ -321,6 +325,76 @@ export function ReviewDetail({
             />
           ) : (
             <>
+              <div className="review__question-header">
+                <div className="review__nav-group">
+                  <Button
+                    isDisabled={currentIndex === 0}
+                    onPress={() => goTo(currentIndex - 1)}
+                    variant="quiet"
+                    aria-label={reviewMessages.previous}
+                    title={reviewMessages.previous}
+                  >
+                    <svg
+                      fill="none"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                      width="16"
+                      height="16"
+                      style={{ marginRight: '4px', display: 'inline-block', verticalAlign: 'middle' }}
+                    >
+                      <path d="M15 19l-7-7 7-7" />
+                    </svg>
+                    <span>{reviewMessages.previous}</span>
+                  </Button>
+                  <Button
+                    isDisabled={currentIndex === orderedRows.length - 1}
+                    onPress={() => goTo(currentIndex + 1)}
+                    variant="quiet"
+                    aria-label={reviewMessages.next}
+                    title={reviewMessages.next}
+                  >
+                    <span>{reviewMessages.next}</span>
+                    <svg
+                      fill="none"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                      width="16"
+                      height="16"
+                      style={{ marginLeft: '4px', display: 'inline-block', verticalAlign: 'middle' }}
+                    >
+                      <path d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Button>
+                </div>
+                <Button
+                  onPress={() => setEditing(true)}
+                  variant="quiet"
+                  aria-label={reviewMessages.edit}
+                  title={reviewMessages.edit}
+                  className="review__edit-btn"
+                >
+                  <svg
+                    fill="none"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                    width="16"
+                    height="16"
+                    style={{ display: 'inline-block', verticalAlign: 'middle' }}
+                  >
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                  </svg>
+                </Button>
+              </div>
               <h3>
                 {displayQuestion}
                 {rowEdit !== undefined ? (
@@ -420,15 +494,6 @@ export function ReviewDetail({
               <div className="review__actions">
                 <Button id={confirmId} isDisabled={selected === undefined} onPress={confirm}>
                   {reviewMessages.confirm}
-                </Button>
-                <Button onPress={() => setEditing(true)} variant="secondary">
-                  {reviewMessages.edit}
-                </Button>
-                <Button isDisabled={currentIndex === 0} onPress={() => goTo(currentIndex - 1)} variant="quiet">
-                  {reviewMessages.previous}
-                </Button>
-                <Button isDisabled={currentIndex === orderedRows.length - 1} onPress={() => goTo(currentIndex + 1)} variant="quiet">
-                  {reviewMessages.next}
                 </Button>
               </div>
             </>
