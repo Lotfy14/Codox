@@ -26,6 +26,54 @@ function evidencePolicy(state: string, region: Region | null) {
   return { type: 'extract_visible_evidence', value: '', needs_review: '' }
 }
 
+// A page footer sits near the bottom edge; stop an extended options box short
+// of it so a page number or running title is never boxed as an option.
+const OPTIONS_FOOTER_LIMIT = 975
+
+/**
+ * Deterministic options-box repair. The BOX role is the weakest model and,
+ * on single-page BOX with gemini-3.1-flash-lite, sometimes draws a row's
+ * options box around only the FIRST option — a sentence-completion stem whose
+ * choices continue below gets clipped to option "a", and the worker faithfully
+ * transcribes just that one region (observed 2026-07-18: options box only ~84
+ * of 1000 tall, one line).
+ *
+ * A question's options always lie between its own prompt and the start of the
+ * next question on the same page, so code — not the model — bounds them here:
+ * grow (never shrink) each row's options box down to the nearest following
+ * prompt/case-stem in the same column, or a footer margin when it is the last
+ * on the page. Column membership is enforced by x-overlap so a neighboring
+ * column's question cannot cap a box early. The box is also widened to the
+ * question's own prompt column so right-shifted or wrapped options are not
+ * clipped horizontally. Never crosses into another question's text: the bound
+ * is that question's top, and a following case stem stops the box before it.
+ */
+function extendClippedOptionBoxes(rows: PlannedRow[]): void {
+  for (const row of rows) {
+    const opts = row.regions.options
+    if (opts === null) continue
+    const [oy0, ox0, oy1, ox1] = opts.box_2d
+    let nextTop = OPTIONS_FOOTER_LIMIT
+    for (const other of rows) {
+      if (other === row) continue
+      for (const region of [other.regions.case_stem, other.regions.question_prompt]) {
+        if (region === null || region.page !== opts.page) continue
+        const [ry0, rx0, , rx1] = region.box_2d
+        const sameColumn = rx1 > ox0 && rx0 < ox1
+        if (ry0 > oy0 && ry0 < nextTop && sameColumn) nextTop = ry0
+      }
+    }
+    const prompt = row.regions.question_prompt
+    const inColumn = prompt !== null && prompt.page === opts.page
+    const newX0 = inColumn ? Math.min(ox0, prompt.box_2d[1]) : ox0
+    const newX1 = inColumn ? Math.max(ox1, prompt.box_2d[3]) : ox1
+    const newY1 = Math.max(oy1, nextTop)
+    if (newY1 !== oy1 || newX0 !== ox0 || newX1 !== ox1) {
+      row.regions.options = { ...opts, box_2d: [oy0, newX0, newY1, newX1] }
+    }
+  }
+}
+
 export function assembleBlueprint(input: AssembleInput): Blueprint {
   const boxed = new Map(input.boxes.questions.map((question) => [question.ref, question]))
   const evidence = new Map(input.evidence.evidence.map((item) => [item.ref, item]))
@@ -86,6 +134,7 @@ export function assembleBlueprint(input: AssembleInput): Blueprint {
       source_pages: question.sourcePages,
     })
   })
+  extendClippedOptionBoxes(rows)
   const assets: BlueprintAsset[] = []
   input.boxes.figures.forEach((figure) => {
     const linkedRowIds = figure.linkedRefs.flatMap((ref) => {
