@@ -228,7 +228,7 @@ export const convertMessages = {
       planner_underextracted:
         'Gemini kept missing questions it had counted on the page, so Codox stopped rather than export an incomplete set.',
       worker_chunk_invalid:
-        'Gemini could not return a valid question set after a repair attempt.',
+        'Gemini could not return a valid question set for any question in this PDF, even after retries on smaller batches.',
       merge_validation_failed:
         'The extracted questions did not pass Codox’s safety checks.',
     }

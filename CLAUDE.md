@@ -124,6 +124,19 @@ accepted on blueprint input so pre-change checkpoints resume unchanged. **Open:
 the external gold gate's case-stem rows must be regenerated to the new format
 before the appendicitis 127/127 comparison is meaningful again.**
 
+*Worker chunk split-retry (owner-approved 2026-07-18):* §1.3's "worker chunk
+retry is exactly one, then stop" no longer stops the run. A chunk that fails
+both attempts bisects into smaller requests (fewer rows, fewer page images —
+a genuinely different request) down to single rows; a row that still fails
+degrades to an all-blank placeholder row that the existing merge gates flag
+(`empty_question`/`incomplete_options`) for Review. `worker_chunk_invalid`
+now fires only when **every** row failed (systemic, not "one bad page").
+Motivation: an EMLE run lost all 89 clean rows because one chunk drew an
+empty (likely safety-blocked) Gemini response twice — an abnormal finish
+reason bypasses the controller's transient empty-response retry, and the
+old path had no fallback. The WORKER prompt and output contract are
+untouched; failure diagnostics now record the finish reason.
+
 *Export projection (owner-approved 2026-07-14):* exported CSVs are a
 column projection of the pinned format (`src/export/export-csv.ts`,
 CODOX_MIGRATION §3.1): `id`/`group_id` never leave the device;

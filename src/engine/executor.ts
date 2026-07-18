@@ -11,7 +11,10 @@
  * Counters: the planner repair round and the worker chunk retry are
  * exactly one each and are consumed only by INVALID CONTENT. Quota,
  * rate-limit, and offline waits are absorbed inside the controller and
- * never touch them.
+ * never touch them. A worker chunk that fails both attempts no longer
+ * stops the run: it bisects into smaller requests (owner-approved
+ * 2026-07-18), and a single row that still fails degrades to a blank
+ * flagged row — "one bad page never crashes a job".
  */
 import { blobToBytes, bytesToBase64 } from '../providers/base64'
 import type { GeminiController } from '../providers/controller'
@@ -76,6 +79,7 @@ import { resolveQuestionReferences } from './reference-resolver'
 import type {
   Blueprint,
   MergedRow,
+  PlannedRow,
   RunStep,
   StopReason,
   WorkerRow,
@@ -826,8 +830,27 @@ async function stepCrops(
 
 // ---------------------------------------------------------------- step 5
 
-/** One chunk failed both attempts — unwinds the concurrent worker pool. */
-class WorkerChunkFailed extends Error {}
+/**
+ * What a row degrades to when the worker could not answer for it at any
+ * granularity: everything blank. NEVER-GUESS — the merge-step gates flag
+ * the emptiness (`empty_question`/`incomplete_options`) so the row reaches
+ * Review pointing at its page instead of killing the other rows' run.
+ */
+export function placeholderWorkerRow(planned: PlannedRow): WorkerRow {
+  return {
+    id: planned.id,
+    group_id: planned.group_id,
+    topic: planned.topic,
+    subtopic: planned.subtopic,
+    year: planned.year,
+    case_stem: '',
+    question: '',
+    options: [],
+    correct_index: '',
+    image_urls: [...planned.image_urls],
+    needs_review: '',
+  }
+}
 
 /**
  * Worker rows the transcription model clearly cut short: the blueprint says
@@ -865,8 +888,13 @@ async function repairUnderTranscribedRows(
   controller: GeminiController,
   workerModel: string,
   signal: AbortSignal | undefined,
+  skipIds: ReadonlySet<string> = new Set(),
 ): Promise<WorkerRow[]> {
-  const brokenIds = underTranscribedRowIds(blueprint, rows)
+  // Rows that already failed their own single-row requests during the chunk
+  // split are not re-asked here — that attempt was just made.
+  const brokenIds = underTranscribedRowIds(blueprint, rows).filter(
+    (id) => !skipIds.has(id),
+  )
   if (brokenIds.length === 0) return rows
   await logEvent({
     scope: 'engine', level: 'info', event: 'engine.worker.repair', runId,
@@ -919,94 +947,189 @@ async function stepWorker(
   // the merged row order identical to the sequential path. Progress counts
   // completions, not positions.
   let chunksCompleted = 0
-  const finishChunk = async (accepted: WorkerRow[]) => {
+  const finishChunk = async <T>(result: T): Promise<T> => {
     chunksCompleted += 1
     await updateRun(runId, { chunksDone: chunksCompleted })
-    return accepted
+    return result
   }
 
-  let chunkResults: WorkerRow[][]
-  try {
-    chunkResults = await mapConcurrent(chunks, CALL_CONCURRENCY, async (chunkRows, chunkIndex) => {
+  /**
+   * One worker request for `rows` — two attempts, the second consumed only
+   * by INVALID CONTENT (or truncation). The raw response is checkpointed
+   * only for whole-chunk requests (`artifactChunkIndex`), where resume can
+   * replay it; split slices are cheap enough to redo.
+   */
+  const requestRows = async (
+    rows: readonly PlannedRow[],
+    label: string,
+    artifactChunkIndex?: number,
+  ): Promise<
+    | { ok: true; rows: WorkerRow[] }
+    | { ok: false; reason?: string; finishReason?: string; rawResponse?: string }
+  > => {
+    const reduced = buildReducedBlueprint(blueprint, rows)
+    const pages = chunkPages(reduced).map((page) => page - 1)
+    const cropPaths = reduced.assets.map((asset) => asset.output_path)
+    const images = [
+      ...(await pageImages(runId, pages)),
+      ...(await cropImages(runId, cropPaths)),
+    ]
+    let previousError: string | undefined
+    let last: { text: string; finishReason?: string } | undefined
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const response = await timed(runId, label, () =>
+        call(
+          controller,
+          runId,
+          buildWorkerRequest(reduced, images, workerModel, previousError),
+          signal,
+        ),
+      )
+      last = response
+      if (artifactChunkIndex !== undefined) {
+        await putArtifact({
+          runId,
+          kind: 'chunk-response',
+          chunkIndex: artifactChunkIndex,
+          text: response.text,
+        })
+      }
+      if (wasTruncated(response.finishReason)) {
+        previousError = 'your response was truncated; return fewer characters'
+        continue
+      }
+      const validation = validateWorkerChunk(response.text, rows)
+      if (validation.ok) return { ok: true, rows: validation.rows }
+      previousError = validation.errors.join('; ')
+    }
+    return {
+      ok: false,
+      reason: previousError,
+      finishReason: last?.finishReason,
+      rawResponse: last?.text,
+    }
+  }
+
+  /**
+   * A failed request bisects instead of stopping the run (owner-approved
+   * 2026-07-18): a smaller slice is a genuinely different request — fewer
+   * rows, fewer page images — which isolates whatever poisoned the batch
+   * (an empty safety-blocked response was observed killing an entire
+   * 89-row run over one chunk). A single row that still fails degrades to
+   * a blank placeholder the merge gates flag for Review. Halves run
+   * sequentially so row order is preserved.
+   */
+  const transcribeSlice = async (
+    chunkRows: readonly PlannedRow[],
+    chunkIndex: number,
+    lo: number,
+    hi: number,
+  ): Promise<{ rows: WorkerRow[]; failedIds: string[]; split: boolean }> => {
+    const slice = chunkRows.slice(lo, hi)
+    const whole = lo === 0 && hi === chunkRows.length
+    const label = whole
+      ? `worker chunk ${chunkIndex + 1}`
+      : `worker chunk ${chunkIndex + 1} rows ${lo + 1}-${hi}`
+    const result = await requestRows(slice, label, whole ? chunkIndex : undefined)
+    if (result.ok) return { rows: result.rows, failedIds: [], split: false }
+    if (slice.length === 1) {
+      // The stop reason alone is undiagnosable from an exported diagnostics
+      // log — record why the row failed and what the model actually
+      // returned (logEvent truncates long strings).
+      await logEvent({
+        scope: 'engine', level: 'error', event: 'engine.worker.row.fail', runId,
+        reason: result.reason,
+        detail: {
+          chunk: chunkIndex + 1, id: slice[0].id,
+          finishReason: result.finishReason, rawResponse: result.rawResponse,
+        },
+      })
+      return {
+        rows: [placeholderWorkerRow(slice[0])],
+        failedIds: [slice[0].id],
+        split: true,
+      }
+    }
+    await logEvent({
+      scope: 'engine', level: 'warn', event: 'engine.worker.chunk.split', runId,
+      reason: result.reason,
+      detail: {
+        chunk: chunkIndex + 1, rows: slice.length,
+        finishReason: result.finishReason, rawResponse: result.rawResponse,
+      },
+    })
+    const mid = lo + Math.ceil(slice.length / 2)
+    const left = await transcribeSlice(chunkRows, chunkIndex, lo, mid)
+    const right = await transcribeSlice(chunkRows, chunkIndex, mid, hi)
+    return {
+      rows: [...left.rows, ...right.rows],
+      failedIds: [...left.failedIds, ...right.failedIds],
+      split: true,
+    }
+  }
+
+  const chunkResults = await mapConcurrent(
+    chunks,
+    CALL_CONCURRENCY,
+    async (chunkRows, chunkIndex) => {
       // Resume: a chunk already answered and validated is not re-sent.
       const cached = byChunk.get(chunkIndex)
       if (cached?.text !== undefined) {
         const replay = validateWorkerChunk(cached.text, chunkRows)
-        if (replay.ok) return finishChunk(replay.rows)
+        if (replay.ok) {
+          return finishChunk({ rows: replay.rows, failedIds: [] as string[] })
+        }
         // Drop only this chunk's stale response — the other chunks' cached
         // responses must survive for the next resume.
         await clearArtifacts(runId, 'chunk-response', chunkIndex)
       }
 
       const reduced = buildReducedBlueprint(blueprint, chunkRows)
-      const pages = chunkPages(reduced).map((page) => page - 1)
-      const cropPaths = reduced.assets.map((asset) => asset.output_path)
-      const images = [
-        ...(await pageImages(runId, pages)),
-        ...(await cropImages(runId, cropPaths)),
-      ]
-
       await putArtifact({
         runId,
         kind: 'chunk-request',
         chunkIndex,
-        json: { reduced, pages, cropPaths, workerModel },
+        json: {
+          reduced,
+          pages: chunkPages(reduced).map((page) => page - 1),
+          cropPaths: reduced.assets.map((asset) => asset.output_path),
+          workerModel,
+        },
       })
 
-      let previousError: string | undefined
-      let lastResponseText: string | undefined
-      let accepted: WorkerRow[] | undefined
-      // Exactly one retry, consumed only by INVALID CONTENT.
-      for (let attempt = 0; attempt < 2 && accepted === undefined; attempt += 1) {
-        const response = await timed(
-          runId,
-          `worker chunk ${chunkIndex + 1}`,
-          () =>
-            call(
-              controller,
-              runId,
-              buildWorkerRequest(reduced, images, workerModel, previousError),
-              signal,
-            ),
-        )
-        lastResponseText = response.text
+      const result = await transcribeSlice(chunkRows, chunkIndex, 0, chunkRows.length)
+      if (result.split) {
+        // The stored raw response is the invalid whole-chunk attempt; replace
+        // it with the assembled outcome so a resume replays instead of
+        // re-spending the split. Placeholder rows replay as-is — they were
+        // already retried at every granularity.
         await putArtifact({
           runId,
           kind: 'chunk-response',
           chunkIndex,
-          text: response.text,
+          text: JSON.stringify({ rows: result.rows }),
         })
-        if (wasTruncated(response.finishReason)) {
-          previousError = 'your response was truncated; return fewer characters'
-          continue
-        }
-        const validation = validateWorkerChunk(response.text, chunkRows)
-        if (validation.ok) {
-          accepted = validation.rows
-        } else {
-          previousError = validation.errors.join('; ')
-        }
       }
+      return finishChunk(result)
+    },
+  )
 
-      if (accepted === undefined) {
-        // The stop reason alone ("worker_chunk_invalid") is undiagnosable from
-        // an exported diagnostics log — record why the chunk failed and what
-        // the model actually returned (logEvent truncates long strings).
-        await logEvent({
-          scope: 'engine', level: 'error', event: 'engine.worker.chunk.fail', runId,
-          reason: previousError, detail: { chunk: chunkIndex + 1, rawResponse: lastResponseText },
-        })
-        throw new WorkerChunkFailed()
-      }
-      return finishChunk(accepted)
+  const flatRows = chunkResults.flatMap((result) => result.rows)
+  const failedIds = new Set(chunkResults.flatMap((result) => result.failedIds))
+  if (failedIds.size > 0) {
+    await logEvent({
+      scope: 'engine', level: 'warn', event: 'engine.worker.rows.failed', runId,
+      detail: { count: failedIds.size, ids: [...failedIds] },
     })
-  } catch (error) {
-    if (error instanceof WorkerChunkFailed) return { ok: false }
-    throw error
+  }
+  // Every row failing every granularity is a systemic provider/content
+  // problem, not "one bad page" — an honest stop beats an all-blank export.
+  if (flatRows.length > 0 && failedIds.size === flatRows.length) {
+    return { ok: false }
   }
 
   const rows = await repairUnderTranscribedRows(
-    runId, blueprint, chunkResults.flat(), controller, workerModel, signal,
+    runId, blueprint, flatRows, controller, workerModel, signal, failedIds,
   )
   return { ok: true, rows }
 }
