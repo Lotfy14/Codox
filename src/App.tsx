@@ -22,6 +22,7 @@ import {
   useApiCoachmarkDismissed,
 } from './state/settings'
 import { useGeminiCredential } from './state/credentials'
+import { archiveFinishedCurrentJobOnStartup } from './state/jobs'
 import { useDailyQuota } from './state/quota'
 import { useStorageEstimate } from './state/storage'
 import { UpdateBanner } from './UpdateBanner.tsx'
@@ -141,6 +142,12 @@ function App() {
 
   useEffect(() => {
     void geminiController.refreshStatus().catch(() => undefined)
+  }, [])
+
+  // Retire a finished conversion into History on load so a reload opens a
+  // clean Convert workspace. A run still in flight is left to resume.
+  useEffect(() => {
+    void archiveFinishedCurrentJobOnStartup().catch(() => undefined)
   }, [])
 
   const hideCoachmark = () => {

@@ -3,9 +3,11 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { addStoredPdf } from './files'
 import {
   archiveCurrentJobAndReset,
+  archiveFinishedCurrentJobOnStartup,
   clearCurrentDraft,
   CURRENT_JOB_ID,
   ensureCurrentJob,
+  resetStartupArchiveForTests,
 } from './jobs'
 import { createRun, putArtifact } from './runs'
 import { db } from './db'
@@ -66,6 +68,49 @@ describe('current workspace lifecycle', () => {
     const archivedId = await archiveCurrentJobAndReset()
 
     expect((await db.files.get(pdfId))?.jobId).toBe(archivedId)
+  })
+
+  it('archives a finished batch on startup so a reload opens clean', async () => {
+    resetStartupArchiveForTests()
+    const pdfId = await addPdf()
+    const runId = await createRun({
+      jobId: CURRENT_JOB_ID,
+      pdfId,
+      fileName: 'exam.pdf',
+      pageCount: 2,
+    })
+    await db.runs.update(runId, { status: 'done' })
+
+    await archiveFinishedCurrentJobOnStartup()
+
+    expect((await db.runs.get(runId))?.jobId).toMatch(/^history-/)
+    expect(await db.runs.where('jobId').equals(CURRENT_JOB_ID).count()).toBe(0)
+  })
+
+  it('leaves an in-flight batch alone so a mid-run reload resumes', async () => {
+    resetStartupArchiveForTests()
+    const pdfId = await addPdf()
+    const runId = await createRun({
+      jobId: CURRENT_JOB_ID,
+      pdfId,
+      fileName: 'exam.pdf',
+      pageCount: 2,
+    })
+    await db.runs.update(runId, { status: 'running' })
+
+    await archiveFinishedCurrentJobOnStartup()
+
+    expect((await db.runs.get(runId))?.jobId).toBe(CURRENT_JOB_ID)
+  })
+
+  it('does nothing when the workspace has no runs', async () => {
+    resetStartupArchiveForTests()
+    await addPdf()
+
+    await archiveFinishedCurrentJobOnStartup()
+
+    expect(await db.jobs.count()).toBe(1)
+    expect(await db.files.count()).toBe(1)
   })
 
   it('clears an unstarted draft without creating a history job', async () => {

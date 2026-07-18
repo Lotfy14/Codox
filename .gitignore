@@ -33,6 +33,10 @@ test-results/
 input/
 output/
 scratch/
+# Exported diagnostics logs and Triviadox/ZIP bundles land in the repo root
+# when the app runs from here — they are user run data, never repo content.
+codox-diagnostics_*.json
+*Cx.zip
 
 # wrangler files
 .wrangler

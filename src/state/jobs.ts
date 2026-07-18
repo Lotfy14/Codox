@@ -1,4 +1,5 @@
 import { db } from './db'
+import { isBatchRunning } from '../engine/progress'
 import type { JobState } from './types'
 
 export const CURRENT_JOB_ID = 'current'
@@ -64,6 +65,35 @@ export async function archiveCurrentJobAndReset(): Promise<string | null> {
     await db.jobs.put(freshCurrentJob())
     return archivedId
   })
+}
+
+let startupArchive: Promise<void> | undefined
+
+/**
+ * Startup housekeeping (owner-approved 2026-07-18): a reload should open a
+ * clean Convert workspace, not the finished conversion's done screen. If the
+ * current workspace holds a batch that is over (every run done or stopped),
+ * retire it into History exactly like "Convert another" and open a fresh one.
+ *
+ * A batch still running or paused is left completely untouched — the resume
+ * path in useConversion (`findResumableRuns`) owns it, and a mid-run reload
+ * must pick up where it left off rather than lose progress. `isBatchRunning`
+ * is true for exactly the runs the resumer claims, so the two never touch the
+ * same batch. The promise is memoized so React StrictMode's double-invoked
+ * startup effect can't archive the same finished batch twice.
+ */
+export function archiveFinishedCurrentJobOnStartup(): Promise<void> {
+  startupArchive ??= (async () => {
+    const runs = await db.runs.where('jobId').equals(CURRENT_JOB_ID).toArray()
+    if (runs.length === 0 || isBatchRunning(runs)) return
+    await archiveCurrentJobAndReset()
+  })()
+  return startupArchive
+}
+
+/** Test-only: forget the memoized startup archive so a fresh load can re-run it. */
+export function resetStartupArchiveForTests(): void {
+  startupArchive = undefined
 }
 
 /** Clears an unstarted draft and resets its options without creating history. */
