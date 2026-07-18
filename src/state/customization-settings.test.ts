@@ -26,6 +26,7 @@ describe('customization settings', () => {
       debugConsole: true,
       boxPagesPerCall: 4,
       workerChunkSize: 5,
+      matchingMode: 'skip',
     })
     expect(await getCustomizationSettings()).toEqual({
       yearMode: 'ai',
@@ -34,6 +35,7 @@ describe('customization settings', () => {
       debugConsole: true,
       boxPagesPerCall: 4,
       workerChunkSize: 5,
+      matchingMode: 'skip',
     })
   })
 
@@ -55,6 +57,10 @@ describe('customization settings', () => {
       debugConsole: DEFAULT_CUSTOMIZATION_SETTINGS.debugConsole,
       boxPagesPerCall: DEFAULT_CUSTOMIZATION_SETTINGS.boxPagesPerCall,
       workerChunkSize: DEFAULT_CUSTOMIZATION_SETTINGS.workerChunkSize,
+      // Absent from the stored row entirely — an install that predates the
+      // setting migrates to the 'split' default rather than to a mode that
+      // would silently drop the tutor's questions.
+      matchingMode: DEFAULT_CUSTOMIZATION_SETTINGS.matchingMode,
     })
   })
 

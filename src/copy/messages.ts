@@ -295,6 +295,14 @@ export const customizeMessages = {
     'How many questions are transcribed in each request. Smaller batches keep every answer complete — the transcription model can drop options when a request grows long — while larger batches spend fewer requests. 6 is the default; lower it if some questions come back missing options.',
   workerOption: (count: number) =>
     count === 6 ? '6 questions (default)' : `${count} questions`,
+  matchingPanelLabel: 'Matching questions',
+  matchingLegend: 'Matching questions',
+  matchingSplit: 'Split into single questions',
+  matchingSplitHint:
+    'Each item in a matching question becomes its own question, using the printed choices word for word. Codox never fills in which choice goes with which item — every split question arrives blank for you to answer in Review.',
+  matchingSkip: 'Leave them out',
+  matchingSkipHint:
+    'Matching questions are dropped from the finished set. Everything else converts as usual.',
 } as const
 
 export const debugMessages = {

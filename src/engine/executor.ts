@@ -76,6 +76,8 @@ import { mergeRows, validateWorkerChunk } from './merge'
 import { stripEnumerationLabels, stripTableBlock } from './normalize'
 import { parseAuditReport, validateFinalRows } from './validate'
 import { resolveQuestionReferences } from './reference-resolver'
+import { applyMatchingPolicy } from './matching'
+import type { MatchingMode } from '../state/customization-settings'
 import type {
   Blueprint,
   MergedRow,
@@ -102,6 +104,11 @@ export interface ExecutorOptions {
    * 1 (default) keeps the per-page pass; higher spends fewer requests.
    */
   boxPagesPerCall?: number
+  /**
+   * Customize's "Matching questions", default 'split'. Spends a request only
+   * when a row's text actually mentions matching or pairing.
+   */
+  matchingMode?: MatchingMode
 }
 
 export type RunOutcome =
@@ -1148,6 +1155,7 @@ export async function executeRun(
 ): Promise<RunOutcome> {
   const controller = options.controller ?? geminiController
   const chunkSize = options.chunkSize ?? 10
+  const matchingMode = options.matchingMode ?? 'split'
   const { signal } = options
 
   await updateRun(runId, { status: 'running' })
@@ -1262,7 +1270,7 @@ export async function executeRun(
 
     // 7 — final validation + CSV emit. A failure still writes the CSV.
     await updateRun(runId, { step: 'emit', stepStartedAt: Date.now() })
-    const csv = await timed(runId, 'emit', async () => {
+    let csv = await timed(runId, 'emit', async () => {
       const final = validateFinalRows(rows, blueprint, producedCrops)
       if (!final.ok) notSafeToImport = true
       return emitCsv(rows)
@@ -1322,7 +1330,21 @@ export async function executeRun(
       detail: { auditUnavailable, notSafeToImport },
     })
 
-    const flaggedRows = rows.filter((row) => row.needs_review !== '').length
+    // 9 — matching-question policy (Customize). Deliberately after the audit:
+    // a matching row changes the row count, so running it earlier would break
+    // the blueprint-to-rows 1:1 that validation and the audit gate depend on.
+    // Here the rows have already been verified against the source pages, and
+    // this pass only re-shapes text that was verified verbatim.
+    const finalRows = await timed(runId, 'matching', () =>
+      applyMatchingPolicy(rows, matchingMode, controller, runId, signal),
+    )
+    if (finalRows !== rows) {
+      await putArtifact({ runId, kind: 'merged-rows', json: finalRows })
+      csv = emitCsv(finalRows)
+      await putArtifact({ runId, kind: 'csv', text: csv })
+    }
+
+    const flaggedRows = finalRows.filter((row) => row.needs_review !== '').length
     await updateRun(runId, {
       status: 'done',
       step: 'audit',
@@ -1332,7 +1354,7 @@ export async function executeRun(
     })
     await logEvent({
       scope: 'engine', level: notSafeToImport ? 'warn' : 'info', event: 'engine.done', runId,
-      detail: { rows: rows.length, flaggedRows, notSafeToImport },
+      detail: { rows: finalRows.length, flaggedRows, notSafeToImport },
     })
     return { status: 'done', runId, csv, flaggedRows, notSafeToImport }
   } catch (error) {

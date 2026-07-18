@@ -17,6 +17,15 @@ export type TopicsMode = 'off' | 'on'
 /** Where the Export button sends the finished set. */
 export type ExportTarget = 'triviadox' | 'zip'
 
+/**
+ * What to do with a true matching question — one row whose answer is a set
+ * of pairings, which a single-`correct_index` Triviadox row cannot carry.
+ * 'split' (the default) emits one MCQ per left-column item with the right
+ * column as its options; 'skip' drops the row. There is deliberately no
+ * "ship it as printed" mode: such a row can never be imported as it stands.
+ */
+export type MatchingMode = 'skip' | 'split'
+
 export interface CustomizationSettings {
   yearMode: YearMode
   topicsMode: TopicsMode
@@ -37,6 +46,12 @@ export interface CustomizationSettings {
    * — full transcription at a modest request count.
    */
   workerChunkSize: number
+  /**
+   * How matching questions are handled after extraction. Defaults to
+   * 'split'. Costs one extra request per run, and only when a row's text
+   * actually mentions matching or pairing.
+   */
+  matchingMode: MatchingMode
 }
 
 export const BOX_PAGES_MIN = 1
@@ -59,11 +74,13 @@ export const DEFAULT_CUSTOMIZATION_SETTINGS: CustomizationSettings = {
   debugConsole: false,
   boxPagesPerCall: BOX_PAGES_MIN,
   workerChunkSize: 6,
+  matchingMode: 'split',
 }
 
 const YEAR_MODES: readonly YearMode[] = ['off', 'type', 'ai']
 const TOPICS_MODES: readonly TopicsMode[] = ['off', 'on']
 const EXPORT_TARGETS: readonly ExportTarget[] = ['triviadox', 'zip']
+const MATCHING_MODES: readonly MatchingMode[] = ['skip', 'split']
 
 function narrow(value: string | undefined): CustomizationSettings {
   if (value === undefined) return DEFAULT_CUSTOMIZATION_SETTINGS
@@ -97,6 +114,9 @@ function narrow(value: string | undefined): CustomizationSettings {
         parsed.workerChunkSize <= WORKER_CHUNK_MAX
           ? parsed.workerChunkSize
           : DEFAULT_CUSTOMIZATION_SETTINGS.workerChunkSize,
+      matchingMode: MATCHING_MODES.includes(parsed.matchingMode as MatchingMode)
+        ? (parsed.matchingMode as MatchingMode)
+        : DEFAULT_CUSTOMIZATION_SETTINGS.matchingMode,
     }
   } catch {
     return DEFAULT_CUSTOMIZATION_SETTINGS

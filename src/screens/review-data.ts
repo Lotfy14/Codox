@@ -8,6 +8,7 @@
  */
 import { useLiveQuery } from 'dexie-react-hooks'
 import { assetJpegPath } from '../engine/blueprint'
+import { parentRowId } from '../engine/matching'
 import type { Blueprint, Box2d, MergedRow, PlannedRow } from '../engine/types'
 import type { AiAnswer } from '../engine/solver'
 import { db } from '../state/db'
@@ -94,7 +95,11 @@ function sourceRegion(
   plannedRows: ReadonlyMap<string, PlannedRow>,
   rowId: string,
 ): { pageIndex: number | null; box: Box2d | null } {
-  const planned = plannedRows.get(rowId)
+  // A split matching row (`12~m2`) has no blueprint entry of its own — it
+  // came out of row `12` after the audit — so fall back to its parent's
+  // region. Without this the tutor loses the source crop on exactly the
+  // rows that most need checking.
+  const planned = plannedRows.get(rowId) ?? plannedRows.get(parentRowId(rowId))
   if (planned === undefined) return { pageIndex: null, box: null }
   const regions = [
     planned.regions.question_prompt,

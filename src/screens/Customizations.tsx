@@ -15,6 +15,7 @@ import {
   saveCustomizationSettings,
   useCustomizationSettings,
   type ExportTarget,
+  type MatchingMode,
   type TopicsMode,
 } from '../state/customization-settings'
 import type { YearMode } from '../state/types'
@@ -65,6 +66,19 @@ const WORKER_CHUNK_OPTIONS: readonly SelectOption<number>[] = Array.from(
     return { id: count, label: customizeMessages.workerOption(count) }
   },
 )
+
+const MATCHING_OPTIONS: readonly ChoiceOption<MatchingMode>[] = [
+  {
+    value: 'split',
+    label: customizeMessages.matchingSplit,
+    hint: customizeMessages.matchingSplitHint,
+  },
+  {
+    value: 'skip',
+    label: customizeMessages.matchingSkip,
+    hint: customizeMessages.matchingSkipHint,
+  },
+]
 
 const TOPICS_OPTIONS: readonly ChoiceOption<TopicsMode>[] = [
   {
@@ -131,6 +145,20 @@ export function Customizations() {
             }
             options={YEAR_OPTIONS}
             value={settings.yearMode}
+          />
+        </GlassPanel>
+        <GlassPanel
+          aria-label={customizeMessages.matchingPanelLabel}
+          as="section"
+          padding="compact"
+        >
+          <ChoiceGroup
+            legend={customizeMessages.matchingLegend}
+            onChange={(matchingMode) =>
+              void saveCustomizationSettings({ ...settings, matchingMode })
+            }
+            options={MATCHING_OPTIONS}
+            value={settings.matchingMode}
           />
         </GlassPanel>
         <GlassPanel

@@ -137,6 +137,31 @@ reason bypasses the controller's transient empty-response retry, and the
 old path had no fallback. The WORKER prompt and output contract are
 untouched; failure diagnostics now record the finish reason.
 
+*Matching-question policy (owner-approved 2026-07-18):* a true matching
+question — one row whose answer is a set of pairings — cannot be carried by a
+single-`correct_index` Triviadox row. Customize's **"Matching questions"**
+setting picks what happens to it: `split` (**default** — one MCQ per
+left-column item, options = the right column verbatim) or `skip` (drop the
+row). There is deliberately **no "ship it as printed" mode** (owner call): a
+matching row can never be imported as it stands, so leaving it intact was
+never a real outcome. Cost: one extra request per run, and only when some
+row's text actually mentions matching or pairing — the keyword gate keeps
+ordinary exams free. `src/engine/matching.ts` is new
+surface **outside the engine path**, solver-style: it runs *after* the audit
+gate, so `validateFinalRows` and the audit still see the engine's rows 1:1
+against the pinned blueprint — only post-audit rows are reshaped. The three
+pinned prompts, the blueprint, and the output contract are untouched. The
+model's only job is to name the matching rows and separate the two columns;
+deterministic code writes every word of the split row's wrapper and **rejects
+any span that is not verbatim in the source row** (`verbatimIn`), so this is
+re-shaping, never authorship. Split rows always ship a blank `correct_index`
+with a review flag — NEVER-GUESS holds: the pairing was never read off the
+page, so it is never invented. Any failure (no candidates, dead call,
+unusable response) returns the engine's rows untouched. Split ids are
+`{parentId}~m{n}`; `parentRowId` lets Review resolve a split row back to its
+parent's source region. Extended-matching stems (one stem, shared option
+bank) are explicitly *not* matching questions and are left alone.
+
 *Export projection (owner-approved 2026-07-14):* exported CSVs are a
 column projection of the pinned format (`src/export/export-csv.ts`,
 CODOX_MIGRATION §3.1): `id`/`group_id` never leave the device;
