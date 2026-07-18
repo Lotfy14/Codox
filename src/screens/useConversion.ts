@@ -154,6 +154,7 @@ export function useConversion(jobId: string): ConversionState {
               answerKeyBytes: item.answerKey?.bytes,
               answerKeyPageCount: item.answerKey?.pageCount,
               boxPagesPerCall: settings.boxPagesPerCall,
+              chunkSize: settings.workerChunkSize,
             })
             setOutcomes((previous) => [...previous, outcome])
             // Label the finished run against the user's topic list before

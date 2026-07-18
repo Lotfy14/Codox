@@ -30,10 +30,20 @@ export interface CustomizationSettings {
    * requests on big exams at some cost in box accuracy.
    */
   boxPagesPerCall: number
+  /**
+   * Questions the worker transcribes per request. Smaller chunks keep each
+   * response short so the weakest model does not abbreviate the later rows
+   * (dropping options); larger chunks spend fewer requests. 6 is the default
+   * — full transcription at a modest request count.
+   */
+  workerChunkSize: number
 }
 
 export const BOX_PAGES_MIN = 1
 export const BOX_PAGES_MAX = 10
+
+export const WORKER_CHUNK_MIN = 3
+export const WORKER_CHUNK_MAX = 12
 
 const SETTINGS_KEY = 'customizationSettings'
 
@@ -48,6 +58,7 @@ export const DEFAULT_CUSTOMIZATION_SETTINGS: CustomizationSettings = {
   exportTarget: 'triviadox',
   debugConsole: false,
   boxPagesPerCall: BOX_PAGES_MIN,
+  workerChunkSize: 6,
 }
 
 const YEAR_MODES: readonly YearMode[] = ['off', 'type', 'ai']
@@ -79,6 +90,13 @@ function narrow(value: string | undefined): CustomizationSettings {
         parsed.boxPagesPerCall <= BOX_PAGES_MAX
           ? parsed.boxPagesPerCall
           : DEFAULT_CUSTOMIZATION_SETTINGS.boxPagesPerCall,
+      workerChunkSize:
+        typeof parsed.workerChunkSize === 'number' &&
+        Number.isInteger(parsed.workerChunkSize) &&
+        parsed.workerChunkSize >= WORKER_CHUNK_MIN &&
+        parsed.workerChunkSize <= WORKER_CHUNK_MAX
+          ? parsed.workerChunkSize
+          : DEFAULT_CUSTOMIZATION_SETTINGS.workerChunkSize,
     }
   } catch {
     return DEFAULT_CUSTOMIZATION_SETTINGS

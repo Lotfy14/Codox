@@ -289,6 +289,12 @@ export const customizeMessages = {
     'How many pages each box-drawing request covers during conversion. 1 is the default and most accurate. Higher values spend fewer requests on big exams — useful against the daily free limit — but box accuracy can drop, so raise this only if you keep running out of quota.',
   boxOption: (count: number) =>
     count === 1 ? '1 page (default)' : `${count} pages`,
+  workerPanelLabel: 'Worker requests',
+  workerLabel: 'Questions per worker request',
+  workerHint:
+    'How many questions are transcribed in each request. Smaller batches keep every answer complete — the transcription model can drop options when a request grows long — while larger batches spend fewer requests. 6 is the default; lower it if some questions come back missing options.',
+  workerOption: (count: number) =>
+    count === 6 ? '6 questions (default)' : `${count} questions`,
 } as const
 
 export const debugMessages = {

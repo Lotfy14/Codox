@@ -25,6 +25,7 @@ describe('customization settings', () => {
       exportTarget: 'zip',
       debugConsole: true,
       boxPagesPerCall: 4,
+      workerChunkSize: 5,
     })
     expect(await getCustomizationSettings()).toEqual({
       yearMode: 'ai',
@@ -32,6 +33,7 @@ describe('customization settings', () => {
       exportTarget: 'zip',
       debugConsole: true,
       boxPagesPerCall: 4,
+      workerChunkSize: 5,
     })
   })
 
@@ -43,6 +45,7 @@ describe('customization settings', () => {
         topicsMode: 'off',
         exportTarget: 'ftp',
         boxPagesPerCall: 99,
+        workerChunkSize: 99,
       }),
     })
     expect(await getCustomizationSettings()).toEqual({
@@ -51,6 +54,7 @@ describe('customization settings', () => {
       exportTarget: DEFAULT_CUSTOMIZATION_SETTINGS.exportTarget,
       debugConsole: DEFAULT_CUSTOMIZATION_SETTINGS.debugConsole,
       boxPagesPerCall: DEFAULT_CUSTOMIZATION_SETTINGS.boxPagesPerCall,
+      workerChunkSize: DEFAULT_CUSTOMIZATION_SETTINGS.workerChunkSize,
     })
   })
 

@@ -829,6 +829,73 @@ async function stepCrops(
 /** One chunk failed both attempts — unwinds the concurrent worker pool. */
 class WorkerChunkFailed extends Error {}
 
+/**
+ * Worker rows the transcription model clearly cut short: the blueprint says
+ * the question has options, but fewer than two came back. No multiple-choice
+ * item — not even True/False — has one option, so <2 is an unambiguous
+ * under-transcription (the weakest model abbreviating a long chunk), never a
+ * genuinely short question. Partial drops (3–4 of 5) are indistinguishable
+ * from real short questions and are left to the chunk-size lever, not guessed.
+ */
+export function underTranscribedRowIds(
+  blueprint: Blueprint,
+  rows: readonly WorkerRow[],
+): string[] {
+  const hasOptions = new Set(
+    blueprint.planned_rows
+      .filter((row) => row.regions.options !== null)
+      .map((row) => row.id),
+  )
+  return rows
+    .filter((row) => hasOptions.has(row.id) && row.options.length < 2)
+    .map((row) => row.id)
+}
+
+/**
+ * Re-asks each under-transcribed row on its own. A single-row request keeps
+ * the worker's output short, so its options come back whole; the fuller result
+ * replaces the clipped one (never a shorter one — a re-ask that came back worse
+ * is discarded). Rows still short afterward are left untouched and flagged
+ * downstream, never silently shipped.
+ */
+async function repairUnderTranscribedRows(
+  runId: string,
+  blueprint: Blueprint,
+  rows: WorkerRow[],
+  controller: GeminiController,
+  workerModel: string,
+  signal: AbortSignal | undefined,
+): Promise<WorkerRow[]> {
+  const brokenIds = underTranscribedRowIds(blueprint, rows)
+  if (brokenIds.length === 0) return rows
+  await logEvent({
+    scope: 'engine', level: 'info', event: 'engine.worker.repair', runId,
+    detail: { count: brokenIds.length, ids: brokenIds },
+  })
+  const plannedById = new Map(blueprint.planned_rows.map((row) => [row.id, row]))
+  const byId = new Map(rows.map((row) => [row.id, row]))
+  await mapConcurrent(brokenIds, CALL_CONCURRENCY, async (id) => {
+    const planned = plannedById.get(id)
+    const current = byId.get(id)
+    if (planned === undefined || current === undefined) return
+    const reduced = buildReducedBlueprint(blueprint, [planned])
+    const images = [
+      ...(await pageImages(runId, chunkPages(reduced).map((page) => page - 1))),
+      ...(await cropImages(runId, reduced.assets.map((asset) => asset.output_path))),
+    ]
+    const response = await timed(runId, `worker repair ${id}`, () =>
+      call(controller, runId, buildWorkerRequest(reduced, images, workerModel), signal),
+    )
+    if (wasTruncated(response.finishReason)) return
+    const validation = validateWorkerChunk(response.text, [planned])
+    if (validation.ok && validation.rows[0] !== undefined &&
+        validation.rows[0].options.length > current.options.length) {
+      byId.set(id, validation.rows[0])
+    }
+  })
+  return rows.map((row) => byId.get(row.id) ?? row)
+}
+
 async function stepWorker(
   runId: string,
   blueprint: Blueprint,
@@ -938,7 +1005,10 @@ async function stepWorker(
     throw error
   }
 
-  return { ok: true, rows: chunkResults.flat() }
+  const rows = await repairUnderTranscribedRows(
+    runId, blueprint, chunkResults.flat(), controller, workerModel, signal,
+  )
+  return { ok: true, rows }
 }
 
 // ---------------------------------------------------------------- the run
@@ -1012,8 +1082,20 @@ export async function executeRun(
       resolveQuestionReferences(merged.rows, controller, runId, signal),
     )
 
+    // Options-bearing rows the worker (and its repair re-ask) still returned
+    // with a single option: an unambiguous transcription defect. Flag them so a
+    // one-option question is surfaced for review, never shipped silently — this
+    // matters most for answered exams, where the row would otherwise carry a
+    // real correct_index and pass unflagged.
+    const optionsPresentIds = new Set(
+      blueprint.planned_rows
+        .filter((planned) => planned.regions.options !== null)
+        .map((planned) => planned.id),
+    )
     const rows: MergedRow[] = resolvedRows.map((row) => {
       const normalized = stripEnumerationLabels(row.options)
+      const incompleteOptions =
+        optionsPresentIds.has(row.id) && normalized.options.length < 2
       // `question` was assembled and label-stripped deterministically at merge
       // (case_stem + prompt, §2.2). When the row carries a figure crop that
       // actually rendered, drop a linearized GFM table from the stem: the table
@@ -1032,9 +1114,13 @@ export async function executeRun(
         ...row,
         question,
         options: normalized.options,
-        // An existing flag wins; otherwise flag empties, then ambiguous labels.
-        needs_review:
-          row.needs_review !== ''
+        // A one-option row is the most urgent defect (the tutor must restore
+        // the choices), so it wins over an existing policy flag; then empties,
+        // then ambiguous labels. The blank-answer flag re-surfaces on its own
+        // (correct_index stays empty), so nothing is lost.
+        needs_review: incompleteOptions
+          ? 'incomplete_options'
+          : row.needs_review !== ''
             ? row.needs_review
             : emptyQuestion
               ? 'empty_question'
