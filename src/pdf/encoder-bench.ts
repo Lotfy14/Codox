@@ -141,18 +141,27 @@ async function measure(
  * candidates can take tens of seconds and a frozen-looking panel reads as a
  * crash.
  */
+type Candidate = [string, (bitmap: PageBitmap) => Promise<Blob>]
+
+const offscreenCandidate: Candidate = [
+  'OffscreenCanvas (current)',
+  encodeViaOffscreenCanvas,
+]
+
 export async function benchmarkEncoders(
   onResult?: (result: EncoderResult) => void,
 ): Promise<EncoderResult[]> {
   const bitmap = makePageBitmap()
   const results: EncoderResult[] = []
 
-  const candidates: Array<[string, (b: PageBitmap) => Promise<Blob>]> = [
+  const candidates: Candidate[] = [
+    // OffscreenCanvas is absent in older WebViews; the app falls back to a
+    // DOM canvas there, so only measure it where it actually exists.
     ...(typeof OffscreenCanvas !== 'undefined'
-      ? ([['OffscreenCanvas (current)', encodeViaOffscreenCanvas]] as const)
+      ? [offscreenCandidate]
       : []),
     ['HTMLCanvasElement', encodeViaDomCanvas],
-    ['MozJPEG / WASM', (b) => bitmapToJpegViaWasm(b)],
+    ['MozJPEG / WASM', (bitmap) => bitmapToJpegViaWasm(bitmap)],
   ]
 
   if (typeof OffscreenCanvas === 'undefined') {
