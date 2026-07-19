@@ -5,6 +5,11 @@ import { Button, Toggle } from '../design/components'
 import { diagnosticsMessages } from '../copy/messages'
 import { clearEvents, exportEventsBlob, listEvents } from '../state/diagnostics'
 import { db } from '../state/db'
+import {
+  benchmarkEncoders,
+  formatEncoderResult,
+  type EncoderResult,
+} from '../pdf/encoder-bench'
 import type { LogEvent } from '../state/types'
 
 interface RunGroup {
@@ -62,6 +67,21 @@ export function DiagnosticsContent() {
   const runs = useLiveQuery(() => db.runs.toArray(), []) ?? []
   const [problemsOnly, setProblemsOnly] = useState(false)
   const [selected, setSelected] = useState<ReadonlySet<number>>(new Set())
+  // DIAGNOSTIC (2026-07-19): encoder benchmark, see src/pdf/encoder-bench.ts.
+  const [benchResults, setBenchResults] = useState<EncoderResult[]>([])
+  const [benchRunning, setBenchRunning] = useState(false)
+
+  const runBenchmark = async () => {
+    setBenchResults([])
+    setBenchRunning(true)
+    try {
+      await benchmarkEncoders((result) => {
+        setBenchResults((previous) => [...previous, result])
+      })
+    } finally {
+      setBenchRunning(false)
+    }
+  }
 
   const runNames = new Map(runs.map((run) => [run.id, run.fileName]))
   const shown = problemsOnly
@@ -116,6 +136,33 @@ export function DiagnosticsContent() {
 
   return (
     <div className="ds-stack ds-diagnostics">
+      {/* DIAGNOSTIC (2026-07-19): remove with src/pdf/encoder-bench.ts once the
+          Android encoder choice is settled. */}
+      <section className="ds-diagnostics__day">
+        <div className="ds-diagnostics__day-head">
+          <h3 className="ds-diagnostics__day-title">Image encoder benchmark</h3>
+        </div>
+        <p className="ds-muted">
+          Measures how fast this device encodes one page image. Used to diagnose
+          slow conversions; runs entirely on your device and sends nothing.
+        </p>
+        <Button
+          isDisabled={benchRunning}
+          onPress={() => void runBenchmark()}
+          variant="secondary"
+        >
+          {benchRunning ? 'Measuring…' : 'Run benchmark'}
+        </Button>
+        {benchResults.length > 0 ? (
+          <ul className="ds-diagnostics__list">
+            {benchResults.map((result) => (
+              <li className="ds-diagnostics__row" key={result.name}>
+                {formatEncoderResult(result)}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
       <div className="ds-diagnostics__actions">
         <Toggle
           isSelected={problemsOnly}

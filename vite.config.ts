@@ -10,6 +10,10 @@ export default defineConfig({
   // it must build as an ES module. pdf.js also always creates its worker with
   // { type: 'module' }, so this is the format it expects.
   worker: { format: 'es' },
+  // @jsquash/jpeg ships Emscripten glue that fetches its .wasm relative to
+  // import.meta.url. Vite's dep optimizer rewrites that and breaks the load
+  // ("Failed to construct 'URL'"), so the package must stay unbundled.
+  optimizeDeps: { exclude: ['@jsquash/jpeg'] },
   define: {
     // CI stamps VERSION (0.0.<run>) into the build so the Android banner can
     // compare it against the newest GitHub release; package.json for dev.
