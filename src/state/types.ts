@@ -74,6 +74,12 @@ export interface RunState {
   badPages?: number[]
   /** Non-fatal planner findings; successful rows are still kept. */
   planningIssues?: PlanningIssue[]
+  /**
+   * DIAGNOSTIC (2026-07-19): cumulative ms per render stage, shown in the
+   * progress panel. Remove with src/pdf/timing.ts once the Android-vs-web
+   * render gap is pinned down.
+   */
+  stageMs?: Partial<Record<string, number>>
   /** Progress counters — persisted, so a reload redraws the same bars. */
   pageCount?: number
   pagesRendered?: number

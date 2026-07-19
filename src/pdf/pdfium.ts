@@ -7,6 +7,7 @@
 import { PDFiumLibrary } from '@hyzyla/pdfium'
 import pdfiumWasmUrl from '@hyzyla/pdfium/pdfium.wasm?url'
 import type { PageBitmap, PageFailure } from './types'
+import type { StageTimer } from './timing'
 
 /** Pinned reference render DPI (CODOX_MIGRATION.md parameters table). */
 export const RENDER_DPI = 200
@@ -14,17 +15,8 @@ export const RENDER_DPI = 200
 /** PDF user-space units are points, 72 per inch. */
 const PDF_POINTS_PER_INCH = 72
 
-/**
- * Destroy + re-init the WASM library after this many pages.
- *
- * DIAGNOSTIC BUILD (2026-07-19) — temporarily raised from 8 so a run never
- * re-inits, to test whether Android's slowness is the per-init WASM compile.
- * Capacitor serves assets through `shouldInterceptRequest`, whose synthetic
- * responses likely miss WebView's WASM code cache, so each init may pay a
- * full 4 MB compile that the web app gets for free. REVERT TO 8 — this
- * disables the native-heap safety net on exactly the long runs it guards.
- */
-export const REINIT_EVERY_PAGES = 10_000
+/** Destroy + re-init the WASM library after this many pages. */
+export const REINIT_EVERY_PAGES = 8
 
 export function scaleForDpi(dpi: number): number {
   return dpi / PDF_POINTS_PER_INCH
@@ -90,6 +82,8 @@ export interface RenderPagesOptions {
   dpi?: number
   reinitEvery?: number
   signal?: AbortSignal
+  /** DIAGNOSTIC: accumulates per-stage timings when supplied. */
+  timer?: StageTimer
 }
 
 export interface RenderPagesResult {
@@ -112,8 +106,15 @@ export async function forEachRenderedPage(
   const scale = scaleForDpi(options.dpi ?? RENDER_DPI)
   const reinitEvery = Math.max(1, options.reinitEvery ?? REINIT_EVERY_PAGES)
   const failures: PageFailure[] = []
+  const timer = options.timer
+  // DIAGNOSTIC: `init` isolates the WASM instantiation + document parse that
+  // each re-init pays, `render` the pdfium raster itself.
+  const open = () =>
+    timer === undefined
+      ? openSession(bytes)
+      : timer.time('init', () => openSession(bytes))
 
-  let session = await openSession(bytes)
+  let session = await open()
   try {
     const pageCount = session.document.getPageCount()
     for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
@@ -121,7 +122,7 @@ export async function forEachRenderedPage(
 
       if (pageIndex > 0 && pageIndex % reinitEvery === 0) {
         closeSession(session)
-        session = await openSession(bytes)
+        session = await open()
       }
 
       let rendered: Awaited<
@@ -129,7 +130,9 @@ export async function forEachRenderedPage(
       >
       try {
         const page = session.document.getPage(pageIndex)
-        rendered = await page.render({ scale, render: 'bitmap' })
+        const draw = () => page.render({ scale, render: 'bitmap' })
+        rendered =
+          timer === undefined ? await draw() : await timer.time('render', draw)
       } catch (error) {
         // One bad page never crashes a job — flag it and continue.
         failures.push({

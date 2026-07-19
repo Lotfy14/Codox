@@ -22,6 +22,7 @@ import { geminiController } from '../providers/controller'
 import type { ProviderFailureCode, VisionResult } from '../providers/types'
 import { cropJpeg } from '../pdf/images'
 import { processPdf } from '../pdf/pipeline'
+import { createStageTimer } from '../pdf/timing'
 import {
   clearArtifacts,
   getArtifact,
@@ -317,6 +318,9 @@ async function stepRender(
   let renderedCount = 0
   let examRenderedCount = 0
   const badPages: number[] = []
+  // DIAGNOSTIC (2026-07-19): per-stage timings, persisted so the progress
+  // panel can show where a slow device is actually spending the time.
+  const timer = createStageTimer()
   const renderDocument = async (
     bytes: Uint8Array,
     pageOffset: number,
@@ -325,29 +329,32 @@ async function stepRender(
     const result = await processPdf(bytes, async (page) => {
       const pageIndex = pageOffset + page.pageIndex
       // Persist as it streams: never hold all pages in JS memory.
-      await putArtifact({
-        runId,
-        kind: 'page-jpeg',
-        pageIndex,
-        width: page.width,
-        height: page.height,
-        bytes: await blobToBytes(page.jpeg),
-      })
-      if (page.text !== '') {
+      await timer.time('store', async () => {
         await putArtifact({
           runId,
-          kind: 'page-text',
+          kind: 'page-jpeg',
           pageIndex,
-          text: page.text,
+          width: page.width,
+          height: page.height,
+          bytes: await blobToBytes(page.jpeg),
         })
-      }
+        if (page.text !== '') {
+          await putArtifact({
+            runId,
+            kind: 'page-text',
+            pageIndex,
+            text: page.text,
+          })
+        }
+      })
       renderedCount += 1
       if (isExam) examRenderedCount += 1
       await updateRun(runId, {
         pageCount: expectedTotal ?? pageOffset + page.pageCount,
         pagesRendered: renderedCount,
+        stageMs: timer.totals(),
       })
-    }, { dpi: options.dpi, signal: options.signal })
+    }, { dpi: options.dpi, signal: options.signal, timer })
     badPages.push(
       ...result.failures.map((failure) => pageOffset + failure.pageIndex),
     )

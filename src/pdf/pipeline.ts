@@ -28,8 +28,13 @@ export async function processPdf(
   onPage: (page: ProcessedPage) => void | Promise<void>,
   options: ProcessPdfOptions = {},
 ): Promise<ProcessPdfResult> {
+  const timer = options.timer
+
   // Text layers first: a cheap whole-document pass (no rendering).
-  const texts = await extractTextLayers(bytes)
+  const texts =
+    timer === undefined
+      ? await extractTextLayers(bytes)
+      : await timer.time('text', () => extractTextLayers(bytes))
 
   const encodeFailures: PageFailure[] = []
   const { pageCount, failures } = await forEachRenderedPage(
@@ -37,7 +42,9 @@ export async function processPdf(
     async (bitmap, pageCount) => {
       let jpeg: Blob
       try {
-        jpeg = await bitmapToJpeg(bitmap)
+        const encode = () => bitmapToJpeg(bitmap)
+        jpeg =
+          timer === undefined ? await encode() : await timer.time('encode', encode)
       } catch (error) {
         encodeFailures.push({
           pageIndex: bitmap.pageIndex,

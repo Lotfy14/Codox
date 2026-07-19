@@ -20,6 +20,7 @@ import {
   uploadMessages,
 } from '../copy/messages'
 import { isBatchRunning, runProgress } from '../engine/progress'
+import { formatStageTotals } from '../pdf/timing'
 import {
   exportableRuns,
   exportRuns,
@@ -633,6 +634,15 @@ function RunningStage({
               )}
             </p>
           ) : null}
+          {/* DIAGNOSTIC (2026-07-19): render-stage timings, live. Remove with
+              src/pdf/timing.ts once the Android render gap is identified. */}
+          {runs.map((run) =>
+            run.stageMs === undefined ? null : (
+              <p className="ds-inline-note ds-inline-note--info" key={run.id}>
+                {`${run.pagesRendered ?? 0}/${run.pageCount ?? '?'} pages — ${formatStageTotals(run.stageMs)}`}
+              </p>
+            ),
+          )}
         </div>
 
         {runs.length > 1 ? (
