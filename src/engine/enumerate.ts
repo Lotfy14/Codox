@@ -12,10 +12,26 @@ export interface ReconciledQuestion extends IndexedQuestion {
   sourcePages: number[]
   sectionKey: string
 }
+/** One removed observation, for diagnostics. Reconciliation is silent
+ *  otherwise, and a rule that deletes real questions is invisible without it. */
+export interface DroppedQuestion {
+  ref: string
+  printedLabel: string
+  ownerPage: number
+  rule: 'duplicate_label' | 'duplicate_anchor' | 'page_not_owned'
+  twinRef?: string
+}
 export interface ReconciledIndex {
   questions: ReconciledQuestion[]
   pages: PageManifest[]
   issues: PlanningIssue[]
+  drops: DroppedQuestion[]
+}
+/** A localized window keeps the observations it does not own: a page whose
+ *  owning window saw nothing is otherwise lost even though a neighbour read
+ *  it correctly across the context overlap. */
+export interface LocalizedIndexWindow extends IndexWindow {
+  disowned: IndexedQuestion[]
 }
 
 function normalHint(value: string): string {
@@ -32,25 +48,32 @@ export function localizeIndexWindow(
   contextPages: readonly number[],
   corePages: readonly number[],
   windowId: number,
-): IndexWindow {
-  const questions = window.questions.flatMap((question, ordinal) => {
+): LocalizedIndexWindow {
+  const questions: IndexedQuestion[] = []
+  const disowned: IndexedQuestion[] = []
+  window.questions.forEach((question, ordinal) => {
     const ownerPage = contextPages[question.ownerPage - 1]
     const sourcePages = question.sourcePages
       .map((page) => contextPages[page - 1])
       .filter((page): page is number => page !== undefined)
-    if (ownerPage === undefined || sourcePages.length === 0 || !corePages.includes(ownerPage)) return []
-    return [{
+    if (ownerPage === undefined || sourcePages.length === 0) return
+    const localized = {
       ...question,
       ref: 'w' + windowId + 'q' + ordinal,
       ownerPage,
       sourcePages: [...new Set(sourcePages)].sort((a, b) => a - b),
-    }]
+    }
+    // The ownership rule still decides the primary result. A disowned
+    // observation is held back rather than discarded: it is the only record
+    // of that page if the owning window emitted nothing for it.
+    if (corePages.includes(ownerPage)) questions.push(localized)
+    else disowned.push(localized)
   })
   const pages = window.pages.flatMap((manifest) => {
     const p = contextPages[manifest.page - 1]
     return p === undefined ? [] : [{ ...manifest, page: p }]
   })
-  return { questions, pages }
+  return { questions, pages, disowned }
 }
 
 /**
@@ -87,39 +110,109 @@ function isGenericAnchor(anchor: string): boolean {
   return norm.length < 12 || generic.some((g) => norm.startsWith(g))
 }
 
-export function reconcileIndexWindows(windows: readonly IndexWindow[]): ReconciledIndex {
-  const questions: ReconciledQuestion[] = []
+export function reconcileIndexWindows(
+  windows: readonly (IndexWindow & { disowned?: IndexedQuestion[] })[],
+): ReconciledIndex {
+  const kept: { question: ReconciledQuestion; windowIndex: number }[] = []
+  const drops: DroppedQuestion[] = []
   const pagesByNumber = new Map<number, PageManifest>()
-  for (const window of windows) {
+
+  /**
+   * The duplicate a window boundary creates, and nothing else.
+   *
+   * Cores partition the document and never overlap (windows.ts), so the only
+   * way one question can be observed twice is by two DIFFERENT windows — the
+   * owning one and a neighbour reading it across the context overlap. Two
+   * questions emitted by the SAME window are separate items in a single
+   * top-to-bottom reading pass and are never duplicates of each other.
+   *
+   * Scoping both rules to cross-window pairs is what makes the anchor rule
+   * safe. Exam stems are formulaic ("A 25-year-old man presents with …"), so
+   * prefix-matching within a page silently deleted genuinely distinct
+   * questions — 8 of them on a real 100-question paper — while
+   * isGenericAnchor waved them through as "specific". The mismatched-label
+   * tolerance stays: a straddling question really can have its printed number
+   * misread by one of the two windows that can see it.
+   */
+  const twin = (
+    question: IndexedQuestion & { ownerPage: number },
+    windowIndex: number,
+  ): { ref: string; rule: DroppedQuestion['rule'] } | undefined => {
+    const labelKey = question.printedLabel.trim()
+    const normAnchor = normalHint(question.anchor)
+    for (const entry of kept) {
+      if (entry.windowIndex === windowIndex) continue
+      const other = entry.question
+      if (Math.abs(other.ownerPage - question.ownerPage) > 1) continue
+      if (labelKey !== '' && other.printedLabel.trim() === labelKey) {
+        return { ref: other.ref, rule: 'duplicate_label' }
+      }
+      if (normAnchor === '') continue
+      const otherNorm = normalHint(other.anchor)
+      const isPrefixMatch =
+        otherNorm.startsWith(normAnchor) || normAnchor.startsWith(otherNorm)
+      if (isPrefixMatch && !isGenericAnchor(other.anchor) && !isGenericAnchor(question.anchor)) {
+        return { ref: other.ref, rule: 'duplicate_anchor' }
+      }
+    }
+    return undefined
+  }
+
+  windows.forEach((window, windowIndex) => {
     for (const page of window.pages) pagesByNumber.set(page.page, page)
     for (const question of window.questions) {
-      const labelKey = question.printedLabel.trim()
-      if (labelKey !== '') {
-        const isDuplicate = questions.some((q) =>
-          q.printedLabel.trim() === labelKey &&
-          Math.abs(q.ownerPage - question.ownerPage) <= 1
-        )
-        if (isDuplicate) continue
-      }
-
-      const normAnchor = normalHint(question.anchor)
-      if (normAnchor !== '') {
-        const isDuplicateAnchor = questions.some((q) => {
-          const qNorm = normalHint(q.anchor)
-          const isPrefixMatch = qNorm.startsWith(normAnchor) || normAnchor.startsWith(qNorm)
-          return (
-            isPrefixMatch &&
-            Math.abs(q.ownerPage - question.ownerPage) <= 1 &&
-            !isGenericAnchor(q.anchor) &&
-            !isGenericAnchor(question.anchor)
-          )
+      const duplicate = twin(question, windowIndex)
+      if (duplicate !== undefined) {
+        drops.push({
+          ref: question.ref,
+          printedLabel: question.printedLabel,
+          ownerPage: question.ownerPage,
+          rule: duplicate.rule,
+          twinRef: duplicate.ref,
         })
-        if (isDuplicateAnchor) continue
+        continue
       }
-
-      questions.push({ ...question, sectionKey: sectionKey(question) })
+      kept.push({ question: { ...question, sectionKey: sectionKey(question) }, windowIndex })
     }
-  }
+  })
+
+  // Rescue pass. A disowned observation is normally the neighbour's redundant
+  // second look at a page its owner already covered — dropped. But when the
+  // owning window emitted NOTHING for that page, the neighbour's reading is
+  // the only record there is, and discarding it loses real questions to a gap
+  // between two windows that each had a valid reason to pass. Observed on a
+  // real paper: three questions on a core's last page, read correctly by the
+  // next window and thrown away by both.
+  // The test is per-question, not per-page. A page is not all-or-nothing: the
+  // owning window can emit some of a page's questions and miss the rest, which
+  // is exactly what happened on the paper this rescues — the owner read 55-57
+  // off its core's last page and stopped, and the next window's reading of
+  // 58-60 was the only record of them. So a disowned observation is kept
+  // unless something already kept is recognisably the same question.
+  const coveredPages = new Set(kept.map((entry) => entry.question.ownerPage))
+  windows.forEach((window, windowIndex) => {
+    for (const question of window.disowned ?? []) {
+      // An unnumbered question with a generic anchor has no identity strong
+      // enough for `twin` to recognise, so it falls back to the conservative
+      // page test rather than risk duplicating a row.
+      const weakIdentity =
+        question.printedLabel.trim() === '' && isGenericAnchor(question.anchor)
+      const duplicate = twin(question, windowIndex)
+      if (duplicate === undefined && !(weakIdentity && coveredPages.has(question.ownerPage))) {
+        kept.push({ question: { ...question, sectionKey: sectionKey(question) }, windowIndex })
+        continue
+      }
+      drops.push({
+        ref: question.ref,
+        printedLabel: question.printedLabel,
+        ownerPage: question.ownerPage,
+        rule: duplicate?.rule ?? 'page_not_owned',
+        ...(duplicate === undefined ? {} : { twinRef: duplicate.ref }),
+      })
+    }
+  })
+
+  const questions = kept.map((entry) => entry.question)
   // Page, then emission order. Each page is owned by exactly one window's
   // core (localizeIndexWindow), so a page's questions all share a window id
   // and the ref ordinal is that window's top-to-bottom reading order. The
@@ -133,5 +226,5 @@ export function reconcileIndexWindows(windows: readonly IndexWindow[]): Reconcil
       issues.push({ kind: 'unreadable_page', page: manifest.page, section: manifest.sectionHint })
     }
   }
-  return { questions, pages: [...pagesByNumber.values()].sort((a, b) => a.page - b.page), issues }
+  return { questions, pages: [...pagesByNumber.values()].sort((a, b) => a.page - b.page), issues, drops }
 }

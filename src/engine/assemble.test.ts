@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+﻿import { describe, expect, it } from 'vitest'
 import { assembleBlueprint, type AssembleInput } from './assemble'
 import type { ReconciledQuestion } from './enumerate'
 import type { BoxedQuestion } from './index-pass'
@@ -39,7 +39,7 @@ describe('assembleBlueprint', () => {
       sectionKey: 'page-1',
     }
     const input: AssembleInput = {
-      index: { questions: [question], pages: [], issues: [] },
+      index: { questions: [question] },
       boxes: { questions: [], figures: [] },
       evidence: { type: 'no_answer_key', markingStyle: '', evidence: [] },
       pageCount: 1,
@@ -54,7 +54,7 @@ describe('assembleBlueprint', () => {
   it('extends an options box clipped to the first option down to the next question', () => {
     // The 2026-07-18 failure: BOX drew q1's options around only option "a".
     const input: AssembleInput = {
-      index: { questions: [question('q1', '1'), question('q2', '2')], pages: [], issues: [] },
+      index: { questions: [question('q1', '1'), question('q2', '2')] },
       boxes: {
         questions: [
           boxed('q1', [437, 51, 507, 935], [508, 133, 592, 590]),
@@ -74,7 +74,6 @@ describe('assembleBlueprint', () => {
     const input: AssembleInput = {
       index: {
         questions: [question('q1', '1'), question('q2', '2', { caseStemKey: 'caseA' })],
-        pages: [], issues: [],
       },
       boxes: {
         questions: [
@@ -94,12 +93,12 @@ describe('assembleBlueprint', () => {
 
   it('does not let a different column cap the box early', () => {
     const input: AssembleInput = {
-      index: { questions: [question('q1', '1'), question('q2', '2'), question('q3', '3')], pages: [], issues: [] },
+      index: { questions: [question('q1', '1'), question('q2', '2'), question('q3', '3')] },
       boxes: {
         questions: [
           // Left-column q1, clipped options.
           boxed('q1', [437, 20, 507, 480], [508, 40, 540, 480]),
-          // Same-column q2 below — the real bound (650).
+          // Same-column q2 below â€” the real bound (650).
           boxed('q2', [650, 20, 700, 480], [701, 40, 900, 480]),
           // Right-column q3 starts lower (560) but must NOT cap q1.
           boxed('q3', [560, 520, 700, 980], [701, 540, 900, 980]),
@@ -115,7 +114,7 @@ describe('assembleBlueprint', () => {
 
   it('extends the last question on a page to a footer margin, and never shrinks a good box', () => {
     const input: AssembleInput = {
-      index: { questions: [question('q1', '1'), question('q2', '2')], pages: [], issues: [] },
+      index: { questions: [question('q1', '1'), question('q2', '2')] },
       boxes: {
         questions: [
           boxed('q1', [100, 51, 150, 935], [151, 51, 200, 935]),
@@ -128,9 +127,10 @@ describe('assembleBlueprint', () => {
       pageCount: 1,
     }
     const rows = assembleBlueprint(input).planned_rows
-    // q1's box already reaches q2's prompt top (300) — unchanged, not shrunk.
+    // q1's box already reaches q2's prompt top (300) â€” unchanged, not shrunk.
     expect(rows[0].regions.options?.box_2d).toEqual([151, 51, 300, 935])
     // q2 is last; extend to the footer margin and widen the column.
     expect(rows[1].regions.options?.box_2d).toEqual([351, 51, 975, 935])
   })
 })
+

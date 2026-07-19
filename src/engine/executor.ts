@@ -50,8 +50,13 @@ import {
 } from './calls'
 import { assembleBlueprint } from './assemble'
 import { mapConcurrent } from './concurrency'
-import { localizeIndexWindow, reconcileIndexWindows, type ReconciledQuestion } from './enumerate'
-import { parseBoxResult, parseEvidenceMap, parseFigureDetection, parseIndexWindow, type BoxResult, type EvidenceMap, type IndexWindow } from './index-pass'
+import {
+  localizeIndexWindow,
+  reconcileIndexWindows,
+  type LocalizedIndexWindow,
+  type ReconciledQuestion,
+} from './enumerate'
+import { parseBoxResult, parseEvidenceMap, parseFigureDetection, parseIndexWindow, type BoxResult, type EvidenceMap } from './index-pass'
 import type { PlanningIssue } from '../state/types'
 import {
   buildReducedBlueprint,
@@ -565,7 +570,7 @@ async function stepPlanAndValidate(
   if (examPages.length === 0) return { ok: false, reason: 'planner_unparseable' }
   const windows = planWindows(examPages)
   await updateRun(runId, { plannerModel: PLANNER_MODEL, plannerWindowCount: windows.length, plannerWindowsDone: 0 })
-  const indexed: IndexWindow[] = []
+  const indexed: LocalizedIndexWindow[] = []
   const issues: PlanningIssue[] = []
   // INDEX windows are independent — reconciliation is deterministic and runs
   // after all of them — so they go out concurrently under the shared RPM
@@ -607,12 +612,29 @@ async function stepPlanAndValidate(
   }
   const reconciled = reconcileIndexWindows(indexed)
   issues.push(...reconciled.issues)
+  const emitted = indexed.reduce((total, window) => total + window.questions.length + window.disowned.length, 0)
   await logEvent({
     scope: 'engine',
     level: reconciled.questions.length === 0 ? 'error' : 'info',
     event: 'engine.index.reconciled', runId,
-    detail: { questions: reconciled.questions.length, issues: reconciled.issues.length },
+    // `emitted` vs `questions` is the under-extraction signal: reconciliation
+    // removing far more than the window overlap explains means a dedup rule
+    // is eating real questions, which is otherwise invisible in the log.
+    detail: {
+      questions: reconciled.questions.length,
+      emitted,
+      dropped: reconciled.drops.length,
+      issues: reconciled.issues.length,
+    },
   })
+  if (reconciled.drops.length > 0) {
+    await logEvent({
+      scope: 'engine',
+      level: 'info',
+      event: 'engine.index.dropped', runId,
+      detail: { drops: reconciled.drops },
+    })
+  }
   if (reconciled.questions.length === 0) {
     // Makes existing interrupted runs and old test fixtures resumable; fresh
     // calls always use INDEX above.

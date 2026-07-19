@@ -11,7 +11,9 @@ const PLAIN_FORMAT = '{question_prompt}'
 const CASE_FORMAT = '{case_stem}\n\n{question_prompt}'
 
 export interface AssembleInput {
-  index: ReconciledIndex
+  /** Only the reconciled questions are assembled; page manifests, planning
+   *  issues, and dropped observations are diagnostics the executor owns. */
+  index: Pick<ReconciledIndex, 'questions'>
   boxes: BoxResult
   evidence: EvidenceMap
   pageCount: number
