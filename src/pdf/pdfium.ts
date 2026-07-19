@@ -14,8 +14,17 @@ export const RENDER_DPI = 200
 /** PDF user-space units are points, 72 per inch. */
 const PDF_POINTS_PER_INCH = 72
 
-/** Destroy + re-init the WASM library after this many pages. */
-export const REINIT_EVERY_PAGES = 8
+/**
+ * Destroy + re-init the WASM library after this many pages.
+ *
+ * DIAGNOSTIC BUILD (2026-07-19) — temporarily raised from 8 so a run never
+ * re-inits, to test whether Android's slowness is the per-init WASM compile.
+ * Capacitor serves assets through `shouldInterceptRequest`, whose synthetic
+ * responses likely miss WebView's WASM code cache, so each init may pay a
+ * full 4 MB compile that the web app gets for free. REVERT TO 8 — this
+ * disables the native-heap safety net on exactly the long runs it guards.
+ */
+export const REINIT_EVERY_PAGES = 10_000
 
 export function scaleForDpi(dpi: number): number {
   return dpi / PDF_POINTS_PER_INCH
