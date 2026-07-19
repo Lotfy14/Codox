@@ -1,16 +1,17 @@
 /**
- * DIAGNOSTIC (2026-07-19): on-device JPEG encoder benchmark.
+ * On-device JPEG encoder benchmark, surfaced in the Diagnostics panel.
  *
- * Page encoding measured ~40x slower inside Capacitor's Android WebView than
- * in Chrome on the same phone (200s vs 5s for the same pages), which is a
- * canvas/Skia cost, not JPEG maths. Desktop numbers cannot settle which
- * replacement to ship, because canvas is precisely the thing that differs
- * between the two shells — so the candidates are measured on the device.
- *
- * Remove this file, its Help-screen entry point, and `bitmapToJpegViaWasm`
- * once the encoder choice is made.
+ * Full-page timings for all candidates, which is how the Android encode
+ * problem was found and settled. The pipeline itself does not use this — it
+ * runs the much cheaper probe in encoder-select.ts — but this stays as the
+ * tool for re-checking a device when conversions are slow, and for confirming
+ * the probe picked the encoder a full-page measurement agrees with.
  */
-import { PAGE_JPEG_QUALITY, bitmapToJpegViaWasm } from './images'
+import {
+  encodeViaDomCanvas,
+  encodeViaOffscreenCanvas,
+  encodeViaWasm,
+} from './images'
 import type { PageBitmap } from './types'
 
 /** A4 at the pinned 200 DPI render — the real per-page shape. */
@@ -47,60 +48,6 @@ function makePageBitmap(): PageBitmap {
     }
   }
   return { pageIndex: 0, width: WIDTH, height: HEIGHT, data }
-}
-
-function pixelView(bitmap: PageBitmap): Uint8ClampedArray<ArrayBuffer> {
-  return new Uint8ClampedArray(
-    bitmap.data.buffer,
-    bitmap.data.byteOffset,
-    bitmap.data.byteLength,
-  ) as Uint8ClampedArray<ArrayBuffer>
-}
-
-async function encodeViaOffscreenCanvas(bitmap: PageBitmap): Promise<Blob> {
-  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height)
-  try {
-    const context = canvas.getContext('2d')
-    if (context === null) throw new Error('no 2d context')
-    context.putImageData(
-      new ImageData(pixelView(bitmap), bitmap.width, bitmap.height),
-      0,
-      0,
-    )
-    return await canvas.convertToBlob({
-      type: 'image/jpeg',
-      quality: PAGE_JPEG_QUALITY,
-    })
-  } finally {
-    canvas.width = 0
-    canvas.height = 0
-  }
-}
-
-async function encodeViaDomCanvas(bitmap: PageBitmap): Promise<Blob> {
-  const canvas = document.createElement('canvas')
-  canvas.width = bitmap.width
-  canvas.height = bitmap.height
-  try {
-    const context = canvas.getContext('2d')
-    if (context === null) throw new Error('no 2d context')
-    context.putImageData(
-      new ImageData(pixelView(bitmap), bitmap.width, bitmap.height),
-      0,
-      0,
-    )
-    return await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob(
-        (blob) =>
-          blob !== null ? resolve(blob) : reject(new Error('toBlob returned null')),
-        'image/jpeg',
-        PAGE_JPEG_QUALITY,
-      )
-    })
-  } finally {
-    canvas.width = 0
-    canvas.height = 0
-  }
 }
 
 async function measure(
@@ -161,7 +108,7 @@ export async function benchmarkEncoders(
       ? [offscreenCandidate]
       : []),
     ['HTMLCanvasElement', encodeViaDomCanvas],
-    ['MozJPEG / WASM', (bitmap) => bitmapToJpegViaWasm(bitmap)],
+    ['MozJPEG / WASM', encodeViaWasm],
   ]
 
   if (typeof OffscreenCanvas === 'undefined') {

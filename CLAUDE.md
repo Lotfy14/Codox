@@ -222,6 +222,20 @@ vite-plugin-pwa, Dexie (IndexedDB), @hyzyla/pdfium (render/crop), pdf.js
   `components.css`.
 - Real DOM, keyboard-navigable, accessible UI (the Review screen especially).
   Prefer headless accessible primitives (Radix/React Aria).
+- **The JPEG encoder is measured, never assumed.** Page encoding is the
+  dominant render cost and no single route wins everywhere — measured
+  2026-07-19, ms per A4 page at 200 DPI: OffscreenCanvas 174 / DOM canvas 95
+  / MozJPEG-WASM 432 on desktop web; 83 / 204 / 417 on the Windows app;
+  **8500 / 4109 / 331 in the Android APK**. Canvas is ~4x faster than WASM
+  where it works and 26x slower inside Capacitor's Android WebView (a Skia
+  bitmap/readback cost, not JPEG maths), and the two canvas flavours trade
+  places between the two desktop shells. `src/pdf/encoder-select.ts` therefore
+  runs a small sub-second probe once per session and keeps the winner. This is
+  deliberately **not** a platform check — there is no `if (android)` anywhere,
+  so the no-behavior-forks rule holds, an Android WebView that fixes canvas is
+  picked up automatically, and an unmeasured device is never guessed at. The
+  probe must warm every candidate before timing any of them: each has one-off
+  first-call costs, and warming only some picks the wrong encoder.
 - Mobile memory discipline is law: pages render one at a time
   (render → send → release), canvases destroyed immediately after use;
   design target is a ~100 MB working set (iPhone-SE-class).

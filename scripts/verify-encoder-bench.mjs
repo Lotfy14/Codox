@@ -13,7 +13,13 @@ const EDGE =
   process.env.EDGE_PATH ??
   'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 
-const browser = await chromium.launch({ executablePath: EDGE, headless: true })
+// Headless Edge appears to throttle WASM: it measured MozJPEG at 741 ms/page
+// against a real phone's 331 ms. Set BENCH_HEADED=1 for a representative
+// desktop number.
+const browser = await chromium.launch({
+  executablePath: EDGE,
+  headless: process.env.BENCH_HEADED !== '1',
+})
 const page = await browser.newPage()
 page.on('console', (m) => {
   if (m.type() === 'error') console.log('[page error]', m.text())

@@ -10,6 +10,17 @@ import {
   formatEncoderResult,
   type EncoderResult,
 } from '../pdf/encoder-bench'
+import {
+  resetEncoderSelection,
+  selectEncoderId,
+  type EncoderId,
+} from '../pdf/encoder-select'
+
+const ENCODER_LABELS: Record<EncoderId, string> = {
+  offscreen: 'OffscreenCanvas',
+  dom: 'HTMLCanvasElement',
+  wasm: 'MozJPEG / WASM',
+}
 import type { LogEvent } from '../state/types'
 
 interface RunGroup {
@@ -71,10 +82,16 @@ export function DiagnosticsContent() {
   const [benchResults, setBenchResults] = useState<EncoderResult[]>([])
   const [benchRunning, setBenchRunning] = useState(false)
 
+  const [chosenEncoder, setChosenEncoder] = useState<string | null>(null)
+
   const runBenchmark = async () => {
     setBenchResults([])
     setBenchRunning(true)
     try {
+      // Re-probe rather than reading the memoized pick, so the label reflects
+      // this device now and can be compared against the full-page timings.
+      resetEncoderSelection()
+      setChosenEncoder(ENCODER_LABELS[await selectEncoderId()])
       await benchmarkEncoders((result) => {
         setBenchResults((previous) => [...previous, result])
       })
@@ -153,6 +170,11 @@ export function DiagnosticsContent() {
         >
           {benchRunning ? 'Measuring…' : 'Run benchmark'}
         </Button>
+        {chosenEncoder !== null ? (
+          <p className="ds-muted">
+            This device converts using: <strong>{chosenEncoder}</strong>
+          </p>
+        ) : null}
         {benchResults.length > 0 ? (
           <ul className="ds-diagnostics__list">
             {benchResults.map((result) => (

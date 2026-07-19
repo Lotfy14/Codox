@@ -67,21 +67,44 @@ function pixelView(bitmap: PageBitmap): Uint8ClampedArray<ArrayBuffer> {
   ) as Uint8ClampedArray<ArrayBuffer>
 }
 
+/** Paint the RGBA buffer into an already-sized canvas. */
+function paint(canvas: AnyCanvas, bitmap: PageBitmap): void {
+  const context = get2dContext(canvas)
+  context.putImageData(
+    new ImageData(pixelView(bitmap), bitmap.width, bitmap.height),
+    0,
+    0,
+  )
+}
+
 /**
- * The original canvas encode path, kept only as a fallback for a device
- * where the MozJPEG WASM fails to instantiate. Measured at ~40x slower than
- * the WASM encoder inside Capacitor's Android WebView (2026-07-19), so it is
- * a correctness net, never the fast path.
+ * Encode through an OffscreenCanvas. Fastest on the Windows app (83 ms/page)
+ * and ruinous inside Capacitor's Android WebView (8500 ms/page) — which is why
+ * no single canvas path can be hard-coded. See encoder-select.ts.
  */
-async function bitmapToJpegViaCanvas(
+export async function encodeViaOffscreenCanvas(
   bitmap: PageBitmap,
-  quality: number,
+  quality: number = PAGE_JPEG_QUALITY,
 ): Promise<Blob> {
-  const canvas = makeCanvas(bitmap.width, bitmap.height)
+  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height)
   try {
-    const context = get2dContext(canvas)
-    const pixels = pixelView(bitmap)
-    context.putImageData(new ImageData(pixels, bitmap.width, bitmap.height), 0, 0)
+    paint(canvas, bitmap)
+    return await canvasToJpeg(canvas, quality)
+  } finally {
+    releaseCanvas(canvas)
+  }
+}
+
+/** Encode through a DOM canvas. Fastest on desktop web (95 ms/page). */
+export async function encodeViaDomCanvas(
+  bitmap: PageBitmap,
+  quality: number = PAGE_JPEG_QUALITY,
+): Promise<Blob> {
+  const canvas = document.createElement('canvas')
+  canvas.width = bitmap.width
+  canvas.height = bitmap.height
+  try {
+    paint(canvas, bitmap)
     return await canvasToJpeg(canvas, quality)
   } finally {
     releaseCanvas(canvas)
@@ -89,28 +112,12 @@ async function bitmapToJpegViaCanvas(
 }
 
 /**
- * Compress one rendered page to the per-page JPEG budget.
- *
- * MozJPEG-in-WASM consumes pdfium's RGBA buffer directly. The canvas route
- * this replaced was ~40x slower in the Android WebView than in Chrome on the
- * same phone — Skia's bitmap/readback path, not the JPEG maths — so keeping
- * pixels out of a canvas makes encoding cost the same on every platform.
+ * MozJPEG-in-WASM: consumes pdfium's RGBA directly, never touching Skia.
+ * Measured at a boringly consistent 331-432 ms/page across three shells and
+ * two CPUs — the slowest option where canvas works, and 26x the fastest where
+ * it does not (the Android WebView).
  */
-export async function bitmapToJpeg(
-  bitmap: PageBitmap,
-  quality: number = PAGE_JPEG_QUALITY,
-): Promise<Blob> {
-  return bitmapToJpegViaCanvas(bitmap, quality)
-}
-
-/**
- * MozJPEG-in-WASM, kept for the on-device encoder benchmark. Measured on
- * desktop at 502 ms/page (baseline options) against canvas's 194 ms/page, so
- * it is NOT a general replacement — but it never touches Skia, which may make
- * it the faster route inside Capacitor's WebView. Not wired into the pipeline
- * until device numbers say it should be.
- */
-export async function bitmapToJpegViaWasm(
+export async function encodeViaWasm(
   bitmap: PageBitmap,
   quality: number = PAGE_JPEG_QUALITY,
 ): Promise<Blob> {
@@ -131,6 +138,19 @@ export async function bitmapToJpegViaWasm(
     },
   )
   return new Blob([encoded], { type: 'image/jpeg' })
+}
+
+/**
+ * Compress one rendered page to the per-page JPEG budget, through whichever
+ * encoder measured fastest on this device (see encoder-select.ts).
+ */
+export async function bitmapToJpeg(
+  bitmap: PageBitmap,
+  quality: number = PAGE_JPEG_QUALITY,
+): Promise<Blob> {
+  const { selectEncoder } = await import('./encoder-select')
+  const encode = await selectEncoder()
+  return encode(bitmap, quality)
 }
 
 /**
