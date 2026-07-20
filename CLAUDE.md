@@ -107,19 +107,32 @@ Customize's "Pages per box request" above 1 — an opt-in accuracy-for-quota
 trade; 1 (the default) keeps the original single-page BOX prompt byte-identical.
 Question regions are always stamped with the ref's code-known owner page; only
 figure pages come from the model, validated against the batch.
-*(2026-07-20, owner-approved:)* INDEX window size is now Customize's **"Pages
-per index request"** (1–10), threaded to `planWindows`; the default stays
+*(2026-07-20, owner-approved:)* INDEX window size is Customize's **"Pages per
+index request"** (1–10), threaded to `planWindows`; the default stays
 `DEFAULT_WINDOW_PAGES` = 10, so engine behaviour is unchanged until a tutor
-lowers it. Motivation: the INDEX call emits one record per question found, so
-window size is really a dial on RESPONSE LENGTH. On a real embryology run a
-10-page window asked for 57 records in one response, and the per-question
-observed fields degraded to a constant partway down that list — `evidence_state`
-read `inline` for refs 1–9 then `none` for 10–57, flipping mid-page-3 (refs 6–9
-`inline`, 10–11 `none`), with `visible_year` collapsing at the same point. A
-false `none` means BOX is never asked for an inline-evidence region, so the row
-ships blank AND its Review crop excludes the answer. NEVER-GUESS is unaffected —
-a missed mark still yields a blank, never an invented answer. **Open: the right
-default is unmeasured; 10 is retained only because it is today's behaviour.**
+lowers it. **Lowering it is measured to LOSE questions and fix nothing** — on
+the embryology document, 10 pages/window found 64 questions with 9 answered
+and 3 pages/window found 57 with 9 answered, because more window boundaries
+means more rows dropped in reconciliation (12 duplicate-label drops vs 7). The
+knob is retained as a diagnostic, not a recommended remedy; a run that lost
+questions should try RAISING it.
+
+*Correction (2026-07-20).* This setting was first shipped on the theory that
+INDEX's per-question observations "degrade to a constant partway down a long
+response," citing `evidence_state` reading `inline` for refs 1–9 then `none`
+for 10–57, with `visible_year` collapsing at the same point. **That diagnosis
+was wrong** and is recorded here so it is not re-derived. Rendering the actual
+document showed every question carries a printed answer letter in a dedicated
+right-hand table column, including the ones marked `none`; and the
+`visible_year` collapse was *correct* — the document's Arabic exam-year tags
+genuinely stop after question 9. Two unrelated facts coinciding on one page
+were misread as one signal. The real defect: `evidence_state`'s vocabulary
+(`none`/`inline`/`separate`/`ambiguous`/`illegible`) has no slot for an answer
+printed in its own column beside the question — it is not a mark on an option
+(`inline`) nor another document (`separate`) — so the model falls back to
+`none`, BOX is never asked for an evidence region, and the row ships blank with
+a crop that excludes the answer. **Lesson: render the source document before
+theorising from model output.**
 
 *Worker output split + code-owned assembly (owner-approved 2026-07-15):* the
 worker no longer assembles the `question` string. It returns the shared case

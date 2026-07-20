@@ -286,7 +286,7 @@ export const customizeMessages = {
   indexPanelLabel: 'Index requests',
   indexLabel: 'Pages per index request',
   indexHint:
-    'How many pages each question-finding request covers. Every question on those pages is described in one response, so a large setting on a dense exam makes that response very long — and the model stops noticing which answers are marked partway down it, leaving those questions blank. 10 is the default; lower it if answers come back blank on later questions, raise it to spend fewer requests.',
+    'How many pages each question-finding request covers. 10 is the default and the safest value. Lowering it splits the document into more overlapping pieces, and questions can be lost where those pieces meet — a run that came back short should try raising this, not lowering it. Lower it only when a page is being skipped entirely.',
   indexOption: (count: number) =>
     count === 10 ? '10 pages (default)' : count === 1 ? '1 page' : `${count} pages`,
   boxPanelLabel: 'Box requests',

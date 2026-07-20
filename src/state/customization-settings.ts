@@ -34,13 +34,12 @@ export interface CustomizationSettings {
   /** Shows the Convert screen's step-timing debug console. Off by default. */
   debugConsole: boolean
   /**
-   * Pages sent per question-indexing request during conversion. The index
-   * call emits one record per question it finds, so this is really a dial on
-   * RESPONSE LENGTH: a 10-page window over a dense exam asks for ~57 records
-   * in one response, and the observed per-question fields (`evidence_state`,
-   * `visible_year`) degrade to a constant partway down a list that long —
-   * costing those questions their answers. Lower it when answers come back
-   * blank; raise it to spend fewer requests. 10 is the historical default.
+   * Pages per INDEX window core. 10 is the default and the safe value.
+   * LOWERING THIS LOSES QUESTIONS: more windows means more boundaries, and
+   * reconciliation drops rows across them (measured on the embryology
+   * document — 10 pages/window found 64 questions, 3 pages/window found 57,
+   * with no gain in answers). Kept as a diagnostic knob, not a remedy; a
+   * short run should raise it. See CLAUDE.md's 2026-07-20 correction.
    */
   indexPagesPerCall: number
   /**
