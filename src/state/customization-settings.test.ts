@@ -24,6 +24,7 @@ describe('customization settings', () => {
       topicsMode: 'off',
       exportTarget: 'zip',
       debugConsole: true,
+      indexPagesPerCall: 3,
       boxPagesPerCall: 4,
       workerChunkSize: 5,
       matchingMode: 'skip',
@@ -33,6 +34,7 @@ describe('customization settings', () => {
       topicsMode: 'off',
       exportTarget: 'zip',
       debugConsole: true,
+      indexPagesPerCall: 3,
       boxPagesPerCall: 4,
       workerChunkSize: 5,
       matchingMode: 'skip',
@@ -46,6 +48,7 @@ describe('customization settings', () => {
         yearMode: 'guess',
         topicsMode: 'off',
         exportTarget: 'ftp',
+        indexPagesPerCall: 0,
         boxPagesPerCall: 99,
         workerChunkSize: 99,
       }),
@@ -55,6 +58,9 @@ describe('customization settings', () => {
       topicsMode: 'off',
       exportTarget: DEFAULT_CUSTOMIZATION_SETTINGS.exportTarget,
       debugConsole: DEFAULT_CUSTOMIZATION_SETTINGS.debugConsole,
+      // Out of range below the floor — a 0-page window would emit no windows
+      // at all, so it must never survive narrowing.
+      indexPagesPerCall: DEFAULT_CUSTOMIZATION_SETTINGS.indexPagesPerCall,
       boxPagesPerCall: DEFAULT_CUSTOMIZATION_SETTINGS.boxPagesPerCall,
       workerChunkSize: DEFAULT_CUSTOMIZATION_SETTINGS.workerChunkSize,
       // Absent from the stored row entirely — an install that predates the

@@ -107,6 +107,19 @@ Customize's "Pages per box request" above 1 — an opt-in accuracy-for-quota
 trade; 1 (the default) keeps the original single-page BOX prompt byte-identical.
 Question regions are always stamped with the ref's code-known owner page; only
 figure pages come from the model, validated against the batch.
+*(2026-07-20, owner-approved:)* INDEX window size is now Customize's **"Pages
+per index request"** (1–10), threaded to `planWindows`; the default stays
+`DEFAULT_WINDOW_PAGES` = 10, so engine behaviour is unchanged until a tutor
+lowers it. Motivation: the INDEX call emits one record per question found, so
+window size is really a dial on RESPONSE LENGTH. On a real embryology run a
+10-page window asked for 57 records in one response, and the per-question
+observed fields degraded to a constant partway down that list — `evidence_state`
+read `inline` for refs 1–9 then `none` for 10–57, flipping mid-page-3 (refs 6–9
+`inline`, 10–11 `none`), with `visible_year` collapsing at the same point. A
+false `none` means BOX is never asked for an inline-evidence region, so the row
+ships blank AND its Review crop excludes the answer. NEVER-GUESS is unaffected —
+a missed mark still yields a blank, never an invented answer. **Open: the right
+default is unmeasured; 10 is retained only because it is today's behaviour.**
 
 *Worker output split + code-owned assembly (owner-approved 2026-07-15):* the
 worker no longer assembles the `question` string. It returns the shared case

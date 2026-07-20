@@ -69,6 +69,7 @@ import {
   validateBlueprint,
 } from './blueprint'
 import {
+  DEFAULT_WINDOW_PAGES,
   localizeWindow,
   planWindows,
   splitWindow,
@@ -105,6 +106,13 @@ export interface ExecutorOptions {
   /** Intake page counts make render checkpoints complete and resumable. */
   examPageCount?: number
   answerKeyPageCount?: number
+  /**
+   * Pages per INDEX window core (Customize's "Pages per index request",
+   * 1–10). Fewer pages means fewer question records per response, which is
+   * what keeps the model's per-question observations honest to the end of a
+   * long list. Defaults to `DEFAULT_WINDOW_PAGES`.
+   */
+  indexPagesPerCall?: number
   /**
    * Pages per BOX call (Customize's "Pages per box request", 1–10).
    * 1 (default) keeps the per-page pass; higher spends fewer requests.
@@ -566,6 +574,7 @@ async function planOneWindow(
 async function stepPlanAndValidate(
   runId: string, controller: GeminiController, signal: AbortSignal | undefined,
   examPageCount?: number, answerKeyPageCount = 0, boxPagesPerCall = 1,
+  indexPagesPerCall = DEFAULT_WINDOW_PAGES,
 ): Promise<{ ok: true; blueprint: Blueprint } | { ok: false; reason: PlannerStop }> {
   const cached = await getArtifact(runId, 'blueprint-valid')
   if (cached?.json !== undefined) return { ok: true, blueprint: cached.json as Blueprint }
@@ -575,7 +584,7 @@ async function stepPlanAndValidate(
     .filter((page) => examPageCount === undefined || page <= examPageCount)
     .sort((a, b) => a - b)
   if (examPages.length === 0) return { ok: false, reason: 'planner_unparseable' }
-  const windows = planWindows(examPages)
+  const windows = planWindows(examPages, indexPagesPerCall)
   await updateRun(runId, { plannerModel: PLANNER_MODEL, plannerWindowCount: windows.length, plannerWindowsDone: 0 })
   const indexed: LocalizedIndexWindow[] = []
   const issues: PlanningIssue[] = []
@@ -1204,7 +1213,7 @@ export async function executeRun(
     await updateRun(runId, { step: 'planner', stepStartedAt: Date.now() })
     const planned = await stepPlanAndValidate(
       runId, controller, signal, render.examPageCount, render.answerKeyPageCount,
-      options.boxPagesPerCall,
+      options.boxPagesPerCall, options.indexPagesPerCall,
     )
     if (!planned.ok) return stop(runId, 'planner', planned.reason)
     const blueprint = planned.blueprint

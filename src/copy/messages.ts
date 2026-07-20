@@ -283,6 +283,12 @@ export const customizeMessages = {
   debugLabel: 'Show debug console',
   debugHint:
     'Adds a timing panel to the Convert screen that shows each conversion step and how long it took — useful for finding what makes a run slow. Off by default; nothing is sent anywhere.',
+  indexPanelLabel: 'Index requests',
+  indexLabel: 'Pages per index request',
+  indexHint:
+    'How many pages each question-finding request covers. Every question on those pages is described in one response, so a large setting on a dense exam makes that response very long — and the model stops noticing which answers are marked partway down it, leaving those questions blank. 10 is the default; lower it if answers come back blank on later questions, raise it to spend fewer requests.',
+  indexOption: (count: number) =>
+    count === 10 ? '10 pages (default)' : count === 1 ? '1 page' : `${count} pages`,
   boxPanelLabel: 'Box requests',
   boxLabel: 'Pages per box request',
   boxHint:

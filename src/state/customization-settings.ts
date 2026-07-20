@@ -34,6 +34,16 @@ export interface CustomizationSettings {
   /** Shows the Convert screen's step-timing debug console. Off by default. */
   debugConsole: boolean
   /**
+   * Pages sent per question-indexing request during conversion. The index
+   * call emits one record per question it finds, so this is really a dial on
+   * RESPONSE LENGTH: a 10-page window over a dense exam asks for ~57 records
+   * in one response, and the observed per-question fields (`evidence_state`,
+   * `visible_year`) degrade to a constant partway down a list that long —
+   * costing those questions their answers. Lower it when answers come back
+   * blank; raise it to spend fewer requests. 10 is the historical default.
+   */
+  indexPagesPerCall: number
+  /**
    * Pages sent per box-drawing request during conversion. 1 (the default)
    * is today's most-accurate per-page pass; higher values spend fewer
    * requests on big exams at some cost in box accuracy.
@@ -54,6 +64,9 @@ export interface CustomizationSettings {
   matchingMode: MatchingMode
 }
 
+export const INDEX_PAGES_MIN = 1
+export const INDEX_PAGES_MAX = 10
+
 export const BOX_PAGES_MIN = 1
 export const BOX_PAGES_MAX = 10
 
@@ -72,6 +85,7 @@ export const DEFAULT_CUSTOMIZATION_SETTINGS: CustomizationSettings = {
   topicsMode: 'on',
   exportTarget: 'triviadox',
   debugConsole: false,
+  indexPagesPerCall: INDEX_PAGES_MAX,
   boxPagesPerCall: BOX_PAGES_MIN,
   workerChunkSize: 6,
   matchingMode: 'split',
@@ -81,6 +95,21 @@ const YEAR_MODES: readonly YearMode[] = ['off', 'type', 'ai']
 const TOPICS_MODES: readonly TopicsMode[] = ['off', 'on']
 const EXPORT_TARGETS: readonly ExportTarget[] = ['triviadox', 'zip']
 const MATCHING_MODES: readonly MatchingMode[] = ['skip', 'split']
+
+/** An integer setting inside its range, or the default for anything else. */
+function counted(
+  value: unknown,
+  min: number,
+  max: number,
+  fallback: number,
+): number {
+  return typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value >= min &&
+    value <= max
+    ? value
+    : fallback
+}
 
 function narrow(value: string | undefined): CustomizationSettings {
   if (value === undefined) return DEFAULT_CUSTOMIZATION_SETTINGS
@@ -100,20 +129,24 @@ function narrow(value: string | undefined): CustomizationSettings {
         typeof parsed.debugConsole === 'boolean'
           ? parsed.debugConsole
           : DEFAULT_CUSTOMIZATION_SETTINGS.debugConsole,
-      boxPagesPerCall:
-        typeof parsed.boxPagesPerCall === 'number' &&
-        Number.isInteger(parsed.boxPagesPerCall) &&
-        parsed.boxPagesPerCall >= BOX_PAGES_MIN &&
-        parsed.boxPagesPerCall <= BOX_PAGES_MAX
-          ? parsed.boxPagesPerCall
-          : DEFAULT_CUSTOMIZATION_SETTINGS.boxPagesPerCall,
-      workerChunkSize:
-        typeof parsed.workerChunkSize === 'number' &&
-        Number.isInteger(parsed.workerChunkSize) &&
-        parsed.workerChunkSize >= WORKER_CHUNK_MIN &&
-        parsed.workerChunkSize <= WORKER_CHUNK_MAX
-          ? parsed.workerChunkSize
-          : DEFAULT_CUSTOMIZATION_SETTINGS.workerChunkSize,
+      indexPagesPerCall: counted(
+        parsed.indexPagesPerCall,
+        INDEX_PAGES_MIN,
+        INDEX_PAGES_MAX,
+        DEFAULT_CUSTOMIZATION_SETTINGS.indexPagesPerCall,
+      ),
+      boxPagesPerCall: counted(
+        parsed.boxPagesPerCall,
+        BOX_PAGES_MIN,
+        BOX_PAGES_MAX,
+        DEFAULT_CUSTOMIZATION_SETTINGS.boxPagesPerCall,
+      ),
+      workerChunkSize: counted(
+        parsed.workerChunkSize,
+        WORKER_CHUNK_MIN,
+        WORKER_CHUNK_MAX,
+        DEFAULT_CUSTOMIZATION_SETTINGS.workerChunkSize,
+      ),
       matchingMode: MATCHING_MODES.includes(parsed.matchingMode as MatchingMode)
         ? (parsed.matchingMode as MatchingMode)
         : DEFAULT_CUSTOMIZATION_SETTINGS.matchingMode,

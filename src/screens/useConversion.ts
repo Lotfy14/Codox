@@ -153,6 +153,7 @@ export function useConversion(jobId: string): ConversionState {
               examPageCount: item.examPageCount,
               answerKeyBytes: item.answerKey?.bytes,
               answerKeyPageCount: item.answerKey?.pageCount,
+              indexPagesPerCall: settings.indexPagesPerCall,
               boxPagesPerCall: settings.boxPagesPerCall,
               chunkSize: settings.workerChunkSize,
               matchingMode: settings.matchingMode,
