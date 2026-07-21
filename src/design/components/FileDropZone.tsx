@@ -92,6 +92,11 @@ export function FileDropZone({
     }
     if (rejected.length > 0) onRejected?.(rejected)
   }
+  // Always call through the latest `split` (it closes over the current
+  // accept/onFiles/onRejected) without re-subscribing the window listener
+  // every render.
+  const splitRef = useRef(split)
+  splitRef.current = split
 
   useEffect(() => {
     if (!pasteImages || isDisabled) return
@@ -108,13 +113,12 @@ export function FileDropZone({
       const files = clipboardImages(event.clipboardData)
       if (files.length === 0) return
       event.preventDefault()
-      split(allowsMultiple ? files : files.slice(0, 1))
+      // `split` applies `allowsMultiple` itself, so hand it every image.
+      splitRef.current(files)
     }
     window.addEventListener('paste', onPaste)
     return () => window.removeEventListener('paste', onPaste)
-    // `split` closes over accept/onFiles/onRejected; re-subscribe when they
-    // change so a paste always uses the current acceptance and handlers.
-  }, [pasteImages, isDisabled, accept, allowsMultiple, onFiles, onRejected])
+  }, [pasteImages, isDisabled])
 
   return (
     <DropZone
