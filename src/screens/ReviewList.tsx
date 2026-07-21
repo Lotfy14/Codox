@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Badge, Button, GlassInput } from '../design/components'
 import { aiReviewMessages, reviewMessages } from '../copy/messages'
 import type { AiAnswer } from '../engine/solver'
+import type { TopicItem } from '../state/types'
 import { effectiveAnswer, type Resolutions, type ReviewRow } from './review-data'
+import { saveRowEditsPatch, type MetaPatch } from './review-edits'
 import {
   isUnresolvedFlag,
   jumpIndex,
@@ -13,10 +15,12 @@ import {
 const answerLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 export interface ReviewListProps {
+  runId: string
   reviewRows: readonly ReviewRow[]
   filteredRows: readonly ReviewRow[]
   resolutions: Resolutions
   aiAnswers: Record<string, AiAnswer> | undefined
+  runTopics: TopicItem[] | undefined
   filter: ReviewFilter
   search: string
   onFilterChange: (filter: ReviewFilter) => void
@@ -41,10 +45,12 @@ function aiPick(
 }
 
 export function ReviewList({
+  runId,
   reviewRows,
   filteredRows,
   resolutions,
   aiAnswers,
+  runTopics,
   filter,
   search,
   onFilterChange,
@@ -56,10 +62,39 @@ export function ReviewList({
   const rowRefs = useRef(new Map<string, HTMLButtonElement>())
   const [highlightedRowId, setHighlightedRowId] = useState<string | null>(null)
   const [jumpHint, setJumpHint] = useState('')
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
+  const [bulkTopic, setBulkTopic] = useState('')
+  const [bulkSubtopic, setBulkSubtopic] = useState('')
+  const [bulkYear, setBulkYear] = useState('')
+  const [bulkStatus, setBulkStatus] = useState('')
+  const [bulkBusy, setBulkBusy] = useState(false)
+  const topicListId = useId()
+  const subtopicListId = useId()
   const parsedSearch = useMemo(() => parseSearch(search), [search])
   const unresolvedCount = reviewRows.filter((row) =>
     isUnresolvedFlag(row, resolutions),
   ).length
+
+  // Prune selection to rows that still exist (edits can drop/rename ids) and
+  // reset the bulk panel whenever the run changes underneath it.
+  const validIds = useMemo(
+    () => new Set(reviewRows.map((row) => row.row.id)),
+    [reviewRows],
+  )
+  useEffect(() => {
+    setSelected((current) => {
+      const next = new Set([...current].filter((id) => validIds.has(id)))
+      return next.size === current.size ? current : next
+    })
+  }, [validIds])
+  useEffect(() => {
+    setSelected(new Set())
+    setBulkTopic('')
+    setBulkSubtopic('')
+    setBulkYear('')
+    setBulkStatus('')
+  }, [runId])
+
   useEffect(() => {
     if (parsedSearch.kind !== 'jump') {
       setJumpHint('')
@@ -97,6 +132,74 @@ export function ReviewList({
     return () => window.cancelAnimationFrame(frame)
   }, [filteredRows, focusRowId])
 
+  const topics = runTopics ?? []
+  const subtopics =
+    topics.find((item) => item.topic === bulkTopic.trim())?.subtopics ??
+    topics.flatMap((item) => item.subtopics)
+
+  const toggleRow = (rowId: string) => {
+    setBulkStatus('')
+    setSelected((current) => {
+      const next = new Set(current)
+      if (next.has(rowId)) next.delete(rowId)
+      else next.add(rowId)
+      return next
+    })
+  }
+
+  const selectAllFiltered = () => {
+    setBulkStatus('')
+    setSelected(new Set(filteredRows.map((row) => row.row.id)))
+  }
+
+  const clearSelection = () => {
+    setBulkStatus('')
+    setSelected(new Set())
+  }
+
+  const allFilteredSelected =
+    filteredRows.length > 0 &&
+    filteredRows.every((row) => selected.has(row.row.id))
+
+  const buildPatch = (fields: MetaPatch): void => {
+    if (selected.size === 0) return
+    setBulkBusy(true)
+    const patches: Record<string, MetaPatch> = {}
+    for (const id of selected) patches[id] = fields
+    void saveRowEditsPatch(runId, patches)
+      .then(() => {
+        const count = selected.size
+        const cleared =
+          fields.topic === '' && fields.subtopic === '' && fields.year === ''
+        setBulkStatus(
+          cleared
+            ? reviewMessages.bulkCleared(count)
+            : reviewMessages.bulkApplied(count),
+        )
+        setSelected(new Set())
+        setBulkTopic('')
+        setBulkSubtopic('')
+        setBulkYear('')
+      })
+      .finally(() => setBulkBusy(false))
+  }
+
+  const applyBulk = () => {
+    const fields: MetaPatch = {}
+    if (bulkTopic.trim() !== '') fields.topic = bulkTopic
+    if (bulkSubtopic.trim() !== '') fields.subtopic = bulkSubtopic
+    if (bulkYear.trim() !== '') fields.year = bulkYear
+    if (Object.keys(fields).length === 0) {
+      setBulkStatus(reviewMessages.bulkNothingToApply)
+      return
+    }
+    buildPatch(fields)
+  }
+
+  const clearBulkFields = () => {
+    buildPatch({ topic: '', subtopic: '', year: '' })
+  }
+
   return (
     <section aria-label={reviewMessages.listPanelLabel} className="review-list">
       <header className="review-list__header">
@@ -124,8 +227,80 @@ export function ReviewList({
             {aiReviewMessages.openDialog}
           </Button>
         </div>
+        <div className="review-list__select-tools">
+          <Button
+            isDisabled={filteredRows.length === 0 || allFilteredSelected}
+            onPress={selectAllFiltered}
+            variant="quiet"
+          >
+            {reviewMessages.bulkSelectAll(filteredRows.length)}
+          </Button>
+          {selected.size > 0 ? (
+            <>
+              <span className="ds-muted review-list__select-count" role="status">
+                {reviewMessages.bulkSelectedCount(selected.size)}
+              </span>
+              <Button onPress={clearSelection} variant="quiet">
+                {reviewMessages.bulkClearSelection}
+              </Button>
+            </>
+          ) : null}
+        </div>
         <p aria-live="polite" className="ds-muted review-list__hint">{jumpHint}</p>
       </header>
+
+      {selected.size > 0 ? (
+        <div
+          aria-label={reviewMessages.bulkBarLabel}
+          className="review-list__bulk-bar"
+          role="group"
+        >
+          <div className="review-list__bulk-fields">
+            <GlassInput
+              inputProps={{ list: topicListId }}
+              label={reviewMessages.bulkTopicLabel}
+              onChange={setBulkTopic}
+              value={bulkTopic}
+            />
+            <GlassInput
+              inputProps={{ list: subtopicListId }}
+              label={reviewMessages.bulkSubtopicLabel}
+              onChange={setBulkSubtopic}
+              value={bulkSubtopic}
+            />
+            <GlassInput
+              label={reviewMessages.bulkYearLabel}
+              onChange={setBulkYear}
+              value={bulkYear}
+            />
+            <datalist id={topicListId}>
+              {topics.map((item) => <option key={item.topic} value={item.topic} />)}
+            </datalist>
+            <datalist id={subtopicListId}>
+              {[...new Set(subtopics)].map((value) => <option key={value} value={value} />)}
+            </datalist>
+          </div>
+          <div className="review-list__bulk-actions">
+            <Button isDisabled={bulkBusy} onPress={applyBulk}>
+              {reviewMessages.bulkApply}
+            </Button>
+            <Button isDisabled={bulkBusy} onPress={clearBulkFields} variant="quiet">
+              {reviewMessages.bulkClearFields}
+            </Button>
+          </div>
+          <p className="ds-muted review-list__bulk-hint">{reviewMessages.bulkApplyHint}</p>
+        </div>
+      ) : null}
+
+      {bulkStatus !== '' ? (
+        <p
+          aria-live="polite"
+          className="ds-inline-note ds-inline-note--info review-list__bulk-status"
+          role="status"
+        >
+          {bulkStatus}
+        </p>
+      ) : null}
 
       {filteredRows.length === 0 ? (
         <p className="ds-muted review-list__empty">{reviewMessages.searchNoMatches}</p>
@@ -135,22 +310,37 @@ export function ReviewList({
             const answer = effectiveAnswer(reviewRow, resolutions)
             const flagged = isUnresolvedFlag(reviewRow, resolutions)
             const ai = aiPick(reviewRow, aiAnswers)
+            const rowId = reviewRow.row.id
+            const isSelected = selected.has(rowId)
             return (
-              <button
-                  aria-posinset={index + 1}
-                  aria-setsize={filteredRows.length}
+              <div
+                aria-posinset={index + 1}
+                aria-setsize={filteredRows.length}
+                className={[
+                  'review-list-row-wrap',
+                  isSelected ? 'review-list-row-wrap--selected' : '',
+                ].filter(Boolean).join(' ')}
+                key={rowId}
+                role="listitem"
+              >
+                <input
+                  aria-label={reviewMessages.bulkSelectRow(reviewRow.questionNumber)}
+                  checked={isSelected}
+                  className="review-list-row__check"
+                  onChange={() => toggleRow(rowId)}
+                  type="checkbox"
+                />
+                <button
                   className={[
                     'review-list-row',
                     flagged ? 'review-list-row--flagged' : '',
-                    highlightedRowId === reviewRow.row.id ? 'review-list-row--highlight' : '',
+                    highlightedRowId === rowId ? 'review-list-row--highlight' : '',
                   ].filter(Boolean).join(' ')}
-                  key={reviewRow.row.id}
-                  onClick={() => onOpenRow(reviewRow.row.id)}
+                  onClick={() => onOpenRow(rowId)}
                   ref={(element) => {
-                    if (element === null) rowRefs.current.delete(reviewRow.row.id)
-                    else rowRefs.current.set(reviewRow.row.id, element)
+                    if (element === null) rowRefs.current.delete(rowId)
+                    else rowRefs.current.set(rowId, element)
                   }}
-                  role="listitem"
                   type="button"
                 >
                   <span className="review-list-row__num">{reviewRow.questionNumber}</span>
@@ -166,7 +356,8 @@ export function ReviewList({
                   <span className="review-list-row__answer">
                     {answer === null ? reviewMessages.answerBlank : (answerLetters[answer] ?? answer + 1)}
                   </span>
-              </button>
+                </button>
+              </div>
             )
           })}
         </div>

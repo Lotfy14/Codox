@@ -17,10 +17,13 @@ export {
 export type { RenderPagesOptions, RenderPagesResult } from './pdfium'
 export {
   CROP_JPEG_QUALITY,
+  IMAGE_MIME_TYPES,
   PAGE_JPEG_QUALITY,
   bitmapToJpeg,
   clampCropBox,
   cropJpeg,
+  decodeImageToBitmap,
+  isImageMime,
 } from './images'
 export { extractTextLayers } from './textLayer'
 export { processPdf } from './pipeline'

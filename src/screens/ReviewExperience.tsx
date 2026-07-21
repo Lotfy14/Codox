@@ -69,6 +69,8 @@ export function ReviewExperience({
         onSearchChange={session.setSearch}
         resolutions={session.resolutions}
         reviewRows={session.reviewRows}
+        runId={session.activeRunId}
+        runTopics={session.runTopics}
         search={session.controls.search}
       />
       <AiReviewDialog

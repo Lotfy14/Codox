@@ -64,6 +64,44 @@ export async function saveRowEdit(
   await db.runArtifacts.update(artifact.id, { json: next })
 }
 
+/** The metadata fields a bulk apply can set across many rows at once. */
+export type MetaPatch = Partial<Pick<RowEdit, 'topic' | 'subtopic' | 'year'>>
+
+/**
+ * Bulk metadata write: applies a topic/subtopic/year patch to each named row
+ * in ONE artifact read + write, merging into (never replacing) that row's
+ * existing edit so a bulk topic change never wipes a per-row question/options
+ * edit. A field set to '' clears just that field; a row whose edit becomes
+ * empty is removed entirely (back to baseline). Fields absent from a patch are
+ * left untouched — the caller sends only what the tutor actually filled in.
+ */
+export async function saveRowEditsPatch(
+  runId: string,
+  patches: Readonly<Record<string, MetaPatch>>,
+): Promise<void> {
+  const artifact = await getArtifact(runId, 'review-edits')
+  const current = (artifact?.json as Record<string, RowEdit> | undefined) ?? {}
+  const next = { ...current }
+  const fields = ['topic', 'subtopic', 'year'] as const
+  for (const [rowId, patch] of Object.entries(patches)) {
+    const merged: RowEdit = { ...next[rowId] }
+    for (const field of fields) {
+      const value = patch[field]
+      if (value === undefined) continue
+      const trimmed = value.trim()
+      if (trimmed === '') delete merged[field]
+      else merged[field] = trimmed
+    }
+    if (Object.keys(merged).length === 0) delete next[rowId]
+    else next[rowId] = merged
+  }
+  if (artifact === undefined) {
+    await putArtifact({ runId, kind: 'review-edits', json: next })
+    return
+  }
+  await db.runArtifacts.update(artifact.id, { json: next })
+}
+
 /**
  * Deterministically remaps one row's cached AI answer after an options
  * edit shifted indexes — same pick, new position; a removed option's pick

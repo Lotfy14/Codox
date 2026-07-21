@@ -253,14 +253,16 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
     try {
       // Loaded on demand so the PDF engine (pdfium WASM + pdf.js) stays
       // out of the app's startup bundle.
-      const { EncryptedPdfError, readPdfInfo } = await import('../pdf')
-      const { isTopicsImage } = await import('../engine/topic-extract')
+      const { EncryptedPdfError, isImageMime, readPdfInfo } = await import('../pdf')
       for (const file of files) {
         try {
-          const isImage = kind === 'topics' && isTopicsImage(file.type)
+          // Topics and answer keys may be an image (a photo/screenshot); an
+          // image is one already-rendered page, so it skips the PDF open check.
+          const isImage =
+            (kind === 'topics' || kind === 'answer-key') && isImageMime(file.type)
           // The open check: page count on success, a plain-English note on
-          // failure. A file that cannot be opened is never stored. Topics
-          // images have no pages to count.
+          // failure. A file that cannot be opened is never stored. Images
+          // have no pages to count.
           const bytes = new Uint8Array(await file.arrayBuffer())
           const pageCount = isImage ? 1 : (await readPdfInfo(bytes)).pageCount
           const entry = {
@@ -279,7 +281,7 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
           failed.push(
             error instanceof EncryptedPdfError
               ? uploadMessages.encryptedPdf(file.name)
-              : kind === 'topics'
+              : kind === 'topics' || kind === 'answer-key'
                 ? uploadMessages.notPdfOrImage(file.name)
                 : uploadMessages.notPdf(file.name),
           )
@@ -472,13 +474,15 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
                   </p>
                 ) : (
                   <FileDropZone
+                    accept={TOPICS_ACCEPT}
                     allowsMultiple={false}
                     chooseLabel={uploadMessages.chooseFiles}
                     description={convertMessages.keyDropHint}
                     isDisabled={busy}
                     label={convertMessages.keyDropTitle}
                     onFiles={(files) => void intake(files, 'answer-key')}
-                    onRejected={rejectFiles}
+                    onRejected={rejectTopicsFiles}
+                    pasteImages
                   />
                 )}
               </div>
@@ -519,6 +523,7 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
                       label={topicsMessages.dropTitle}
                       onFiles={(files) => void intake(files, 'topics')}
                       onRejected={rejectTopicsFiles}
+                      pasteImages
                     />
                   )}
                   {topicsBusy ? (

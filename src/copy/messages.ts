@@ -181,7 +181,7 @@ export const convertMessages = {
   dropMoreTitle: 'Add PDFs',
   dropMoreHint: 'PDF files',
   keyDropTitle: 'Answer key (optional)',
-  keyDropHint: 'PDF file',
+  keyDropHint: 'PDF or image — paste or drop',
   batchPanelLabel: 'Batch files',
   optionsPanelLabel: 'Before you start',
   progressPanelLabel: 'Conversion progress',
@@ -335,7 +335,7 @@ export const topicsMessages = {
   subtopicLabel: (topicPosition: number, position: number) =>
     `Topic ${topicPosition} subtopic ${position}`,
   dropTitle: 'Topics file (optional)',
-  dropHint: 'PDF or image',
+  dropHint: 'PDF or image — paste or drop',
   docAdded: (fileName: string) => `${fileName} added`,
   reading: 'Reading your topics…',
   readSuccess: (fileName: string) =>
@@ -433,6 +433,24 @@ export const reviewMessages = {
   editSave: 'Save changes',
   editCancel: 'Cancel',
   editRevert: 'Remove all edits on this question',
+  bulkSelectRow: (questionNumber: number) => `Select question ${questionNumber}`,
+  bulkSelectAll: (count: number) => `Select all ${count}`,
+  bulkClearSelection: 'Clear selection',
+  bulkSelectedCount: (count: number) =>
+    `${count} question${count === 1 ? '' : 's'} selected`,
+  bulkBarLabel: 'Set topic, subtopic and year on the selected questions',
+  bulkTopicLabel: 'Topic',
+  bulkSubtopicLabel: 'Subtopic',
+  bulkYearLabel: 'Year',
+  bulkApply: 'Apply to selected',
+  bulkClearFields: 'Clear topic, subtopic & year on selected',
+  bulkApplyHint:
+    'Leave a box empty to keep each question’s current value; fill it to set the same value on every selected question.',
+  bulkApplied: (count: number) =>
+    `Updated ${count} question${count === 1 ? '' : 's'}.`,
+  bulkCleared: (count: number) =>
+    `Cleared topic, subtopic and year on ${count} question${count === 1 ? '' : 's'}.`,
+  bulkNothingToApply: 'Fill in a topic, subtopic or year first.',
 } as const
 
 export const exportMessages = {

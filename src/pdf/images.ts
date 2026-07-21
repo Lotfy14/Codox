@@ -13,6 +13,14 @@ import type { CropBox, PageBitmap } from './types'
 export const PAGE_JPEG_QUALITY = 0.8
 export const CROP_JPEG_QUALITY = 0.85
 
+/** Raster image types Codox can decode as a page (matches the drop zones). */
+export const IMAGE_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp'])
+
+/** True for a MIME type Codox can decode into a page bitmap. */
+export function isImageMime(mimeType: string): boolean {
+  return IMAGE_MIME_TYPES.has(mimeType)
+}
+
 type AnyCanvas = HTMLCanvasElement | OffscreenCanvas
 type Any2dContext = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D
 
@@ -151,6 +159,40 @@ export async function bitmapToJpeg(
   const { selectEncoder } = await import('./encoder-select')
   const encode = await selectEncoder()
   return encode(bitmap, quality)
+}
+
+/**
+ * Decode an encoded raster image (PNG/JPEG/WebP bytes) into a raw RGBA
+ * `PageBitmap` — the same shape pdfium hands the encoders, so an image can be
+ * stored as one pre-rendered page without any PDF round trip. Runs once per
+ * image (e.g. an image answer key), not in the hot page loop, and releases its
+ * canvas immediately (memory discipline).
+ */
+export async function decodeImageToBitmap(
+  bytes: Uint8Array,
+  mimeType: string,
+): Promise<PageBitmap> {
+  const blob = new Blob([bytes as BlobPart], {
+    type: mimeType === '' ? 'image/png' : mimeType,
+  })
+  const source = await createImageBitmap(blob)
+  try {
+    const { width, height } = source
+    if (width === 0 || height === 0) {
+      throw new Error('Decoded image has no dimensions')
+    }
+    const canvas = makeCanvas(width, height)
+    try {
+      const context = get2dContext(canvas)
+      context.drawImage(source, 0, 0)
+      const rgba = context.getImageData(0, 0, width, height).data
+      return { pageIndex: 0, width, height, data: new Uint8Array(rgba.buffer) }
+    } finally {
+      releaseCanvas(canvas)
+    }
+  } finally {
+    source.close()
+  }
 }
 
 /**

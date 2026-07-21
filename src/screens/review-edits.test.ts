@@ -11,6 +11,7 @@ import {
   getEdits,
   planEditSave,
   saveRowEdit,
+  saveRowEditsPatch,
   updateAiAnswerIndex,
   type EditorOption,
 } from './review-edits'
@@ -240,5 +241,47 @@ describe('edit storage', () => {
   it('updateAiAnswerIndex is a no-op when nothing is cached', async () => {
     await updateAiAnswerIndex('run1', '1', 0)
     expect(await getArtifact('run1', 'ai-answers')).toBeUndefined()
+  })
+})
+
+describe('saveRowEditsPatch', () => {
+  it('applies a patch to many rows in one write, trimming values', async () => {
+    await saveRowEditsPatch('run1', {
+      '1': { topic: 'Surgery', year: '2023' },
+      '2': { topic: '  Anatomy  ' },
+    })
+    expect(await getEdits('run1')).toEqual({
+      '1': { topic: 'Surgery', year: '2023' },
+      '2': { topic: 'Anatomy' },
+    })
+  })
+
+  it('merges into an existing edit without wiping content fields', async () => {
+    await saveRowEdit('run1', '1', { question: 'Kept?', options: ['A', 'B'] })
+    await saveRowEditsPatch('run1', { '1': { topic: 'Surgery' } })
+    expect(await getEdits('run1')).toEqual({
+      '1': { question: 'Kept?', options: ['A', 'B'], topic: 'Surgery' },
+    })
+  })
+
+  it('leaves absent fields untouched but clears a field set to empty', async () => {
+    await saveRowEdit('run1', '1', { topic: 'Surgery', subtopic: 'Hernia', year: '2023' })
+    // Only year is in the patch, and it clears; topic/subtopic stay.
+    await saveRowEditsPatch('run1', { '1': { year: '' } })
+    expect(await getEdits('run1')).toEqual({
+      '1': { topic: 'Surgery', subtopic: 'Hernia' },
+    })
+  })
+
+  it('removes a row whose edit becomes empty after clearing', async () => {
+    await saveRowEdit('run1', '1', { topic: 'Surgery' })
+    await saveRowEditsPatch('run1', { '1': { topic: '   ' } })
+    expect(await getEdits('run1')).toEqual({})
+  })
+
+  it('creates the artifact on first write', async () => {
+    expect(await getArtifact('run1', 'review-edits')).toBeUndefined()
+    await saveRowEditsPatch('run1', { '1': { subtopic: 'Acute abdomen' } })
+    expect(await getEdits('run1')).toEqual({ '1': { subtopic: 'Acute abdomen' } })
   })
 })

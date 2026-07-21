@@ -55,6 +55,8 @@ interface QueueItem {
   answerKey?: {
     bytes: Uint8Array
     pageCount: number
+    /** The key's MIME type — an image type routes it in as a rendered page. */
+    mimeType: string
   }
 }
 
@@ -153,6 +155,7 @@ export function useConversion(jobId: string): ConversionState {
               examPageCount: item.examPageCount,
               answerKeyBytes: item.answerKey?.bytes,
               answerKeyPageCount: item.answerKey?.pageCount,
+              answerKeyMimeType: item.answerKey?.mimeType,
               indexPagesPerCall: settings.indexPagesPerCall,
               boxPagesPerCall: settings.boxPagesPerCall,
               chunkSize: settings.workerChunkSize,
@@ -222,6 +225,7 @@ export function useConversion(jobId: string): ConversionState {
                 answerKey: {
                   bytes: new Uint8Array(await answerKey.blob.arrayBuffer()),
                   pageCount: answerKey.pageCount,
+                  mimeType: answerKey.blob.type,
                 },
               }),
         })
@@ -274,6 +278,7 @@ export function useConversion(jobId: string): ConversionState {
                 answerKey: {
                   bytes: new Uint8Array(await answerKey.blob.arrayBuffer()),
                   pageCount: answerKey.pageCount,
+                  mimeType: answerKey.blob.type,
                 },
               }),
         })
@@ -309,6 +314,7 @@ export function useConversion(jobId: string): ConversionState {
                 answerKey: {
                   bytes: new Uint8Array(await answerKey.blob.arrayBuffer()),
                   pageCount: answerKey.pageCount,
+                  mimeType: answerKey.blob.type,
                 },
               }),
         })

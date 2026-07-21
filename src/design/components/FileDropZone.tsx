@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { Button as AriaButton } from 'react-aria-components/Button'
 import { DropZone } from 'react-aria-components/DropZone'
 import { FileTrigger } from 'react-aria-components/FileTrigger'
@@ -6,6 +7,33 @@ import { isFileDropItem } from 'react-aria-components/useDragAndDrop'
 export interface FileAccept {
   mimeTypes: readonly string[]
   extensions: readonly string[]
+}
+
+/** File extension to give a pasted clipboard image, by its MIME type. */
+function pastedImageExtension(type: string): string {
+  if (type === 'image/png') return 'png'
+  if (type === 'image/gif') return 'gif'
+  if (type === 'image/webp') return 'webp'
+  return 'jpg'
+}
+
+/** Turn the clipboard's image items into named Files (they arrive nameless). */
+function clipboardImages(data: DataTransfer | null): File[] {
+  if (data === null) return []
+  const files: File[] = []
+  for (const item of data.items) {
+    if (item.kind !== 'file' || !item.type.startsWith('image/')) continue
+    const file = item.getAsFile()
+    if (file === null) continue
+    files.push(
+      new File(
+        [file],
+        `pasted-${crypto.randomUUID()}.${pastedImageExtension(item.type)}`,
+        { type: item.type },
+      ),
+    )
+  }
+  return files
 }
 
 /** The default acceptance: PDFs only, as every original zone expects. */
@@ -25,6 +53,14 @@ export interface FileDropZoneProps {
   label: string
   onFiles: (files: File[]) => void
   onRejected?: (files: File[]) => void
+  /**
+   * When set, a clipboard image pasted while the pointer is over this zone
+   * (or the zone holds focus) is routed through `onFiles` exactly like a
+   * dropped file. Off by default so the exam zone — and paste elsewhere — is
+   * untouched. Scoped to the hovered/focused zone so two image zones on one
+   * screen never both consume the same paste.
+   */
+  pasteImages?: boolean
 }
 
 function isAccepted(file: File, accept: FileAccept): boolean {
@@ -45,7 +81,9 @@ export function FileDropZone({
   label,
   onFiles,
   onRejected,
+  pasteImages = false,
 }: FileDropZoneProps) {
+  const zoneRef = useRef<HTMLDivElement>(null)
   const split = (files: File[]) => {
     const accepted = files.filter((file) => isAccepted(file, accept))
     const rejected = files.filter((file) => !isAccepted(file, accept))
@@ -54,6 +92,30 @@ export function FileDropZone({
     }
     if (rejected.length > 0) onRejected?.(rejected)
   }
+
+  useEffect(() => {
+    if (!pasteImages || isDisabled) return
+    const onPaste = (event: ClipboardEvent) => {
+      // Already handled by another zone's listener this event: never twice.
+      if (event.defaultPrevented) return
+      const zone = zoneRef.current
+      if (zone === null) return
+      // Route to the zone the pointer is over, or the focused one — the two
+      // ways a user aims a paste at a specific drop area.
+      const aimed =
+        zone.matches(':hover') || zone.contains(document.activeElement)
+      if (!aimed) return
+      const files = clipboardImages(event.clipboardData)
+      if (files.length === 0) return
+      event.preventDefault()
+      split(allowsMultiple ? files : files.slice(0, 1))
+    }
+    window.addEventListener('paste', onPaste)
+    return () => window.removeEventListener('paste', onPaste)
+    // `split` closes over accept/onFiles/onRejected; re-subscribe when they
+    // change so a paste always uses the current acceptance and handlers.
+  }, [pasteImages, isDisabled, accept, allowsMultiple, onFiles, onRejected])
+
   return (
     <DropZone
       aria-label={label}
@@ -66,6 +128,7 @@ export function FileDropZone({
 
         void Promise.all(pendingFiles).then(split)
       }}
+      ref={pasteImages ? zoneRef : undefined}
     >
       <div aria-hidden="true" className="ds-file-drop-zone__mark">
         <svg

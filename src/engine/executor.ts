@@ -20,7 +20,7 @@ import { blobToBytes, bytesToBase64 } from '../providers/base64'
 import type { GeminiController } from '../providers/controller'
 import { geminiController } from '../providers/controller'
 import type { ProviderFailureCode, VisionResult } from '../providers/types'
-import { cropJpeg } from '../pdf/images'
+import { bitmapToJpeg, cropJpeg, decodeImageToBitmap, isImageMime } from '../pdf/images'
 import { processPdf } from '../pdf/pipeline'
 import { createStageTimer } from '../pdf/timing'
 import {
@@ -101,8 +101,14 @@ export interface ExecutorOptions {
   signal?: AbortSignal
   /** Rendered-page DPI override; production always uses the pinned 200. */
   dpi?: number
-  /** Separate answer-key PDF, appended after the exam pages when declared. */
+  /** Separate answer-key document, appended after the exam pages when declared. */
   answerKeyBytes?: Uint8Array
+  /**
+   * The answer key's MIME type. When it names a raster image, the key is a
+   * single already-rendered page (a photo/screenshot) stored directly rather
+   * than rendered through pdfium — the engine still just sees one more page.
+   */
+  answerKeyMimeType?: string
   /** Intake page counts make render checkpoints complete and resumable. */
   examPageCount?: number
   answerKeyPageCount?: number
@@ -369,11 +375,55 @@ async function stepRender(
     return result.pageCount
   }
 
+  /**
+   * An image answer key (a photo/screenshot) is already one rendered page: it
+   * is decoded, re-encoded to the page JPEG the rest of the engine expects, and
+   * stored exactly like a rendered PDF page — no pdfium round trip. A decode
+   * failure is treated like a bad page (flag it, continue): the answer key is
+   * optional and never rescues an unreadable exam.
+   */
+  const storeImagePage = async (
+    bytes: Uint8Array,
+    mimeType: string,
+    pageOffset: number,
+  ): Promise<number> => {
+    try {
+      const bitmap = await decodeImageToBitmap(bytes, mimeType)
+      const jpeg = await bitmapToJpeg(bitmap)
+      await timer.time('store', async () => {
+        await putArtifact({
+          runId,
+          kind: 'page-jpeg',
+          pageIndex: pageOffset,
+          width: bitmap.width,
+          height: bitmap.height,
+          bytes: await blobToBytes(jpeg),
+        })
+      })
+      renderedCount += 1
+      await updateRun(runId, {
+        pageCount: expectedTotal ?? pageOffset + 1,
+        pagesRendered: renderedCount,
+        stageMs: timer.totals(),
+      })
+      return 1
+    } catch {
+      badPages.push(pageOffset)
+      return 0
+    }
+  }
+
   const examPageCount = await renderDocument(pdfBytes, 0, true)
   const answerKeyPageCount =
     options.answerKeyBytes === undefined
       ? 0
-      : await renderDocument(options.answerKeyBytes, examPageCount, false)
+      : isImageMime(options.answerKeyMimeType ?? '')
+        ? await storeImagePage(
+            options.answerKeyBytes,
+            options.answerKeyMimeType ?? '',
+            examPageCount,
+          )
+        : await renderDocument(options.answerKeyBytes, examPageCount, false)
   await updateRun(runId, {
     pageCount: examPageCount + answerKeyPageCount,
     pagesRendered: renderedCount,
