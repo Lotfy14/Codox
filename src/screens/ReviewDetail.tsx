@@ -651,9 +651,9 @@ export function ReviewDetail({
                 borderTop: '1px solid var(--color-outline)',
               }}
             >
-              <span><strong>Topic:</strong> {editTopic || '—'}</span>
-              <span><strong>Subtopic:</strong> {editSubtopic || '—'}</span>
-              <span><strong>Year:</strong> {editYear || '—'}</span>
+              <span><strong>Topic:</strong> {(rowEdit?.topic ?? baseline.topic) || '—'}</span>
+              <span><strong>Subtopic:</strong> {(rowEdit?.subtopic ?? baseline.subtopic) || '—'}</span>
+              <span><strong>Year:</strong> {(rowEdit?.year ?? baseline.year) || '—'}</span>
             </div>
           ) : (
             <div

@@ -29,7 +29,18 @@ export type ReviewView =
 export function useReviewSession(runs: readonly RunState[]) {
   const doneRuns = useMemo(() => runs.filter((run) => run.status === 'done'), [runs])
   const runIds = doneRuns.map((run) => run.id).join('|')
-  const [activeRunId, setActiveRunId] = useState(() => doneRuns[0]?.id ?? '')
+  // Default to the newest done run: an older, pre-topics/pre-year run must
+  // never be the one a tutor lands on (or exports) by accident.
+  const newestDoneId = useMemo(
+    () =>
+      doneRuns.reduce<RunState | undefined>(
+        (newest, run) =>
+          newest === undefined || run.createdAt > newest.createdAt ? run : newest,
+        undefined,
+      )?.id ?? '',
+    [doneRuns],
+  )
+  const [activeRunId, setActiveRunId] = useState(newestDoneId)
   const [dataCache, setDataCache] = useState<Record<string, ReviewData>>({})
   const [controlsByRun, setControlsByRun] = useState<Record<string, ReviewControls>>({})
   const [view, setView] = useState<ReviewView>({ kind: 'list' })
@@ -38,10 +49,10 @@ export function useReviewSession(runs: readonly RunState[]) {
 
   useEffect(() => {
     if (!doneRuns.some((run) => run.id === activeRunId)) {
-      setActiveRunId(doneRuns[0]?.id ?? '')
+      setActiveRunId(newestDoneId)
       setView({ kind: 'list' })
     }
-  }, [activeRunId, doneRuns, runIds])
+  }, [activeRunId, doneRuns, newestDoneId, runIds])
 
   useEffect(() => {
     if (activeRunId === '' || dataCache[activeRunId] !== undefined) return
