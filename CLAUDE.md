@@ -134,6 +134,25 @@ printed in its own column beside the question — it is not a mark on an option
 a crop that excludes the answer. **Lesson: render the source document before
 theorising from model output.**
 
+*Per-page INDEX repair (owner-approved 2026-07-21):* raising the window size
+only shrinks the number of tail boundaries where INDEX can under-enumerate — it
+never removes the last one, and a normal page (verified by rendering it: seven
+plain MCQs, no figure) was dropped at a 3-page window's tail on an IM exam,
+lost silently from the output. So after the first reconcile, any page a
+manifest said holds questions but that no window owned — a reconcile gap, or
+every core page of a window that failed to parse — is re-indexed on its own:
+core `[p]`, context `[p-1,p,p+1]` (`repairTargetPages` + the repair loop in
+`executor.ts`). A single-page request carries none of the long-response fatigue
+that dropped the page, and merges back through the same `reconcileIndexWindows`,
+so its page-`p` questions are recovered while any neighbour it re-reads dedups
+against the original windows — safe whether the page was omitted or mislabeled.
+Gated on INDEX having mostly worked (a run that emitted nothing still falls to
+the legacy path, never a call per page); a page still empty after its repair
+stays flagged `unreadable_page` — NEVER-GUESS holds, nothing is invented. The
+three pinned prompts and the output contract are untouched: repair reuses the
+INDEX prompt on a narrower page set. "Pages per index request" stays a
+diagnostic knob; the repair is the real remedy for a lost page.
+
 *Worker output split + code-owned assembly (owner-approved 2026-07-15):* the
 worker no longer assembles the `question` string. It returns the shared case
 stem and the individual prompt as two separate verbatim fields (`case_stem`,
