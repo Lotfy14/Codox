@@ -5,6 +5,7 @@ import type { RunState } from '../state/types'
 import { AiReviewDialog } from './AiReviewDialog'
 import { ReviewDetail } from './ReviewDetail'
 import { ReviewList } from './ReviewList'
+import { RunTopicsPanel } from './RunTopicsPanel'
 import type { ReviewSession } from './useReviewSession'
 
 export function ReviewExperience({
@@ -58,6 +59,11 @@ export function ReviewExperience({
           onTabChange={session.selectRun}
         />
       ) : null}
+      <RunTopicsPanel
+        key={session.activeRunId}
+        runId={session.activeRunId}
+        runTopics={session.runTopics}
+      />
       <ReviewList
         aiAnswers={session.aiAnswers}
         filter={session.controls.filter}

@@ -203,6 +203,67 @@ describe('matchRunTopics', () => {
     expect(Object.keys((await readTopicMatches(runId))?.matches ?? {})).toHaveLength(25)
   })
 
+  it('one bad row is retried alone and its good neighbours survive', async () => {
+    const rows = [row('1'), row('2'), row('3')]
+    const runId = await seedRun(rows)
+    const script = scriptedAdapter()
+    // First response: row 2 carries an unlisted topic; 1 and 3 are valid.
+    script.push(
+      ok(
+        matchesJson([
+          { id: '1', topic: 'Surgery', subtopic: '' },
+          { id: '2', topic: 'Radiology', subtopic: '' },
+          { id: '3', topic: 'Pediatrics', subtopic: '' },
+        ]),
+      ),
+      // Retry sends only row 2; this time it's valid.
+      ok(matchesJson([{ id: '2', topic: 'Surgery', subtopic: 'Appendix' }])),
+    )
+
+    const outcome = await matchRunTopics(runId, {
+      controller: new GeminiController(script.adapter),
+    })
+
+    expect(outcome).toEqual({ ok: true, requestsMade: 2 })
+    // The retry request must carry only the offending row.
+    expect(script.calls[1].prompt).toContain('Question 2?')
+    expect(script.calls[1].prompt).not.toContain('Question 1?')
+    expect(script.calls[1].prompt).not.toContain('Question 3?')
+    expect((await readTopicMatches(runId))?.matches).toEqual({
+      '1': { topic: 'Surgery', subtopic: '' },
+      '2': { topic: 'Surgery', subtopic: 'Appendix' },
+      '3': { topic: 'Pediatrics', subtopic: '' },
+    })
+  })
+
+  it('a row still bad after its retry blanks only itself', async () => {
+    const rows = [row('1'), row('2'), row('3')]
+    const runId = await seedRun(rows)
+    const script = scriptedAdapter()
+    script.push(
+      ok(
+        matchesJson([
+          { id: '1', topic: 'Surgery', subtopic: '' },
+          { id: '2', topic: 'Radiology', subtopic: '' },
+          { id: '3', topic: 'Pediatrics', subtopic: '' },
+        ]),
+      ),
+      // Retry still unlisted → row 2 stays honestly blank.
+      ok(matchesJson([{ id: '2', topic: 'Cardiology', subtopic: '' }])),
+    )
+
+    const outcome = await matchRunTopics(runId, {
+      controller: new GeminiController(script.adapter),
+    })
+
+    expect(outcome).toEqual({ ok: true, requestsMade: 2 })
+    expect((await readTopicMatches(runId))?.matches).toEqual({
+      '1': { topic: 'Surgery', subtopic: '' },
+      '2': { topic: '', subtopic: '' },
+      '3': { topic: 'Pediatrics', subtopic: '' },
+    })
+  })
+
   it('never touches merged-rows or the run status', async () => {
     const rows = [row('1')]
     const runId = await seedRun(rows)
@@ -228,8 +289,10 @@ describe('validateMatchChunk', () => {
       rows,
       TOPICS,
     )
-    expect(result.ok).toBe(true)
+    expect(result.structuralError).toBeUndefined()
+    expect(result.invalidIds).toEqual([])
     expect(result.matches['1']).toEqual({ topic: 'Surgery', subtopic: 'Gallbladder' })
+    expect(result.matches['2']).toEqual({ topic: '', subtopic: '' })
   })
 
   it('accepts a listed topic with a blank subtopic', () => {
@@ -241,31 +304,78 @@ describe('validateMatchChunk', () => {
       rows,
       TOPICS,
     )
-    expect(result.ok).toBe(true)
+    expect(result.invalidIds).toEqual([])
+    expect(Object.keys(result.matches)).toHaveLength(2)
   })
 
   it.each([
     ['not json', 'not JSON'],
     ['{"matches": "nope"}', 'missing "matches" array'],
-    [matchesJson([{ id: 'x', topic: '', subtopic: '' }]), 'unknown row id'],
+  ])('flags %s as a structural error (whole response unusable)', (text, part) => {
+    const result = validateMatchChunk(text, rows, TOPICS)
+    expect(result.structuralError).toContain(part)
+    expect(result.matches).toEqual({})
+    expect(result.invalidIds).toEqual(['1', '2'])
+  })
+
+  it.each([
     [
-      matchesJson([{ id: '1', topic: 'Radiology', subtopic: '' }]),
+      matchesJson([
+        { id: '1', topic: 'Radiology', subtopic: '' },
+        { id: '2', topic: 'Surgery', subtopic: '' },
+      ]),
       'not in the provided list',
     ],
     [
-      matchesJson([{ id: '1', topic: 'Surgery', subtopic: 'Neonates' }]),
+      matchesJson([
+        { id: '1', topic: 'Surgery', subtopic: 'Neonates' },
+        { id: '2', topic: 'Surgery', subtopic: '' },
+      ]),
       'not listed under',
     ],
     [
-      matchesJson([{ id: '1', topic: 'Pediatrics', subtopic: 'Appendix' }]),
+      matchesJson([
+        { id: '1', topic: 'Pediatrics', subtopic: 'Appendix' },
+        { id: '2', topic: 'Surgery', subtopic: '' },
+      ]),
       'not listed under',
     ],
-    [matchesJson([{ id: '1', topic: '', subtopic: 'Appendix' }]), 'subtopic without a topic'],
-    [matchesJson([{ id: '1', topic: 'Surgery', subtopic: '' }]), 'missing matches'],
-  ])('rejects %s', (text, errorPart) => {
-    const result = validateMatchChunk(text, rows, TOPICS)
-    expect(result.ok).toBe(false)
-    expect(result.error).toContain(errorPart)
+    [
+      matchesJson([
+        { id: '1', topic: '', subtopic: 'Appendix' },
+        { id: '2', topic: 'Surgery', subtopic: '' },
+      ]),
+      'subtopic without a topic',
+    ],
+    [
+      matchesJson([{ id: '2', topic: 'Surgery', subtopic: '' }]),
+      'no match returned',
+    ],
+  ])(
+    'marks only the bad row invalid and keeps the good one (%#)',
+    (text, errorPart) => {
+      const result = validateMatchChunk(text, rows, TOPICS)
+      expect(result.structuralError).toBeUndefined()
+      // Row 2 always validated; only row 1 is invalid.
+      expect(result.invalidIds).toEqual(['1'])
+      expect(result.matches['2']).toEqual({ topic: 'Surgery', subtopic: '' })
+      expect(result.matches['1']).toBeUndefined()
+      expect(result.firstError).toContain(errorPart)
+    },
+  )
+
+  it('ignores unknown ids that were not requested', () => {
+    const result = validateMatchChunk(
+      matchesJson([
+        { id: '1', topic: 'Surgery', subtopic: '' },
+        { id: '2', topic: 'Pediatrics', subtopic: '' },
+        { id: 'ghost', topic: 'Surgery', subtopic: '' },
+      ]),
+      rows,
+      TOPICS,
+    )
+    expect(result.invalidIds).toEqual([])
+    expect(Object.keys(result.matches).sort()).toEqual(['1', '2'])
   })
 })
 

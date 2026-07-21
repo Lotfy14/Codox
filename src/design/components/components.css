@@ -1964,6 +1964,30 @@
   overflow-x: auto;
 }
 
+.review-topics-panel {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.review-topics-panel__body {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-outline);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-elevated);
+}
+
+.review-topics-panel__hint {
+  margin: 0;
+}
+
+.review-topics-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
 .review-list__header {
   display: grid;
   gap: var(--space-3);

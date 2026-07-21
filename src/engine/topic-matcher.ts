@@ -130,17 +130,29 @@ function buildMatchRequest(
   }
 }
 
-interface ChunkValidation {
-  ok: boolean
+export interface ChunkValidation {
+  /**
+   * The whole response is unusable (not JSON, no `matches` array) — nothing
+   * can be trusted, so the caller retries the entire request. Distinct from
+   * a per-row failure, which loses only the offending row.
+   */
+  structuralError?: string
+  /** Valid picks keyed by row id — a subset of the requested rows. */
   matches: Record<string, TopicMatch>
-  error?: string
+  /** Requested rows the model got wrong or omitted (retry these only). */
+  invalidIds: string[]
+  /** First per-row error, threaded back to the model as the retry hint. */
+  firstError?: string
 }
 
 /**
- * Deterministic gate on one match response: ids ⊆ requested and complete,
- * topic blank or literally in the list, subtopic blank or literally under
- * that topic, blank topic forces blank subtopic. The prompt's promises are
- * never trusted — this function is the enforcement.
+ * Deterministic gate on one match response, evaluated PER ROW: a blank pick
+ * is a valid "unsure", a listed topic (with a listed or blank subtopic) is
+ * accepted, and anything else — an unlisted topic, a mismatched subtopic, a
+ * missing row — is an invalid row that never becomes a label. One bad row
+ * no longer discards its nineteen good neighbours (owner-approved
+ * 2026-07-21): only structural garbage fails the whole response. The
+ * prompt's promises are never trusted — this function is the enforcement.
  */
 export function validateMatchChunk(
   text: string,
@@ -149,52 +161,66 @@ export function validateMatchChunk(
 ): ChunkValidation {
   const parsed = parseModelJson(text)
   if (parsed.error !== undefined) {
-    return { ok: false, matches: {}, error: `response is not JSON: ${parsed.error}` }
+    return {
+      structuralError: `response is not JSON: ${parsed.error}`,
+      matches: {},
+      invalidIds: rows.map((row) => row.id),
+    }
   }
   if (!isRecord(parsed.value) || !Array.isArray(parsed.value.matches)) {
-    return { ok: false, matches: {}, error: 'missing "matches" array' }
+    return {
+      structuralError: 'missing "matches" array',
+      matches: {},
+      invalidIds: rows.map((row) => row.id),
+    }
   }
-  const rowIds = new Set(rows.map((row) => row.id))
   const subtopicsByTopic = new Map(
     topics.map((entry) => [entry.topic, new Set(entry.subtopics)]),
   )
-  const matches: Record<string, TopicMatch> = {}
+  // Index the model's entries by id; unknown ids (not requested) are simply
+  // ignored rather than failing the response.
+  const byId = new Map<string, Record<string, unknown>>()
   for (const entry of parsed.value.matches as unknown[]) {
-    if (!isRecord(entry) || typeof entry.id !== 'string') {
-      return { ok: false, matches: {}, error: 'a match is missing its id' }
-    }
-    if (!rowIds.has(entry.id)) {
-      return { ok: false, matches: {}, error: `unknown row id "${entry.id}"` }
+    if (isRecord(entry) && typeof entry.id === 'string') byId.set(entry.id, entry)
+  }
+  const matches: Record<string, TopicMatch> = {}
+  const invalidIds: string[] = []
+  let firstError: string | undefined
+  const fail = (id: string, reason: string) => {
+    invalidIds.push(id)
+    if (firstError === undefined) firstError = `row "${id}": ${reason}`
+  }
+  for (const row of rows) {
+    const entry = byId.get(row.id)
+    if (entry === undefined) {
+      fail(row.id, 'no match returned')
+      continue
     }
     const { topic, subtopic } = entry
     if (typeof topic !== 'string' || typeof subtopic !== 'string') {
-      return { ok: false, matches: {}, error: `row "${entry.id}": topic and subtopic must be strings` }
+      fail(row.id, 'topic and subtopic must be strings')
+      continue
     }
     if (topic === '') {
       if (subtopic !== '') {
-        return { ok: false, matches: {}, error: `row "${entry.id}": subtopic without a topic` }
+        fail(row.id, 'subtopic without a topic')
+        continue
       }
-      matches[entry.id] = { topic: '', subtopic: '' }
+      matches[row.id] = { topic: '', subtopic: '' }
       continue
     }
     const allowedSubtopics = subtopicsByTopic.get(topic)
     if (allowedSubtopics === undefined) {
-      return { ok: false, matches: {}, error: `row "${entry.id}": topic "${topic}" is not in the provided list` }
+      fail(row.id, `topic "${topic}" is not in the provided list`)
+      continue
     }
     if (subtopic !== '' && !allowedSubtopics.has(subtopic)) {
-      return { ok: false, matches: {}, error: `row "${entry.id}": subtopic "${subtopic}" is not listed under "${topic}"` }
+      fail(row.id, `subtopic "${subtopic}" is not listed under "${topic}"`)
+      continue
     }
-    matches[entry.id] = { topic, subtopic }
+    matches[row.id] = { topic, subtopic }
   }
-  const missing = rows.filter((row) => matches[row.id] === undefined)
-  if (missing.length > 0) {
-    return {
-      ok: false,
-      matches: {},
-      error: `missing matches for ids: ${missing.map((row) => row.id).join(', ')}`,
-    }
-  }
-  return { ok: true, matches }
+  return { matches, invalidIds, firstError }
 }
 
 /** Merge one chunk's matches into the cached artifact (update-in-place). */
@@ -249,12 +275,15 @@ export async function matchRunTopics(
       chunkIndex * chunkSize,
       (chunkIndex + 1) * chunkSize,
     )
+    const accepted: Record<string, TopicMatch> = {}
+    // Rows still needing a good pick — a retry re-sends only these, never
+    // the neighbours that already validated.
+    let remaining: readonly MergedRow[] = chunkRows
     let previousError: string | undefined
-    let accepted: Record<string, TopicMatch> | undefined
     // Exactly one retry, consumed only by INVALID CONTENT (worker idiom).
-    for (let attempt = 0; attempt < 2 && accepted === undefined; attempt += 1) {
+    for (let attempt = 0; attempt < 2 && remaining.length > 0; attempt += 1) {
       const result = await controller.runGeminiRequest(
-        buildMatchRequest(chunkRows, topics, previousError),
+        buildMatchRequest(remaining, topics, previousError),
         { signal },
       )
       if (!result.ok) {
@@ -268,23 +297,70 @@ export async function matchRunTopics(
         previousError = 'your response was truncated; return fewer characters'
         continue
       }
-      const validation = validateMatchChunk(result.text, chunkRows, topics)
-      if (validation.ok) accepted = validation.matches
-      else previousError = validation.error
+      const validation = validateMatchChunk(result.text, remaining, topics)
+      if (validation.structuralError !== undefined) {
+        // Nothing usable came back — retry the whole remaining set as-is.
+        previousError = validation.structuralError
+        continue
+      }
+      Object.assign(accepted, validation.matches)
+      remaining = remaining.filter((row) => accepted[row.id] === undefined)
+      previousError = validation.firstError
     }
 
-    // Still invalid after the retry → those rows stay honestly blank;
-    // a malformed response never becomes a label.
-    const matches =
-      accepted ??
-      Object.fromEntries(
-        chunkRows.map((row) => [row.id, { topic: '', subtopic: '' }]),
-      )
+    // Whatever is still unresolved after the retry stays honestly blank; a
+    // bad or missing row never becomes a label — but its neighbours survive.
+    const matches: Record<string, TopicMatch> = { ...accepted }
+    for (const row of remaining) matches[row.id] = { topic: '', subtopic: '' }
     await saveMatches(runId, matches)
     onProgress?.(chunkIndex + 1, chunkCount)
   }
 
   return { ok: true, requestsMade }
+}
+
+// ------------------------------------------------------ re-matching (review)
+
+/**
+ * Overwrites the run's `topics-list` snapshot with an edited taxonomy — the
+ * post-run topics editor's persistence. The engine's `merged-rows` are never
+ * touched; only the label taxonomy the matcher and export read changes.
+ */
+export async function writeRunTopics(
+  runId: string,
+  topics: readonly TopicItem[],
+): Promise<void> {
+  const artifact = await getArtifact(runId, 'topics-list')
+  if (artifact === undefined) {
+    await putArtifact({ runId, kind: 'topics-list', json: { topics } })
+    return
+  }
+  await db.runArtifacts.update(artifact.id, { json: { topics } })
+}
+
+/**
+ * Drops every cached match so the next `matchRunTopics` re-labels all rows —
+ * used when the taxonomy changed under them (a renamed or removed topic
+ * would otherwise leave stale picks that no longer exist in the list).
+ */
+export async function clearTopicMatches(runId: string): Promise<void> {
+  const artifact = await getArtifact(runId, 'topic-matches')
+  if (artifact !== undefined) await db.runArtifacts.delete(artifact.id)
+}
+
+/**
+ * Post-run re-match: persist an edited taxonomy, discard the old matches,
+ * and re-label every row against the new list. Clearing an empty list is a
+ * valid outcome — the run then exports with no topic columns.
+ */
+export async function rematchRunTopics(
+  runId: string,
+  topics: readonly TopicItem[],
+  options: MatchOptions = {},
+): Promise<MatchOutcome> {
+  await writeRunTopics(runId, topics)
+  await clearTopicMatches(runId)
+  return matchRunTopics(runId, options)
 }
 
 // ---------------------------------------------------------------- applying

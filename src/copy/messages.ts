@@ -359,6 +359,23 @@ export const topicsMessages = {
   matchWrongKey:
     'Topic matching stopped: Gemini rejected the saved API key. Fix the key, then retry.',
   retryMatching: 'Retry topic matching',
+  rematchOpen: 'Edit topics & re-match',
+  rematchClose: 'Close topic editor',
+  rematchHint:
+    'Rename or remove topics, then re-match. This re-labels every question against the edited list — it does not re-run the conversion.',
+  rematchSave: 'Save & re-match',
+  rematchSaving: 'Re-matching…',
+  rematchProgress: (done: number, total: number) =>
+    `Re-matching… ${done} of ${total}`,
+  rematchDone: 'Topics saved and questions re-matched.',
+  rematchEmpty:
+    'Topics cleared — this run will export without topic columns.',
+  rematchFailed:
+    'Topic matching could not finish right now. Try Save & re-match again in a moment.',
+  rematchQuotaPaused:
+    'Your Gemini allowance is resting — try Save & re-match again shortly. Any matches already made are kept.',
+  rematchUnreachable:
+    "Can't reach Gemini right now — try Save & re-match again in a moment. Any matches already made are kept.",
 } as const
 
 export const reviewMessages = {

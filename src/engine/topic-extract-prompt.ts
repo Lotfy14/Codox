@@ -15,5 +15,6 @@ Rules:
 - Copy names exactly as printed, including their language and punctuation. Never invent, merge, reorder, translate, or rephrase entries.
 - Nesting on the page (indentation, numbering, headings above lists) decides what is a topic and what is its subtopic. A flat list is topics with empty "subtopics" arrays.
 - Ignore page furniture: titles, page numbers, headers, footers, and any text that is clearly not part of the topic list.
+- Ignore count badges and tallies attached to a name: a trailing number or bracketed count that reports how many items fall under a topic (e.g. "Cardiology 167", "Chest (138)") is NOT part of the name — copy only the name ("Cardiology", "Chest"). Keep numbers that are genuinely part of the name (e.g. "Trisomy 21", "Cranial nerve III").
 - If the document contains no recognizable topic list, return {"topics": []}.
 - No prose, no markdown fences — raw JSON only.`
