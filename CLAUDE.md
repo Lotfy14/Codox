@@ -200,6 +200,24 @@ outside the engine path, solver-style: they never modify `merged-rows`,
 deterministic code validates every pick against the user's list, and
 unsure stays blank — a wrong topic is worse than a blank one.
 
+*Per-row match validation + post-run editor (owner-approved 2026-07-21):*
+the matcher validated a whole 20-row chunk atomically and blanked all 20
+if any single row's pick failed — on a 50-question run this silently lost
+19 good matches when one row in the first chunk came back bad (rows 1–20
+blank, 21–50 matched). `validateMatchChunk` is now **per-row**: a blank
+pick is a valid "unsure", a listed topic is accepted, and only genuinely
+bad or omitted rows are retried alone; only structural garbage (not JSON,
+no `matches` array) still fails the whole response. The one retry re-sends
+just the offending rows, and a row still bad after it stays honestly blank
+— NEVER-GUESS holds, its neighbours survive. Separately, TOPIC_EXTRACT now
+strips count badges beside a topic name (`Cardiology 167` → `Cardiology`),
+which cleaned exported labels and was the likely trigger of the chunk
+failures. New `RunTopicsPanel` (review) lets a tutor rename/remove a run's
+topics and re-match every row against the edited list without re-running
+the conversion (`rematchRunTopics` = write `topics-list` + clear
+`topic-matches` + `matchRunTopics`); still outside the engine path,
+`merged-rows` untouched.
+
 ## Ship everywhere or nowhere (non-negotiable)
 
 A fix is not done until it is **committed and pushed to `main`** — that one
