@@ -1825,6 +1825,7 @@
 .ds-topics-editor__row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   width: 100%;
   gap: var(--space-2);
 }
@@ -1834,8 +1835,25 @@
 }
 
 .ds-topics-editor__field {
-  flex: 1;
-  min-width: 0;
+  flex: 1 1 8rem;
+  min-width: 8rem;
+}
+
+/* The reparent action-menu sits on its own line under the topic name, so
+   it never squeezes the name field or pushes Remove out of the panel. Its
+   trigger reads as an action ("Make a subtopic of…"). */
+.ds-topics-editor__reparent {
+  display: flex;
+  padding-inline-start: var(--space-5);
+}
+
+.ds-topics-editor__demote {
+  width: auto;
+  max-width: 16rem;
+}
+
+.ds-topics-editor__demote .ds-select__label {
+  display: none;
 }
 
 /* ---------- Convert: running + done stages ---------- */

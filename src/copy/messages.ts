@@ -331,6 +331,12 @@ export const topicsMessages = {
     `Remove topic${topic === '' ? '' : ` ${topic}`}`,
   removeSubtopic: (subtopic: string) =>
     `Remove subtopic${subtopic === '' ? '' : ` ${subtopic}`}`,
+  demoteTopic: 'Make a subtopic of…',
+  demoteTopicLabel: (topic: string) =>
+    `Make ${topic === '' ? 'this topic' : topic} a subtopic of another topic`,
+  promoteSubtopic: 'Make topic',
+  promoteSubtopicLabel: (subtopic: string) =>
+    `Make ${subtopic === '' ? 'this subtopic' : subtopic} its own topic`,
   topicLabel: (position: number) => `Topic ${position}`,
   subtopicLabel: (topicPosition: number, position: number) =>
     `Topic ${topicPosition} subtopic ${position}`,

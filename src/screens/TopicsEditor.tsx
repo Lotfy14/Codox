@@ -6,7 +6,7 @@
  * (key on an extraction nonce) so the draft re-seeds.
  */
 import { useState } from 'react'
-import { Button, GlassInput } from '../design/components'
+import { Button, GlassInput, Select } from '../design/components'
 import { convertMessages, topicsMessages } from '../copy/messages'
 import type { TopicItem } from '../state/types'
 
@@ -65,6 +65,53 @@ export function TopicsEditor({
     )
   }
 
+  /**
+   * Demote a topic to a subtopic of another: its name (and any subtopics it
+   * already had) move under the target, and the topic row is removed. The
+   * fix for a flat extraction the tutor wants to nest by hand.
+   */
+  const demoteTopic = (index: number, targetIndex: number) => {
+    const moved = draft[index]
+    const movedName = moved.topic.trim()
+    if (movedName === '') return
+    const additions = [
+      movedName,
+      ...moved.subtopics.map((subtopic) => subtopic.trim()).filter((s) => s !== ''),
+    ]
+    const next = draft
+      .map((item, i) => {
+        if (i !== targetIndex) return item
+        const seen = new Set(item.subtopics.map((subtopic) => subtopic.trim()))
+        const merged = [...item.subtopics]
+        for (const addition of additions) {
+          if (!seen.has(addition)) {
+            merged.push(addition)
+            seen.add(addition)
+          }
+        }
+        return { ...item, subtopics: merged }
+      })
+      .filter((_, i) => i !== index)
+    update(next, true)
+  }
+
+  /** Promote a subtopic to its own top-level topic (the inverse move). */
+  const promoteSubtopic = (index: number, subIndex: number) => {
+    const name = (draft[index].subtopics[subIndex] ?? '').trim()
+    const next = draft.map((item, i) =>
+      i === index
+        ? {
+            ...item,
+            subtopics: item.subtopics.filter((_, j) => j !== subIndex),
+          }
+        : item,
+    )
+    if (name !== '' && !next.some((item) => item.topic.trim() === name)) {
+      next.push({ topic: name, subtopics: [] })
+    }
+    update(next, true)
+  }
+
   return (
     <div aria-label={topicsMessages.editorLabel} className="ds-topics-editor" role="group">
       {draft.map((item, index) => (
@@ -94,6 +141,30 @@ export function TopicsEditor({
               {convertMessages.remove}
             </Button>
           </div>
+          {draft.some((other, i) => i !== index && other.topic.trim() !== '') &&
+          item.topic.trim() !== '' ? (
+            <div className="ds-topics-editor__reparent">
+              <Select
+                className="ds-topics-editor__demote"
+                isDisabled={isDisabled}
+                label={
+                  <span className="ds-visually-hidden">
+                    {topicsMessages.demoteTopicLabel(item.topic.trim())}
+                  </span>
+                }
+                onChange={(key) => {
+                  if (key !== null) demoteTopic(index, Number(key))
+                }}
+                options={draft.flatMap((other, i) =>
+                  i !== index && other.topic.trim() !== ''
+                    ? [{ id: String(i), label: other.topic.trim() }]
+                    : [],
+                )}
+                value={null}
+                valueLabel={topicsMessages.demoteTopic}
+              />
+            </div>
+          ) : null}
           {item.subtopics.map((subtopic, subIndex) => (
             <div
               className="ds-topics-editor__row ds-topics-editor__row--subtopic"
@@ -112,6 +183,14 @@ export function TopicsEditor({
                 placeholder={topicsMessages.subtopicPlaceholder}
                 value={subtopic}
               />
+              <Button
+                aria-label={topicsMessages.promoteSubtopicLabel(subtopic.trim())}
+                isDisabled={isDisabled || subtopic.trim() === ''}
+                onPress={() => promoteSubtopic(index, subIndex)}
+                variant="quiet"
+              >
+                {topicsMessages.promoteSubtopic}
+              </Button>
               <Button
                 aria-label={topicsMessages.removeSubtopic(subtopic.trim())}
                 isDisabled={isDisabled}

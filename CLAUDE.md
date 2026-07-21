@@ -216,7 +216,11 @@ failures. New `RunTopicsPanel` (review) lets a tutor rename/remove a run's
 topics and re-match every row against the edited list without re-running
 the conversion (`rematchRunTopics` = write `topics-list` + clear
 `topic-matches` + `matchRunTopics`); still outside the engine path,
-`merged-rows` untouched.
+`merged-rows` untouched. `TopicsEditor` also gained **reparenting**
+(owner-approved 2026-07-21): a "Make a subtopic of…" picker demotes a
+top-level topic (and its own subtopics) under another, and "Make topic"
+promotes a subtopic back — so a flat extraction the tutor knows should be
+nested can be restructured by hand before converting, not just retyped.
 
 ## Ship everywhere or nowhere (non-negotiable)
 
