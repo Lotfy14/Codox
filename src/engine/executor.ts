@@ -658,7 +658,7 @@ async function stepPlanAndValidate(
   }
 
   const defaultEvidence: EvidenceMap = {
-    type: reconciled.questions.some((row) => row.evidenceState === 'inline') ? 'inline_marks' : 'no_answer_key',
+    type: reconciled.questions.some((row) => row.answerPresent) ? 'inline_marks' : 'no_answer_key',
     markingStyle: '', evidence: [],
   }
   const runEvidence = async (): Promise<EvidenceMap> => {
@@ -714,7 +714,10 @@ async function stepPlanAndValidate(
         anchor: row.anchor,
         optionsPresent: row.optionsPresent,
         hasCase: row.caseStemKey !== null,
-        hasInlineEvidence: row.evidenceState === 'inline'
+        // BOX is display-only now: it bounds the question and options, never
+        // the answer. The answer is read off the page by the worker, so BOX is
+        // never asked to box an answer mark.
+        hasInlineEvidence: false
       }))
       const request = batchPages.length === 1
         ? buildBoxRequest(images, tasks, PLANNER_MODEL)

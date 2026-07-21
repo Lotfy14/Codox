@@ -3,7 +3,7 @@ import { reconcileIndexWindows, type ReconciledQuestion } from './enumerate'
 import type { IndexedQuestion, IndexWindow } from './index-pass'
 
 function q(ref: string, printedLabel: string, ownerPage: number, anchor: string): IndexedQuestion {
-  return { ref, printedLabel, ownerPage, sourcePages: [ownerPage], anchor, optionsPresent: false, caseStemKey: null, sectionHint: '', visibleYear: '', evidenceState: 'none' }
+  return { ref, printedLabel, ownerPage, sourcePages: [ownerPage], anchor, optionsPresent: false, caseStemKey: null, sectionHint: '', visibleYear: '', answerPresent: false }
 }
 
 describe('reconcileIndexWindows', () => {

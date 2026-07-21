@@ -212,8 +212,8 @@ export function buildIndexRequest(
         source_pages: { type: 'ARRAY', items: { type: 'INTEGER' } }, anchor: { type: 'STRING' },
         options_present: { type: 'BOOLEAN' }, case_stem_key: { type: 'STRING', nullable: true },
         section_hint: { type: 'STRING' }, visible_year: { type: 'STRING' },
-        evidence_state: { type: 'STRING', enum: ['none', 'inline', 'separate', 'ambiguous', 'illegible'] },
-      }, required: ['ref','printed_label','owner_page','source_pages','anchor','options_present','case_stem_key','section_hint','visible_year','evidence_state'] } },
+        answer_present: { type: 'BOOLEAN' },
+      }, required: ['ref','printed_label','owner_page','source_pages','anchor','options_present','case_stem_key','section_hint','visible_year','answer_present'] } },
       pages: { type: 'ARRAY', items: { type: 'OBJECT', properties: {
         page: { type: 'INTEGER' }, contains_question_start: { type: 'BOOLEAN' },
         first_printed_label: { type: 'STRING' }, last_printed_label: { type: 'STRING' }, section_hint: { type: 'STRING' },

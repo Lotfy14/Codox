@@ -102,13 +102,20 @@ export function assembleBlueprint(input: AssembleInput): Blueprint {
       question: wholePage,
       options: wholePage,
       caseStem: question.caseStemKey !== null ? wholePage : null,
-      inlineEvidence: question.evidenceState === 'inline' ? wholePage : null,
+      inlineEvidence: null,
     }
     const id = labelsUnique ? question.printedLabel : String(rows.length + 1)
     refToId.set(question.ref, id)
     const keyEvidence = evidence.get(question.ref)
-    const answerRegion = keyEvidence?.region ?? geometry.inlineEvidence
-    const answerState = keyEvidence?.state ?? question.evidenceState
+    // The answer is read off the page, never from a BOX region. A separate
+    // answer key keeps its own key-page region (and richer state); an on-page
+    // answer_present true just needs SOME non-null region to permit extraction
+    // and to satisfy blueprint validation, so it uses the whole page — the
+    // worker already sees the whole page. BOX's inline_evidence is deliberately
+    // ignored: the box path is display-only now. answer_present false -> no
+    // region -> blank, never guessed.
+    const answerRegion = keyEvidence?.region ?? (question.answerPresent ? wholePage : null)
+    const answerState = keyEvidence?.state ?? (question.answerPresent ? 'inline' : 'none')
     const hasCase = question.caseStemKey !== null && geometry.caseStem !== null
     rows.push({
       id,

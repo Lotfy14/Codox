@@ -149,6 +149,34 @@ describe('loadReviewData', () => {
     expect(flaggedRows(data)).toEqual([flag])
   })
 
+  it('excludes answer_evidence from the crop so the question shows without the answer', async () => {
+    // A present on-page answer carries a whole-page answer_evidence region.
+    // The crop must NOT union it — otherwise it blows up to the full page and
+    // reveals the answer inside the question preview.
+    const answered: Pick<Blueprint, 'planned_rows'> = {
+      planned_rows: [
+        {
+          id: '1', group_id: '', topic: '', subtopic: '', year: '',
+          question_assembly: { mode: 'plain_question_prompt', final_format: '{question_prompt}' },
+          regions: {
+            case_stem: null,
+            question_prompt: { page: 2, box_2d: [100, 50, 300, 900] },
+            options: { page: 2, box_2d: [300, 50, 500, 900] },
+            answer_evidence: { page: 2, box_2d: [0, 0, 1000, 1000] },
+          },
+          image_urls: [],
+          correct_index_policy: { type: 'extract_visible_evidence', value: '', needs_review: '' },
+          worker_task: { case_stem_required: false, read_regions_only: false, must_follow_planner_structure: true },
+        },
+      ],
+    }
+    await putArtifact({ runId: 'run-ans', kind: 'merged-rows', json: [makeRow({ id: '1', correct_index: '0', needs_review: '' })] })
+    await putArtifact({ runId: 'run-ans', kind: 'blueprint-valid', json: answered })
+    const reviewRow = (await loadReviewData('run-ans')).reviewRows[0]
+    // Union of the two question regions only, padded — NOT the whole page.
+    expect(reviewRow.box).toEqual([70, 20, 530, 930])
+  })
+
   it('flags rows without a blueprint region as page-less', async () => {
     await putArtifact({ runId: 'run2', kind: 'merged-rows', json: [makeRow()] })
     const data = await loadReviewData('run2')

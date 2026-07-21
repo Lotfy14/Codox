@@ -2,6 +2,8 @@
 import { parseModelJson } from './json'
 import type { Box2d, Region } from './types'
 
+/** Still used by the EVIDENCE stage — a SEPARATE answer key can be ambiguous
+ *  or illegible in ways the on-page binary does not need to express. */
 export type EvidenceState = 'none' | 'inline' | 'separate' | 'ambiguous' | 'illegible'
 export interface IndexedQuestion {
   ref: string
@@ -13,7 +15,11 @@ export interface IndexedQuestion {
   caseStemKey: string | null
   sectionHint: string
   visibleYear: string
-  evidenceState: EvidenceState
+  /** Binary on-page observation: is exactly one answer visibly indicated on
+   *  this question's own page? False is always left blank, never guessed;
+   *  conflicting or unreadable marks are false. A separate answer key is NOT
+   *  answer_present — the EVIDENCE stage handles that. */
+  answerPresent: boolean
 }
 export interface PageManifest {
   page: number
@@ -90,17 +96,26 @@ export function parseIndexWindow(text: string): ParseResult<IndexWindow> {
     const optionsPresent = typeof raw?.options_present === 'boolean' ? raw.options_present : undefined
     const caseStemKey = raw?.case_stem_key === null ? null : str(raw?.case_stem_key)
     const sectionHint = str(raw?.section_hint); const visibleYear = str(raw?.visible_year)
-    const evidenceState = str(raw?.evidence_state) as EvidenceState | undefined
+    // New contract: answer_present boolean. Back-compat: a pre-binary
+    // checkpoint carries evidence_state, where only 'inline' meant an on-page
+    // answer — so it maps to true, everything else to false. Keeps an
+    // interrupted old run resumable without a second INDEX call.
+    const legacyState = str(raw?.evidence_state)
+    const answerPresent = typeof raw?.answer_present === 'boolean'
+      ? raw.answer_present
+      : legacyState !== undefined && STATES.includes(legacyState as EvidenceState)
+        ? legacyState === 'inline'
+        : undefined
     const sourcePages = Array.isArray(raw?.source_pages)
       ? raw.source_pages.filter((p): p is number => page(p) !== undefined) : []
     if (ref === undefined || printedLabel === undefined || ownerPage === undefined || anchor === undefined ||
       optionsPresent === undefined || caseStemKey === undefined || sectionHint === undefined ||
-      visibleYear === undefined || evidenceState === undefined || !STATES.includes(evidenceState) ||
+      visibleYear === undefined || answerPresent === undefined ||
       sourcePages.length === 0) {
       errors.push('questions[' + index + '] is invalid'); return
     }
     questions.push({ ref, printedLabel, ownerPage, sourcePages: [...new Set(sourcePages)].sort((a,b) => a-b),
-      anchor, optionsPresent, caseStemKey, sectionHint, visibleYear, evidenceState })
+      anchor, optionsPresent, caseStemKey, sectionHint, visibleYear, answerPresent })
   })
   const pages: PageManifest[] = []
   value.pages.forEach((item, index) => {

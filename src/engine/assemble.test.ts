@@ -8,7 +8,7 @@ function question(ref: string, label: string, over: Partial<ReconciledQuestion> 
   return {
     ref, printedLabel: label, ownerPage: 1, sourcePages: [1], anchor: label,
     optionsPresent: true, caseStemKey: null, sectionHint: '', visibleYear: '',
-    evidenceState: 'none', sectionKey: 'page-1', ...over,
+    answerPresent: false, sectionKey: 'page-1', ...over,
   }
 }
 
@@ -16,10 +16,14 @@ function region(box: Box2d): Region {
   return { page: 1, box_2d: box }
 }
 
-function boxed(ref: string, prompt: Box2d, options: Box2d, caseStem: Box2d | null = null): BoxedQuestion {
+function boxed(
+  ref: string, prompt: Box2d, options: Box2d, caseStem: Box2d | null = null,
+  inlineEvidence: Box2d | null = null,
+): BoxedQuestion {
   return {
     ref, question: region(prompt), options: region(options),
-    caseStem: caseStem === null ? null : region(caseStem), inlineEvidence: null,
+    caseStem: caseStem === null ? null : region(caseStem),
+    inlineEvidence: inlineEvidence === null ? null : region(inlineEvidence),
   }
 }
 
@@ -35,7 +39,7 @@ describe('assembleBlueprint', () => {
       caseStemKey: null,
       sectionHint: '',
       visibleYear: '',
-      evidenceState: 'none',
+      answerPresent: false,
       sectionKey: 'page-1',
     }
     const input: AssembleInput = {
@@ -131,6 +135,43 @@ describe('assembleBlueprint', () => {
     expect(rows[0].regions.options?.box_2d).toEqual([151, 51, 300, 935])
     // q2 is last; extend to the footer margin and widen the column.
     expect(rows[1].regions.options?.box_2d).toEqual([351, 51, 975, 935])
+  })
+
+  it('answer_present true is extractable; false is blank; both never guessed', () => {
+    const input: AssembleInput = {
+      index: {
+        questions: [
+          question('q1', '1', { answerPresent: true }),
+          question('q2', '2', { answerPresent: false }),
+        ],
+      },
+      boxes: { questions: [], figures: [] },
+      evidence: { type: 'no_answer_key', markingStyle: '', evidence: [] },
+      pageCount: 1,
+    }
+    const [present, absent] = assembleBlueprint(input).planned_rows
+    // Present: a whole-page evidence region and a policy that permits extraction.
+    expect(present.regions.answer_evidence).toEqual({ page: 1, box_2d: [0, 0, 1000, 1000] })
+    expect(present.correct_index_policy.type).toBe('extract_visible_evidence')
+    // Absent: no region, blank policy, never guessed.
+    expect(absent.regions.answer_evidence).toBeNull()
+    expect(absent.correct_index_policy.type).toBe('blank_no_visible_answer')
+  })
+
+  it('the answer never depends on BOX: a BOX inline_evidence region is ignored', () => {
+    // The box path is display-only. Even if BOX draws an answer region, the
+    // answer_evidence stays the whole page (read off the page), not the box.
+    const input: AssembleInput = {
+      index: { questions: [question('q1', '1', { answerPresent: true })] },
+      boxes: {
+        questions: [boxed('q1', [100, 50, 200, 900], [200, 50, 400, 900], null, [10, 10, 40, 40])],
+        figures: [],
+      },
+      evidence: { type: 'no_answer_key', markingStyle: '', evidence: [] },
+      pageCount: 1,
+    }
+    const [row] = assembleBlueprint(input).planned_rows
+    expect(row.regions.answer_evidence).toEqual({ page: 1, box_2d: [0, 0, 1000, 1000] })
   })
 })
 

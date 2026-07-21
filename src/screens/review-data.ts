@@ -101,10 +101,13 @@ function sourceRegion(
   // rows that most need checking.
   const planned = plannedRows.get(rowId) ?? plannedRows.get(parentRowId(rowId))
   if (planned === undefined) return { pageIndex: null, box: null }
+  // The crop shows the QUESTION, never the answer: answer_evidence is left out
+  // of the union on purpose. An on-page answer's region is the whole page, and
+  // including it would both blow up the crop and reveal the answer inside the
+  // question preview. The tutor sees the prompt, options, and case stem only.
   const regions = [
     planned.regions.question_prompt,
     planned.regions.options,
-    planned.regions.answer_evidence,
     planned.regions.case_stem,
   ].filter((region) => region !== null)
   const first = regions[0]

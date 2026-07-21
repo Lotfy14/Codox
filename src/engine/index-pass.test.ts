@@ -1,8 +1,47 @@
 import { describe, expect, it } from 'vitest'
-import { parseBoxResult } from './index-pass'
+import { parseBoxResult, parseIndexWindow } from './index-pass'
 
 const BOX = [10, 20, 100, 200]
 const ANOTHER_BOX = [150, 160, 300, 320]
+
+const INDEX_QUESTION = {
+  ref: 'w0q0', printed_label: '1', owner_page: 1, source_pages: [1],
+  anchor: 'At which site', options_present: true, case_stem_key: null,
+  section_hint: '', visible_year: '',
+}
+const INDEX_PAGE = {
+  page: 1, contains_question_start: true, first_printed_label: '1',
+  last_printed_label: '1', section_hint: '',
+}
+
+describe('parseIndexWindow answer_present', () => {
+  it('reads the answer_present boolean', () => {
+    const result = parseIndexWindow(JSON.stringify({
+      questions: [{ ...INDEX_QUESTION, answer_present: true }],
+      pages: [INDEX_PAGE],
+    }))
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.value.questions[0].answerPresent).toBe(true)
+  })
+
+  it('maps a legacy evidence_state checkpoint: inline -> true, else false', () => {
+    const inline = parseIndexWindow(JSON.stringify({
+      questions: [{ ...INDEX_QUESTION, evidence_state: 'inline' }], pages: [INDEX_PAGE],
+    }))
+    const none = parseIndexWindow(JSON.stringify({
+      questions: [{ ...INDEX_QUESTION, evidence_state: 'none' }], pages: [INDEX_PAGE],
+    }))
+    expect(inline.ok && inline.value.questions[0].answerPresent).toBe(true)
+    expect(none.ok && none.value.questions[0].answerPresent).toBe(false)
+  })
+
+  it('rejects a question missing both answer_present and evidence_state', () => {
+    const result = parseIndexWindow(JSON.stringify({
+      questions: [{ ...INDEX_QUESTION }], pages: [INDEX_PAGE],
+    }))
+    expect(result.ok).toBe(false)
+  })
+})
 
 describe('parseBoxResult', () => {
   it('accepts regions whose page is 0 — the executor overwrites it (regression)', () => {
