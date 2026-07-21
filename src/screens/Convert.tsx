@@ -117,6 +117,11 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
   } | null>(null)
   // Remounts the editor when an extraction replaces the whole list.
   const [topicsNonce, setTopicsNonce] = useState(0)
+  // Seeds the freshly extracted list straight into the editor. The job's
+  // topics live query lags the write that feeds it, so a remount that read
+  // from job.topics alone would re-seed from the stale (empty) value and
+  // never catch up — the data has to travel with the remount, not behind it.
+  const [extractedTopics, setExtractedTopics] = useState<TopicItem[] | null>(null)
   const sectionRef = useRef<HTMLElement | null>(null)
   const credential = useGeminiCredential()
   const settings = useCustomizationSettings()
@@ -219,6 +224,7 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
       const outcome = await extractTopicsFromDocument({ bytes, mimeType })
       if (outcome.ok) {
         await updateJob({ topics: outcome.topics })
+        setExtractedTopics(outcome.topics)
         setTopicsNonce((nonce) => nonce + 1)
         setTopicsNote(
           outcome.topics.length > 0
@@ -547,7 +553,7 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
                     isDisabled={busy || topicsBusy}
                     key={topicsNonce}
                     onCommit={(topics: TopicItem[]) => void updateJob({ topics })}
-                    topics={job.topics ?? []}
+                    topics={extractedTopics ?? job.topics ?? []}
                   />
                 </div>
               ) : null}
