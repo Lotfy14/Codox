@@ -1,7 +1,37 @@
 import { describe, expect, it } from 'vitest'
-import { placeholderWorkerRow, underTranscribedRowIds } from './executor'
+import { placeholderWorkerRow, repairTargetPages, underTranscribedRowIds } from './executor'
 import { mergeRows, validateWorkerChunk } from './merge'
 import { makeBlueprint, makePlannedRow, makeWorkerRow } from './fixtures'
+
+describe('repairTargetPages', () => {
+  const exam = new Set([1, 2, 3, 4, 5])
+
+  it('targets a reconcile page-gap the model under-enumerated', () => {
+    // Page 4 flagged by reconcile, nothing owns it → re-index it alone.
+    const owned = new Set([1, 2, 3, 5])
+    expect(repairTargetPages([], [4], owned, exam)).toEqual([4])
+  })
+
+  it('targets the core pages of a window that would not parse', () => {
+    const owned = new Set([1, 2])
+    expect(repairTargetPages([3, 4, 5], [], owned, exam)).toEqual([3, 4, 5])
+  })
+
+  it('unions both sources without duplicating a page', () => {
+    const owned = new Set([1, 2])
+    expect(repairTargetPages([3, 4], [4, 5], owned, exam)).toEqual([3, 4, 5])
+  })
+
+  it('never re-indexes a page a window already owns', () => {
+    const owned = new Set([1, 2, 3])
+    expect(repairTargetPages([3], [3], owned, exam)).toEqual([])
+  })
+
+  it('drops a flagged page outside the exam (an answer-key or hallucinated page)', () => {
+    const owned = new Set([1, 2])
+    expect(repairTargetPages([], [3, 9], owned, exam)).toEqual([3])
+  })
+})
 
 describe('underTranscribedRowIds', () => {
   it('flags an options-bearing row the worker cut to a single option', () => {

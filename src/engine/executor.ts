@@ -638,6 +638,10 @@ async function stepPlanAndValidate(
   await updateRun(runId, { plannerModel: PLANNER_MODEL, plannerWindowCount: windows.length, plannerWindowsDone: 0 })
   const indexed: LocalizedIndexWindow[] = []
   const issues: PlanningIssue[] = []
+  // Core pages of a window that failed to parse. They get a focused per-page
+  // re-index below before any of them is flagged unreadable — a full-window
+  // failure is exactly the long-response case a single-page request survives.
+  const failedWindowPages: number[] = []
   // INDEX windows are independent — reconciliation is deterministic and runs
   // after all of them — so they go out concurrently under the shared RPM
   // throttle. Outcomes are processed in window order below, so the stitched
@@ -669,16 +673,76 @@ async function stepPlanAndValidate(
           return { ok: true, blueprint }
         }
       }
-      // An unresolved window is a visible non-fatal planning issue on its
-      // core pages, never a silent gap in the exam.
-      issues.push(...window.core.map((page) => ({ kind: 'unreadable_page' as const, page })))
+      // A whole window that would not parse: hold its core pages for the
+      // per-page repair below. Any that repair cannot recover are flagged
+      // after it, so an unresolved page is still a visible non-fatal issue,
+      // never a silent gap in the exam.
+      failedWindowPages.push(...window.core)
       continue
     }
     indexed.push(localizeIndexWindow(parsed.value, window.context, window.core, index))
   }
-  const reconciled = reconcileIndexWindows(indexed)
-  issues.push(...reconciled.issues)
+  let reconciled = reconcileIndexWindows(indexed)
+  // Dedup pressure is measured against the ORIGINAL windows only; repair
+  // windows below re-observe a page's neighbours and would inflate it.
   const emitted = indexed.reduce((total, window) => total + window.questions.length + window.disowned.length, 0)
+
+  // Per-page INDEX repair. A page the manifest says holds questions but that
+  // no window ended up owning — INDEX gave up at a window's tail, or the whole
+  // window failed to parse — is re-indexed on its own. A single-page request
+  // (core [p], context [p-1,p,p+1]) has none of the long-response fatigue that
+  // dropped the page, and merges back through the same reconcile: its page-p
+  // questions are new, and any neighbour it re-reads dedups against the
+  // original windows. Gated on INDEX having mostly worked — a run that emitted
+  // nothing falls to the legacy path below rather than spending a call per
+  // page. NEVER-GUESS holds: a page still empty after its repair stays flagged.
+  if (reconciled.questions.length > 0) {
+    const examPageSet = new Set(examPages)
+    const repairPages = repairTargetPages(
+      failedWindowPages,
+      reconciled.issues.flatMap((issue) => (issue.page === undefined ? [] : [issue.page])),
+      new Set(reconciled.questions.map((question) => question.ownerPage)),
+      examPageSet,
+    )
+    if (repairPages.length > 0) {
+      const repaired = await mapConcurrent(repairPages, CALL_CONCURRENCY, async (page, offset) => {
+        const context = [page - 1, page, page + 1].filter((candidate) => examPageSet.has(candidate))
+        const windowId = windows.length + offset
+        const images = await pageImages(runId, context.map((candidate) => candidate - 1))
+        const response = await timed(runId, `index repair p${page}`, () => call(controller, runId, buildIndexRequest(
+          images, [context.indexOf(page) + 1], PLANNER_MODEL,
+        ), signal))
+        await putArtifact({ runId, kind: 'index-window', chunkIndex: windowId, text: response.text })
+        const parsed = wasTruncated(response.finishReason) ? undefined : parseIndexWindow(response.text)
+        return parsed !== undefined && parsed.ok
+          ? localizeIndexWindow(parsed.value, context, [page], windowId)
+          : undefined
+      })
+      const recovered = repaired.filter((window): window is LocalizedIndexWindow => window !== undefined)
+      if (recovered.length > 0) {
+        indexed.push(...recovered)
+        reconciled = reconcileIndexWindows(indexed)
+      }
+      const nowOwned = new Set(reconciled.questions.map((question) => question.ownerPage))
+      await logEvent({
+        scope: 'engine', level: 'info', event: 'engine.index.repair', runId,
+        detail: { pages: repairPages, recovered: repairPages.filter((page) => nowOwned.has(page)) },
+      })
+    }
+  }
+
+  issues.push(...reconciled.issues)
+  // A failed-window page that repair could not recover is not manifest-flagged
+  // (its manifest died with the window), so reconcile never sees it — surface
+  // it here to keep the original "unresolved page is always visible" guarantee.
+  const ownedPages = new Set(reconciled.questions.map((question) => question.ownerPage))
+  const flaggedPages = new Set(issues.flatMap((issue) => (issue.page === undefined ? [] : [issue.page])))
+  for (const page of failedWindowPages) {
+    if (!ownedPages.has(page) && !flaggedPages.has(page)) {
+      issues.push({ kind: 'unreadable_page', page })
+      flaggedPages.add(page)
+    }
+  }
   await logEvent({
     scope: 'engine',
     level: reconciled.questions.length === 0 ? 'error' : 'info',
@@ -934,6 +998,23 @@ async function stepCrops(
  * the emptiness (`empty_question`/`incomplete_options`) so the row reaches
  * Review pointing at its page instead of killing the other rows' run.
  */
+/**
+ * Pages to re-index on their own after the first reconcile: a page a manifest
+ * said held questions but no window ended up owning, plus every core page of a
+ * window that would not parse — minus pages already owned and pages outside the
+ * exam. Unique and page-ordered so the focused calls go out predictably.
+ */
+export function repairTargetPages(
+  failedWindowPages: readonly number[],
+  issuePages: readonly number[],
+  ownedPages: ReadonlySet<number>,
+  examPages: ReadonlySet<number>,
+): number[] {
+  return [...new Set([...failedWindowPages, ...issuePages])]
+    .filter((page) => examPages.has(page) && !ownedPages.has(page))
+    .sort((a, b) => a - b)
+}
+
 export function placeholderWorkerRow(planned: PlannedRow): WorkerRow {
   return {
     id: planned.id,
