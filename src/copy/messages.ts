@@ -311,23 +311,28 @@ export const customizeMessages = {
   matchingSkip: 'Leave them out',
   matchingSkipHint:
     'Matching questions are dropped from the finished set. Everything else converts as usual.',
-  modelNewer: 'Newer model (default)',
-  modelNewerHint:
-    'Gemini 3.5 Flash-Lite — the newer model, used for every step unless you change it here.',
-  modelOlder: 'Steadier older model',
-  modelOlderHint:
-    'Gemini 3.1 Flash-Lite — the previous model. Slower to run out of the free per-minute limit and steadier on some documents.',
+  modelNewer: 'Newer (default)',
+  modelOlder: 'Steadier older',
   modelsPanelLabel: 'Which model does each step',
   modelsIntro:
-    'Advanced. Each conversion runs three steps that call Gemini, and you can pick the model for each. Whichever model you do not pick is used automatically as the backup if the first one is busy or unavailable — nothing is ever left unanswered. Both run under your own key. Leave these on the default unless you have a reason to change them.',
-  plannerModelLabel: 'Finding questions (planner)',
-  plannerModelHint:
-    'The step that reads the pages to find every question, its options, and any figures. This one model covers all of that reading.',
-  workerModelLabel: 'Transcribing questions (worker)',
-  workerModelHint:
-    'The step that types out each question and its choices word for word.',
-  auditModelLabel: 'Double-checking (audit)',
-  auditModelHint:
+    'Advanced. A conversion runs several steps that call Gemini, and you can pick the model for each one. Whichever model you do not pick for a step is used automatically as that step’s backup if the first is busy or unavailable — nothing is ever left unanswered. Both models run under your own key. Newer is Gemini 3.5 Flash-Lite; steadier older is Gemini 3.1 Flash-Lite, which is slower to hit the free per-minute limit and can be steadier on some documents. Leave these on the default unless you have a reason to change them.',
+  modelIndexLabel: 'Finding questions',
+  modelIndexHint:
+    'Reads the pages to list every question and where it sits. This also runs the fallback re-read of any page that comes back empty.',
+  modelEvidenceLabel: 'Reading a separate answer key',
+  modelEvidenceHint:
+    'Reads a separate answer-key document (when you add one) to locate each answer. Skipped when there is no separate key.',
+  modelFigureLabel: 'Spotting figures',
+  modelFigureHint:
+    'Detects images and diagrams attached to a question so they get cropped with it.',
+  modelBoxLabel: 'Drawing crops',
+  modelBoxHint:
+    'Draws the exact box around each question, its options, and any figure. This is the geometry-heavy step where the two models differ most — if crops come out misaligned, try the steadier older model here.',
+  modelWorkerLabel: 'Transcribing questions',
+  modelWorkerHint:
+    'Types out each question and its choices word for word.',
+  modelAuditLabel: 'Double-checking',
+  modelAuditHint:
     'The final read-through that checks the transcribed questions against the pages before the set is finished.',
 } as const
 
@@ -480,6 +485,8 @@ export const reviewMessages = {
   editNoPicturesAvailable:
     'This file has no other extracted pictures to link.',
   editPictureAlt: (path: string) => `Extracted picture ${path}`,
+  editPastePictureHint:
+    'Paste an image (Ctrl/⌘+V) to attach it as a linked picture.',
   editSave: 'Save changes',
   editCancel: 'Cancel',
   editRevert: 'Remove all edits on this question',

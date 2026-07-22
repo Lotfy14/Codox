@@ -4,6 +4,11 @@ import {
   SELECTABLE_ENGINE_MODELS,
   type EngineModel,
 } from '../providers/gemini'
+import {
+  DEFAULT_ENGINE_MODELS,
+  ENGINE_STEPS,
+  type EngineStep,
+} from '../engine/model-steps'
 import { db } from './db'
 import type { YearMode } from './types'
 
@@ -67,16 +72,14 @@ export interface CustomizationSettings {
    */
   matchingMode: MatchingMode
   /**
-   * Which model each engine role uses as its PRIMARY (Advanced). Every role
-   * defaults to `DEFAULT_GEMINI_VISION_MODEL`; the model NOT chosen becomes
-   * that role's runtime fallback ("the other one is the fallback"). The
-   * planner value drives INDEX/EVIDENCE/FIGURE/BOX (they share one model). All
-   * three run under the same one user key — a second model, never a second
-   * key or provider. Snapshotted per run at creation like the other knobs.
+   * Which model each request-making engine step uses as its PRIMARY (Advanced).
+   * Every step (index, evidence, figure, box, worker, audit) defaults to
+   * `DEFAULT_GEMINI_VISION_MODEL`; the model NOT chosen becomes that step's
+   * runtime fallback ("the other one is the fallback"). All run under the same
+   * one user key — a second model, never a second key or provider. Snapshotted
+   * per run at creation like the other knobs.
    */
-  plannerModel: EngineModel
-  workerModel: EngineModel
-  auditModel: EngineModel
+  engineModels: Record<EngineStep, EngineModel>
 }
 
 export const INDEX_PAGES_MIN = 1
@@ -104,9 +107,7 @@ export const DEFAULT_CUSTOMIZATION_SETTINGS: CustomizationSettings = {
   boxPagesPerCall: BOX_PAGES_MIN,
   workerChunkSize: 6,
   matchingMode: 'split',
-  plannerModel: DEFAULT_GEMINI_VISION_MODEL,
-  workerModel: DEFAULT_GEMINI_VISION_MODEL,
-  auditModel: DEFAULT_GEMINI_VISION_MODEL,
+  engineModels: { ...DEFAULT_ENGINE_MODELS },
 }
 
 const YEAR_MODES: readonly YearMode[] = ['off', 'type', 'ai']
@@ -114,11 +115,41 @@ const TOPICS_MODES: readonly TopicsMode[] = ['off', 'on']
 const EXPORT_TARGETS: readonly ExportTarget[] = ['triviadox', 'zip']
 const MATCHING_MODES: readonly MatchingMode[] = ['skip', 'split']
 
-/** A selectable engine model, or the default for anything unrecognized. */
-function engineModel(value: unknown): EngineModel {
-  return SELECTABLE_ENGINE_MODELS.includes(value as EngineModel)
-    ? (value as EngineModel)
-    : DEFAULT_GEMINI_VISION_MODEL
+/** A selectable engine model, or a fallback (legacy value, then the default). */
+function engineModel(value: unknown, legacy?: unknown): EngineModel {
+  if (SELECTABLE_ENGINE_MODELS.includes(value as EngineModel)) {
+    return value as EngineModel
+  }
+  if (SELECTABLE_ENGINE_MODELS.includes(legacy as EngineModel)) {
+    return legacy as EngineModel
+  }
+  return DEFAULT_GEMINI_VISION_MODEL
+}
+
+/**
+ * Per-step primary models, narrowing each step independently. Falls a missing
+ * or unrecognized step back to the first-shipped grouped fields
+ * (`plannerModel` → the four planner-family steps; `workerModel`/`auditModel`),
+ * so the brief 3-picker settings migrate without losing the tutor's choice,
+ * then to the default primary.
+ */
+function narrowEngineModels(
+  parsed: Record<string, unknown>,
+): Record<EngineStep, EngineModel> {
+  const stored = (parsed.engineModels ?? {}) as Record<string, unknown>
+  const legacy: Record<EngineStep, unknown> = {
+    index: parsed.plannerModel,
+    evidence: parsed.plannerModel,
+    figure: parsed.plannerModel,
+    box: parsed.plannerModel,
+    worker: parsed.workerModel,
+    audit: parsed.auditModel,
+  }
+  const result = {} as Record<EngineStep, EngineModel>
+  for (const step of ENGINE_STEPS) {
+    result[step] = engineModel(stored[step], legacy[step])
+  }
+  return result
 }
 
 /** An integer setting inside its range, or the default for anything else. */
@@ -175,9 +206,7 @@ function narrow(value: string | undefined): CustomizationSettings {
       matchingMode: MATCHING_MODES.includes(parsed.matchingMode as MatchingMode)
         ? (parsed.matchingMode as MatchingMode)
         : DEFAULT_CUSTOMIZATION_SETTINGS.matchingMode,
-      plannerModel: engineModel(parsed.plannerModel),
-      workerModel: engineModel(parsed.workerModel),
-      auditModel: engineModel(parsed.auditModel),
+      engineModels: narrowEngineModels(parsed as Record<string, unknown>),
     }
   } catch {
     return DEFAULT_CUSTOMIZATION_SETTINGS

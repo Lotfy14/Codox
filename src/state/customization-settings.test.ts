@@ -28,9 +28,14 @@ describe('customization settings', () => {
       boxPagesPerCall: 4,
       workerChunkSize: 5,
       matchingMode: 'skip',
-      plannerModel: 'gemini-3.1-flash-lite',
-      workerModel: 'gemini-3.5-flash-lite',
-      auditModel: 'gemini-3.1-flash-lite',
+      engineModels: {
+        index: 'gemini-3.5-flash-lite',
+        evidence: 'gemini-3.1-flash-lite',
+        figure: 'gemini-3.5-flash-lite',
+        box: 'gemini-3.1-flash-lite',
+        worker: 'gemini-3.5-flash-lite',
+        audit: 'gemini-3.1-flash-lite',
+      },
     })
     expect(await getCustomizationSettings()).toEqual({
       yearMode: 'ai',
@@ -41,9 +46,37 @@ describe('customization settings', () => {
       boxPagesPerCall: 4,
       workerChunkSize: 5,
       matchingMode: 'skip',
-      plannerModel: 'gemini-3.1-flash-lite',
-      workerModel: 'gemini-3.5-flash-lite',
-      auditModel: 'gemini-3.1-flash-lite',
+      engineModels: {
+        index: 'gemini-3.5-flash-lite',
+        evidence: 'gemini-3.1-flash-lite',
+        figure: 'gemini-3.5-flash-lite',
+        box: 'gemini-3.1-flash-lite',
+        worker: 'gemini-3.5-flash-lite',
+        audit: 'gemini-3.1-flash-lite',
+      },
+    })
+  })
+
+  it('migrates the first-shipped grouped model fields per step', async () => {
+    // Settings written by the brief 3-picker version: plannerModel drove the
+    // four planner-family steps; workerModel/auditModel their own. They must
+    // carry over so a tutor who set them does not silently lose the choice.
+    await db.meta.put({
+      key: 'customizationSettings',
+      value: JSON.stringify({
+        plannerModel: 'gemini-3.1-flash-lite',
+        workerModel: 'gemini-3.5-flash-lite',
+        auditModel: 'gemini-3.1-flash-lite',
+      }),
+    })
+    const { engineModels } = await getCustomizationSettings()
+    expect(engineModels).toEqual({
+      index: 'gemini-3.1-flash-lite',
+      evidence: 'gemini-3.1-flash-lite',
+      figure: 'gemini-3.1-flash-lite',
+      box: 'gemini-3.1-flash-lite',
+      worker: 'gemini-3.5-flash-lite',
+      audit: 'gemini-3.1-flash-lite',
     })
   })
 
@@ -59,7 +92,7 @@ describe('customization settings', () => {
         workerChunkSize: 99,
         // An unrecognized model id (a typo, or a model removed from the menu)
         // must never reach the engine — it narrows back to the default.
-        plannerModel: 'gemini-9-ultra',
+        engineModels: { box: 'gemini-9-ultra' },
       }),
     })
     expect(await getCustomizationSettings()).toEqual({
@@ -76,10 +109,9 @@ describe('customization settings', () => {
       // setting migrates to the 'split' default rather than to a mode that
       // would silently drop the tutor's questions.
       matchingMode: DEFAULT_CUSTOMIZATION_SETTINGS.matchingMode,
-      // Unknown / absent model ids fall back to the default primary.
-      plannerModel: DEFAULT_CUSTOMIZATION_SETTINGS.plannerModel,
-      workerModel: DEFAULT_CUSTOMIZATION_SETTINGS.workerModel,
-      auditModel: DEFAULT_CUSTOMIZATION_SETTINGS.auditModel,
+      // Unknown (box) and absent (all others) model ids fall back to the
+      // default primary — no unrecognized id reaches the engine.
+      engineModels: DEFAULT_CUSTOMIZATION_SETTINGS.engineModels,
     })
   })
 

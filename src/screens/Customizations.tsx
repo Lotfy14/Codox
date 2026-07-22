@@ -25,6 +25,7 @@ import {
   FALLBACK_GEMINI_VISION_MODEL,
   type EngineModel,
 } from '../providers/gemini'
+import type { EngineStep } from '../engine/model-steps'
 import type { YearMode } from '../state/types'
 
 const YEAR_OPTIONS: readonly ChoiceOption<YearMode>[] = [
@@ -95,17 +96,23 @@ const MATCHING_OPTIONS: readonly ChoiceOption<MatchingMode>[] = [
   },
 ]
 
-const MODEL_OPTIONS: readonly ChoiceOption<EngineModel>[] = [
-  {
-    value: DEFAULT_GEMINI_VISION_MODEL,
-    label: customizeMessages.modelNewer,
-    hint: customizeMessages.modelNewerHint,
-  },
-  {
-    value: FALLBACK_GEMINI_VISION_MODEL,
-    label: customizeMessages.modelOlder,
-    hint: customizeMessages.modelOlderHint,
-  },
+const MODEL_SELECT_OPTIONS: readonly SelectOption<EngineModel>[] = [
+  { id: DEFAULT_GEMINI_VISION_MODEL, label: customizeMessages.modelNewer },
+  { id: FALLBACK_GEMINI_VISION_MODEL, label: customizeMessages.modelOlder },
+]
+
+/** The request-making steps, in pipeline order, with their tutor-facing copy. */
+const MODEL_STEPS: readonly {
+  step: EngineStep
+  label: string
+  hint: string
+}[] = [
+  { step: 'index', label: customizeMessages.modelIndexLabel, hint: customizeMessages.modelIndexHint },
+  { step: 'evidence', label: customizeMessages.modelEvidenceLabel, hint: customizeMessages.modelEvidenceHint },
+  { step: 'figure', label: customizeMessages.modelFigureLabel, hint: customizeMessages.modelFigureHint },
+  { step: 'box', label: customizeMessages.modelBoxLabel, hint: customizeMessages.modelBoxHint },
+  { step: 'worker', label: customizeMessages.modelWorkerLabel, hint: customizeMessages.modelWorkerHint },
+  { step: 'audit', label: customizeMessages.modelAuditLabel, hint: customizeMessages.modelAuditHint },
 ]
 
 const TOPICS_OPTIONS: readonly ChoiceOption<TopicsMode>[] = [
@@ -253,33 +260,22 @@ export function Customizations() {
         >
           <div className="ds-stack">
             <p className="ds-muted">{customizeMessages.modelsIntro}</p>
-            <p className="ds-muted">{customizeMessages.plannerModelHint}</p>
-            <ChoiceGroup
-              legend={customizeMessages.plannerModelLabel}
-              onChange={(plannerModel) =>
-                void saveCustomizationSettings({ ...settings, plannerModel })
-              }
-              options={MODEL_OPTIONS}
-              value={settings.plannerModel}
-            />
-            <p className="ds-muted">{customizeMessages.workerModelHint}</p>
-            <ChoiceGroup
-              legend={customizeMessages.workerModelLabel}
-              onChange={(workerModel) =>
-                void saveCustomizationSettings({ ...settings, workerModel })
-              }
-              options={MODEL_OPTIONS}
-              value={settings.workerModel}
-            />
-            <p className="ds-muted">{customizeMessages.auditModelHint}</p>
-            <ChoiceGroup
-              legend={customizeMessages.auditModelLabel}
-              onChange={(auditModel) =>
-                void saveCustomizationSettings({ ...settings, auditModel })
-              }
-              options={MODEL_OPTIONS}
-              value={settings.auditModel}
-            />
+            {MODEL_STEPS.map(({ step, label, hint }) => (
+              <Select<EngineModel>
+                key={step}
+                description={hint}
+                label={label}
+                onChange={(model) => {
+                  if (model === null) return
+                  void saveCustomizationSettings({
+                    ...settings,
+                    engineModels: { ...settings.engineModels, [step]: model },
+                  })
+                }}
+                options={MODEL_SELECT_OPTIONS}
+                value={settings.engineModels[step]}
+              />
+            ))}
           </div>
         </GlassPanel>
         <GlassPanel

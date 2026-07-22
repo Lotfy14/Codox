@@ -13,14 +13,14 @@ import { AUDIT_PROMPT, PLANNER_PROMPT, WORKER_PROMPT } from './prompts'
 import type { AuditReport, Blueprint, MergedRow, ReducedBlueprint } from './types'
 
 /**
- * Default model assignments (§1.2). Every role defaults to the primary
+ * Default model assignments (§1.2). Every step defaults to the primary
  * gemini-3.5-flash-lite (owner decision 2026-07-22; see
- * DEFAULT_GEMINI_VISION_MODEL). As of the per-role model selection
- * (owner-approved 2026-07-22) a tutor MAY override each role's model in
- * Customize (Advanced) — the value is threaded in as a call argument; these
- * constants are only the defaults. The engine itself still never swaps a
- * role's model mid-run: the chosen model is fixed for the run and the engine
- * retries the SAME model. The one runtime model swap lives in the controller,
+ * DEFAULT_GEMINI_VISION_MODEL). As of per-step model selection
+ * (owner-approved 2026-07-22) a tutor MAY override each request-making step's
+ * model in Customize (Advanced) — the value is threaded in as a call argument
+ * (`EngineModels` in model-steps.ts); these constants are only the defaults.
+ * The engine itself still never swaps a step's model mid-run: the chosen model
+ * is fixed for the run and the engine retries the SAME model. The one runtime model swap lives in the controller,
  * outside the engine: a request the primary cannot answer is retried on the
  * role's fallback — `fallbackModelId`, set here to the OTHER selectable model
  * ("the one the tutor didn't pick"), or the controller's global

@@ -41,15 +41,14 @@ import {
   buildPlannerRepairRequest,
   buildPlannerRequest,
   buildWorkerRequest,
-  AUDIT_MODEL,
   PLANNER_MODEL,
-  WORKER_MODEL,
   wasTruncated,
   type CallImage,
 } from './calls'
 import {
   buildBoxBatchRequest, buildBoxRequest, buildEvidenceRequest, buildFigureDetectRequest, buildIndexRequest,
 } from './calls'
+import { DEFAULT_ENGINE_MODELS, type EngineModels } from './model-steps'
 import { assembleBlueprint } from './assemble'
 import { mapConcurrent } from './concurrency'
 import {
@@ -131,13 +130,12 @@ export interface ExecutorOptions {
    */
   matchingMode?: MatchingMode
   /**
-   * Per-role primary models (Customize → Advanced). Each defaults to the role
-   * constant; the model NOT chosen becomes that role's runtime fallback. The
-   * planner value covers INDEX/EVIDENCE/FIGURE/BOX (they share one model).
+   * Per-step primary models (Customize → Advanced). Each step (index, evidence,
+   * figure, box, worker, audit) defaults to the primary vision model; the model
+   * NOT chosen becomes that step's runtime fallback. Any step omitted here
+   * falls to `DEFAULT_ENGINE_MODELS`.
    */
-  plannerModel?: string
-  workerModel?: string
-  auditModel?: string
+  models?: Partial<EngineModels>
 }
 
 export type RunOutcome =
@@ -633,7 +631,7 @@ async function planOneWindow(
 async function stepPlanAndValidate(
   runId: string, controller: GeminiController, signal: AbortSignal | undefined,
   examPageCount?: number, answerKeyPageCount = 0, boxPagesPerCall = 1,
-  indexPagesPerCall = DEFAULT_WINDOW_PAGES, plannerModel = PLANNER_MODEL,
+  indexPagesPerCall = DEFAULT_WINDOW_PAGES, models: EngineModels = DEFAULT_ENGINE_MODELS,
 ): Promise<{ ok: true; blueprint: Blueprint } | { ok: false; reason: PlannerStop }> {
   const cached = await getArtifact(runId, 'blueprint-valid')
   if (cached?.json !== undefined) return { ok: true, blueprint: cached.json as Blueprint }
@@ -644,7 +642,7 @@ async function stepPlanAndValidate(
     .sort((a, b) => a - b)
   if (examPages.length === 0) return { ok: false, reason: 'planner_unparseable' }
   const windows = planWindows(examPages, indexPagesPerCall)
-  await updateRun(runId, { plannerModel, plannerWindowCount: windows.length, plannerWindowsDone: 0 })
+  await updateRun(runId, { plannerModel: models.index, plannerWindowCount: windows.length, plannerWindowsDone: 0 })
   const indexed: LocalizedIndexWindow[] = []
   const issues: PlanningIssue[] = []
   // Core pages of a window that failed to parse. They get a focused per-page
@@ -659,7 +657,7 @@ async function stepPlanAndValidate(
   const indexOutcomes = await mapConcurrent(windows, CALL_CONCURRENCY, async (window, index) => {
     const images = await pageImages(runId, window.context.map((page) => page - 1))
     const response = await timed(runId, `index w${index + 1}`, () => call(controller, runId, buildIndexRequest(
-      images, window.core.map((page) => window.context.indexOf(page) + 1), plannerModel,
+      images, window.core.map((page) => window.context.indexOf(page) + 1), models.index,
     ), signal))
     await putArtifact({ runId, kind: 'index-window', chunkIndex: index, text: response.text })
     indexWindowsDone += 1
@@ -719,7 +717,7 @@ async function stepPlanAndValidate(
         const windowId = windows.length + offset
         const images = await pageImages(runId, context.map((candidate) => candidate - 1))
         const response = await timed(runId, `index repair p${page}`, () => call(controller, runId, buildIndexRequest(
-          images, [context.indexOf(page) + 1], plannerModel,
+          images, [context.indexOf(page) + 1], models.index,
         ), signal))
         await putArtifact({ runId, kind: 'index-window', chunkIndex: windowId, text: response.text })
         const parsed = wasTruncated(response.finishReason) ? undefined : parseIndexWindow(response.text)
@@ -776,8 +774,9 @@ async function stepPlanAndValidate(
   }
   if (reconciled.questions.length === 0) {
     // Makes existing interrupted runs and old test fixtures resumable; fresh
-    // calls always use INDEX above.
-    return stepLegacyPlanAndValidate(runId, controller, signal, plannerModel)
+    // calls always use INDEX above. The legacy single-planner call is the
+    // index-equivalent step, so it takes the index model.
+    return stepLegacyPlanAndValidate(runId, controller, signal, models.index)
   }
 
   const defaultEvidence: EvidenceMap = {
@@ -790,7 +789,7 @@ async function stepPlanAndValidate(
     const response = await timed(runId, 'evidence', async () => call(controller, runId, buildEvidenceRequest(
       await pageImages(runId, keyPages.map((page) => page - 1)),
       reconciled.questions.map((row) => ({ ref: row.ref, printedLabel: row.printedLabel, section: row.sectionKey })),
-      plannerModel,
+      models.evidence,
     ), signal))
     const parsed = wasTruncated(response.finishReason) ? undefined : parseEvidenceMap(response.text)
     return parsed?.ok ? parsed.value : defaultEvidence
@@ -802,7 +801,7 @@ async function stepPlanAndValidate(
     const response = await timed(runId, `figure w${index + 1}`, async () => call(controller, runId, buildFigureDetectRequest(
       await pageImages(runId, window.context.map((page) => page - 1)),
       reconciled.questions.filter((row) => window.core.includes(row.ownerPage)).map((row) => ({ ref: row.ref, ownerPage: row.ownerPage })),
-      plannerModel,
+      models.figure,
     ), signal))
     await putArtifact({ runId, kind: 'figure-window', chunkIndex: index, text: response.text })
     if (!wasTruncated(response.finishReason)) parseFigureDetection(response.text)
@@ -843,10 +842,10 @@ async function stepPlanAndValidate(
         hasInlineEvidence: false
       }))
       const request = batchPages.length === 1
-        ? buildBoxRequest(images, tasks, plannerModel)
+        ? buildBoxRequest(images, tasks, models.box)
         : buildBoxBatchRequest(images, tasks.map((task, index) => ({
             ...task, page: batchPages.indexOf(refs[index].ownerPage) + 1,
-          })), plannerModel)
+          })), models.box)
       return call(controller, runId, request, signal)
     })
     const parsed = wasTruncated(response.finishReason) ? undefined : parseBoxResult(response.text)
@@ -1337,11 +1336,9 @@ export async function executeRun(
   const controller = options.controller ?? geminiController
   const chunkSize = options.chunkSize ?? 10
   const matchingMode = options.matchingMode ?? 'split'
-  // Per-role primary models (Customize → Advanced); each defaults to its role
-  // constant. The controller falls each back to its paired other model.
-  const plannerModel = options.plannerModel ?? PLANNER_MODEL
-  const workerModel = options.workerModel ?? WORKER_MODEL
-  const auditModel = options.auditModel ?? AUDIT_MODEL
+  // Per-step primary models (Customize → Advanced); each unset step defaults to
+  // the primary. The controller falls each back to its paired other model.
+  const models: EngineModels = { ...DEFAULT_ENGINE_MODELS, ...options.models }
   const { signal } = options
 
   await updateRun(runId, { status: 'running' })
@@ -1361,7 +1358,7 @@ export async function executeRun(
     await updateRun(runId, { step: 'planner', stepStartedAt: Date.now() })
     const planned = await stepPlanAndValidate(
       runId, controller, signal, render.examPageCount, render.answerKeyPageCount,
-      options.boxPagesPerCall, options.indexPagesPerCall, plannerModel,
+      options.boxPagesPerCall, options.indexPagesPerCall, models,
     )
     if (!planned.ok) return stop(runId, 'planner', planned.reason)
     const blueprint = planned.blueprint
@@ -1382,7 +1379,7 @@ export async function executeRun(
       runId,
       blueprint,
       controller,
-      workerModel,
+      models.worker,
       chunkSize,
       signal,
     )
@@ -1478,7 +1475,7 @@ export async function executeRun(
         call(
           controller,
           runId,
-          buildAuditRequest(blueprint, rows, auditImages, auditModel),
+          buildAuditRequest(blueprint, rows, auditImages, models.audit),
           signal,
         ),
       )

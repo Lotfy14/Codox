@@ -40,30 +40,6 @@ for why each stack piece was chosen.
    sees a key or a page. First run shows a one-line notice that pages are
    sent to Gemini under the user's key (owner chose minimal notice —
    users are a known group working with public documents).
-4. **Claude orchestrates, GLM codes** — in this repo Claude plans and
-   reviews; it never writes or edits application code itself, and never
-   hand-fixes a bug. Every code change goes through GLM via the `opencode`
-   CLI (the `delegate-to-opencode` skill): Claude writes the spec — what to
-   change, where, the constraints from this file, and what "done" looks
-   like — GLM executes it as a diff, and Claude reviews the diff against the
-   spec and against every other rule in this file. If the diff doesn't pass
-   review, Claude sends GLM one precise fix instruction and re-reviews — no
-   fixed round limit, keep iterating as long as each round makes real
-   progress on the review findings. If a round comes back with the same
-   problem unfixed (no progress), stop and surface it to the owner instead
-   of writing the fix by hand or looping further. Every `opencode run` is
-   time-boxed (hard timeout on the invocation; ~3 minutes with no output
-   and no diff = stalled → kill it and re-dispatch fresh, never wait it
-   out). Continue a session with `-c` only when the follow-up needs its
-   accumulated context; a small fully-specified fix always goes in a fresh
-   session — stale sessions are killed, never left running. Scope is
-   application code (`src/`, shipped config, build scripts) — Claude still
-   reads code, runs tests/builds/git to verify GLM's work, writes specs and
-   commit messages, and edits documentation (including this file) directly;
-   the line is who holds the pen on application code, not who's allowed to
-   touch a keyboard. The **Search before build** research step below is
-   unaffected — Claude still researches whether a package exists; if none
-   does, GLM writes the hand-rolled implementation, not Claude.
 
 ## Provider and quota rule (non-negotiable)
 
@@ -122,29 +98,36 @@ are untouched. Consequence: the key check runs the **fallback** model (the
 guaranteed-runnable path), so a key that lacks the new primary but can run the
 fallback still validates and converts.
 
-*Per-role model selection (owner-approved 2026-07-22):* the fixed one-model-
+*Per-step model selection (owner-approved 2026-07-22):* the fixed one-model-
 for-every-role pin above is now a **default**, not a lock. Customize's Advanced
-"Which model does each step" exposes the three engine roles that make requests —
-**Planner** (drives INDEX/EVIDENCE/FIGURE/BOX, which share one model),
-**Worker**, and **Audit** — and lets the tutor pick each role's **primary** from
-exactly the two selectable models (`SELECTABLE_ENGINE_MODELS`:
-`gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`). The model **not** picked
-becomes that role's runtime **fallback** — "the other one is the fallback" —
+"Which model does each step" lists **every request-making engine step
+individually** (`ENGINE_STEPS`, pipeline order): **index** (also drives the
+legacy single-planner path and the per-page INDEX repair), **evidence**,
+**figure**, **box**, **worker**, and **audit**. The tutor picks each step's
+**primary** from exactly the two selectable models (`SELECTABLE_ENGINE_MODELS`:
+`gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`); the model **not** picked
+becomes that step's runtime **fallback** — "the other one is the fallback" —
 threaded as the request's `fallbackModelId` (`otherEngineModel`) and honored by
 the controller's existing one-swap path above (a per-request fallback now,
 defaulting to `FALLBACK_GEMINI_VISION_MODEL` when unset, which is how the
 post-audit AI steps keep their old behavior). The pair is **closed at two**, so
-"the other one" is always well-defined. This does **not** touch the
-provider/quota rule: both models run under the **same one user key** — a second
-model, never a second key or provider. The **engine still never swaps a role's
-model mid-run** — the tutor's choice is fixed for the whole run and the engine
-retries the same model; only the controller does the one paired-fallback swap.
-Defaults leave all three roles on `gemini-3.5-flash-lite`, so a tutor who
-changes nothing gets byte-identical behavior. Choices snapshot per run at
-creation like the other Customize knobs. The three pinned prompts and the
-output contract are untouched. Post-audit AI steps (topic matching, Ask-AI
-solver, matching-split) are **not** part of this selection — they keep their
-own `gemini-3.1-flash-lite` pin.
+"the other one" is always well-defined. The per-step split exists so a tutor can
+put the geometry-heavy **box** step on the older model (whose bounding boxes are
+the measured weak point of the newer one) without dragging the text-reading
+steps with it. This does **not** touch the provider/quota rule: every step runs
+under the **same one user key** — a second model, never a second key or
+provider. The **engine still never swaps a step's model mid-run** — the tutor's
+choice is fixed for the whole run and the engine retries the same model; only
+the controller does the one paired-fallback swap. Defaults leave every step on
+`gemini-3.5-flash-lite`, so a tutor who changes nothing gets byte-identical
+behavior. Choices live in `CustomizationSettings.engineModels`
+(`Record<EngineStep, EngineModel>`, defined in `src/engine/model-steps.ts`) and
+snapshot per run at creation like the other Customize knobs; the brief first
+cut shipped three grouped pickers (planner/worker/audit) and those stored fields
+migrate per step. The three pinned prompts and the output contract are
+untouched. Post-audit AI steps (topic matching, Ask-AI solver, matching-split)
+are **not** part of this selection — they keep their own `gemini-3.1-flash-lite`
+pin.
 
 *Question count is code-owned (owner-approved 2026-07-14):* CODOX_MIGRATION
 §1.6's rule "`planned_rows` count equals `document_profile.question_count`" no
@@ -349,21 +332,6 @@ leaves every other device broken. If a fix genuinely cannot ship through
 cache or IndexedDB), say so explicitly and list which devices remain
 affected and what the user must do on each.
 
-## Search before build
-
-Before implementing any non-trivial functionality from scratch, dispatch a
-**Claude Sonnet 5 research subagent** (Agent tool, model `sonnet`, web search
-enabled) to check whether a maintained package already does it. Adopt the
-package when it is maintained, permissively licensed, and reasonably sized;
-only when the search comes back empty does GLM hand-write the
-implementation (per the **Claude orchestrates, GLM codes** rule above —
-Claude specs it, doesn't write it). Goal: minimize hand-written code.
-Trivial glue (a loop, a small helper) needs no search.
-
-Already-decided packages (do not re-litigate): React 19 + Vite +
-vite-plugin-pwa, Dexie (IndexedDB), @hyzyla/pdfium (render/crop), pdf.js
-(text layer only), fflate (zip), Tauri 2 (Windows shell), Capacitor
-(Android shell).
 
 ## Stack & conventions
 
