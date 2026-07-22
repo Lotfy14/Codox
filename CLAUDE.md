@@ -287,18 +287,21 @@ nested can be restructured by hand before converting, not just retyped.
 *Post-run topic matching from scratch (owner-approved 2026-07-22):*
 `RunTopicsPanel` no longer hides when a run finished with no topic list. A
 run converted without topics (topics mode off, or no list supplied) now
-shows an **"Add topic matching"** entry in review: the tutor builds a list
-in `TopicsEditor` and matches every extracted row against it — no re-run.
-The engine already supported this — `rematchRunTopics`'s `writeRunTopics`
-creates the `topics-list` snapshot on first save — so this is a pure UI
-unlock (the old `runTopics === undefined` early-return is gone), still
-outside the engine path with `merged-rows` untouched and NEVER-GUESS intact
-(unsure rows stay blank). Export already keys its topic columns off the
-per-run `topics-list` artifact (`hasTopics` in `exporter.ts`), not the
-global topics setting, so an added-after-the-fact list flows straight into
-the exported `topic`/`subtopic` columns. Scope was deliberately kept to a
-typed/pasted list — no topics-document upload in review (owner call
-2026-07-22).
+shows an **"Add topic matching"** entry in review: the tutor supplies a list
+— **either** dropping a topics document (PDF/image), read in place by the
+same `extractTopicsFromDocument` the setup screen uses, **or** typing it in
+`TopicsEditor` — and matches every extracted row against it, no re-run. The
+engine already supported this — `rematchRunTopics`'s `writeRunTopics`
+creates the `topics-list` snapshot on first save — so the match side is a
+pure UI unlock (the old `runTopics === undefined` early-return is gone). The
+document read is the setup extraction reused: the dropped file's bytes go
+straight to `extractTopicsFromDocument` (no job PDF stored), and read
+failures map to the same bad-key ≠ quota ≠ unreachable notes. Still outside
+the engine path with `merged-rows` untouched and NEVER-GUESS intact (unsure
+rows stay blank). Export already keys its topic columns off the per-run
+`topics-list` artifact (`hasTopics` in `exporter.ts`), not the global topics
+setting, so an added-after-the-fact list flows straight into the exported
+`topic`/`subtopic` columns.
 
 ## Ship everywhere or nowhere (non-negotiable)
 

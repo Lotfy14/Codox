@@ -386,7 +386,7 @@ export const topicsMessages = {
   // one now and match without re-running the conversion.
   addOpen: 'Add topic matching',
   addHint:
-    'Build a topic list — type each topic and any subtopics — then match. This labels every question against your list without re-running the conversion.',
+    'Drop a topics document (PDF or image) to read the list, or type it by hand — then match. This labels every question against your list without re-running the conversion.',
 } as const
 
 export const reviewMessages = {
