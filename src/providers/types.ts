@@ -87,6 +87,15 @@ export interface VisionRequest {
   }>
   /** Model id override; the adapter's default free vision model otherwise. */
   modelId?: string
+  /**
+   * The model this request's runtime fallback should use when the primary
+   * (`modelId`) cannot answer. Set by the engine call builders to the OTHER of
+   * the two selectable models — "the model the tutor didn't pick" — so each
+   * role falls back to its own paired model. Absent → the controller uses its
+   * global `FALLBACK_GEMINI_VISION_MODEL` (post-audit AI steps, which never
+   * set this, keep their existing fallback behavior unchanged).
+   */
+  fallbackModelId?: string
   /** Passed through verbatim; omitted from the request body when absent. */
   generationConfig?: GenerationConfig
 }

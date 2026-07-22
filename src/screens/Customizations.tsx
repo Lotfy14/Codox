@@ -20,6 +20,11 @@ import {
   type MatchingMode,
   type TopicsMode,
 } from '../state/customization-settings'
+import {
+  DEFAULT_GEMINI_VISION_MODEL,
+  FALLBACK_GEMINI_VISION_MODEL,
+  type EngineModel,
+} from '../providers/gemini'
 import type { YearMode } from '../state/types'
 
 const YEAR_OPTIONS: readonly ChoiceOption<YearMode>[] = [
@@ -87,6 +92,19 @@ const MATCHING_OPTIONS: readonly ChoiceOption<MatchingMode>[] = [
     value: 'skip',
     label: customizeMessages.matchingSkip,
     hint: customizeMessages.matchingSkipHint,
+  },
+]
+
+const MODEL_OPTIONS: readonly ChoiceOption<EngineModel>[] = [
+  {
+    value: DEFAULT_GEMINI_VISION_MODEL,
+    label: customizeMessages.modelNewer,
+    hint: customizeMessages.modelNewerHint,
+  },
+  {
+    value: FALLBACK_GEMINI_VISION_MODEL,
+    label: customizeMessages.modelOlder,
+    hint: customizeMessages.modelOlderHint,
   },
 ]
 
@@ -227,6 +245,42 @@ export function Customizations() {
             options={WORKER_CHUNK_OPTIONS}
             value={settings.workerChunkSize}
           />
+        </GlassPanel>
+        <GlassPanel
+          aria-label={customizeMessages.modelsPanelLabel}
+          as="section"
+          padding="compact"
+        >
+          <div className="ds-stack">
+            <p className="ds-muted">{customizeMessages.modelsIntro}</p>
+            <p className="ds-muted">{customizeMessages.plannerModelHint}</p>
+            <ChoiceGroup
+              legend={customizeMessages.plannerModelLabel}
+              onChange={(plannerModel) =>
+                void saveCustomizationSettings({ ...settings, plannerModel })
+              }
+              options={MODEL_OPTIONS}
+              value={settings.plannerModel}
+            />
+            <p className="ds-muted">{customizeMessages.workerModelHint}</p>
+            <ChoiceGroup
+              legend={customizeMessages.workerModelLabel}
+              onChange={(workerModel) =>
+                void saveCustomizationSettings({ ...settings, workerModel })
+              }
+              options={MODEL_OPTIONS}
+              value={settings.workerModel}
+            />
+            <p className="ds-muted">{customizeMessages.auditModelHint}</p>
+            <ChoiceGroup
+              legend={customizeMessages.auditModelLabel}
+              onChange={(auditModel) =>
+                void saveCustomizationSettings({ ...settings, auditModel })
+              }
+              options={MODEL_OPTIONS}
+              value={settings.auditModel}
+            />
+          </div>
         </GlassPanel>
         <GlassPanel
           aria-label={customizeMessages.debugPanelLabel}

@@ -349,6 +349,37 @@ describe('failure handling', () => {
     expect(modelCallCount(FALLBACK_GEMINI_VISION_MODEL)).toBe(1)
   })
 
+  it("honors a request's own fallbackModelId as the retry model", async () => {
+    // A tutor picked the older model as this role's primary, so its paired
+    // fallback is the newer one — the request carries that pairing and the
+    // controller must retry on it, not on the global FALLBACK constant.
+    await saveGeminiKey('quota-key')
+    const { adapter, modelCallCount } = makeAdapter({
+      complete: (_key, model) =>
+        model === DEFAULT_GEMINI_VISION_MODEL
+          ? { ok: true, text: 'done' }
+          : {
+              ok: false,
+              kind: 'rate-limited',
+              retryAfterSeconds: 0,
+              httpStatus: 429,
+            },
+    })
+    const controller = new GeminiController(adapter, { minRequestSpacingMs: 0 })
+
+    const result = await controller.runGeminiRequest({
+      ...request,
+      modelId: FALLBACK_GEMINI_VISION_MODEL,
+      fallbackModelId: DEFAULT_GEMINI_VISION_MODEL,
+    })
+
+    expect(result).toMatchObject({ ok: true, text: 'done' })
+    // Primary (the older model) was rate-limited once, then the request's own
+    // fallback (the newer model) answered — the pairing was honored.
+    expect(modelCallCount(FALLBACK_GEMINI_VISION_MODEL)).toBe(1)
+    expect(modelCallCount(DEFAULT_GEMINI_VISION_MODEL)).toBe(1)
+  })
+
   it('a rate-limited fallback still shows the calm paused state, then resumes', async () => {
     await saveGeminiKey('quota-key')
     let fallbackAttempt = 0

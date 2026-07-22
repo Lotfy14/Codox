@@ -1,4 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks'
+import {
+  DEFAULT_GEMINI_VISION_MODEL,
+  SELECTABLE_ENGINE_MODELS,
+  type EngineModel,
+} from '../providers/gemini'
 import { db } from './db'
 import type { YearMode } from './types'
 
@@ -61,6 +66,17 @@ export interface CustomizationSettings {
    * actually mentions matching or pairing.
    */
   matchingMode: MatchingMode
+  /**
+   * Which model each engine role uses as its PRIMARY (Advanced). Every role
+   * defaults to `DEFAULT_GEMINI_VISION_MODEL`; the model NOT chosen becomes
+   * that role's runtime fallback ("the other one is the fallback"). The
+   * planner value drives INDEX/EVIDENCE/FIGURE/BOX (they share one model). All
+   * three run under the same one user key — a second model, never a second
+   * key or provider. Snapshotted per run at creation like the other knobs.
+   */
+  plannerModel: EngineModel
+  workerModel: EngineModel
+  auditModel: EngineModel
 }
 
 export const INDEX_PAGES_MIN = 1
@@ -88,12 +104,22 @@ export const DEFAULT_CUSTOMIZATION_SETTINGS: CustomizationSettings = {
   boxPagesPerCall: BOX_PAGES_MIN,
   workerChunkSize: 6,
   matchingMode: 'split',
+  plannerModel: DEFAULT_GEMINI_VISION_MODEL,
+  workerModel: DEFAULT_GEMINI_VISION_MODEL,
+  auditModel: DEFAULT_GEMINI_VISION_MODEL,
 }
 
 const YEAR_MODES: readonly YearMode[] = ['off', 'type', 'ai']
 const TOPICS_MODES: readonly TopicsMode[] = ['off', 'on']
 const EXPORT_TARGETS: readonly ExportTarget[] = ['triviadox', 'zip']
 const MATCHING_MODES: readonly MatchingMode[] = ['skip', 'split']
+
+/** A selectable engine model, or the default for anything unrecognized. */
+function engineModel(value: unknown): EngineModel {
+  return SELECTABLE_ENGINE_MODELS.includes(value as EngineModel)
+    ? (value as EngineModel)
+    : DEFAULT_GEMINI_VISION_MODEL
+}
 
 /** An integer setting inside its range, or the default for anything else. */
 function counted(
@@ -149,6 +175,9 @@ function narrow(value: string | undefined): CustomizationSettings {
       matchingMode: MATCHING_MODES.includes(parsed.matchingMode as MatchingMode)
         ? (parsed.matchingMode as MatchingMode)
         : DEFAULT_CUSTOMIZATION_SETTINGS.matchingMode,
+      plannerModel: engineModel(parsed.plannerModel),
+      workerModel: engineModel(parsed.workerModel),
+      auditModel: engineModel(parsed.auditModel),
     }
   } catch {
     return DEFAULT_CUSTOMIZATION_SETTINGS

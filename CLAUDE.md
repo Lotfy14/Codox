@@ -122,6 +122,30 @@ are untouched. Consequence: the key check runs the **fallback** model (the
 guaranteed-runnable path), so a key that lacks the new primary but can run the
 fallback still validates and converts.
 
+*Per-role model selection (owner-approved 2026-07-22):* the fixed one-model-
+for-every-role pin above is now a **default**, not a lock. Customize's Advanced
+"Which model does each step" exposes the three engine roles that make requests —
+**Planner** (drives INDEX/EVIDENCE/FIGURE/BOX, which share one model),
+**Worker**, and **Audit** — and lets the tutor pick each role's **primary** from
+exactly the two selectable models (`SELECTABLE_ENGINE_MODELS`:
+`gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`). The model **not** picked
+becomes that role's runtime **fallback** — "the other one is the fallback" —
+threaded as the request's `fallbackModelId` (`otherEngineModel`) and honored by
+the controller's existing one-swap path above (a per-request fallback now,
+defaulting to `FALLBACK_GEMINI_VISION_MODEL` when unset, which is how the
+post-audit AI steps keep their old behavior). The pair is **closed at two**, so
+"the other one" is always well-defined. This does **not** touch the
+provider/quota rule: both models run under the **same one user key** — a second
+model, never a second key or provider. The **engine still never swaps a role's
+model mid-run** — the tutor's choice is fixed for the whole run and the engine
+retries the same model; only the controller does the one paired-fallback swap.
+Defaults leave all three roles on `gemini-3.5-flash-lite`, so a tutor who
+changes nothing gets byte-identical behavior. Choices snapshot per run at
+creation like the other Customize knobs. The three pinned prompts and the
+output contract are untouched. Post-audit AI steps (topic matching, Ask-AI
+solver, matching-split) are **not** part of this selection — they keep their
+own `gemini-3.1-flash-lite` pin.
+
 *Question count is code-owned (owner-approved 2026-07-14):* CODOX_MIGRATION
 §1.6's rule "`planned_rows` count equals `document_profile.question_count`" no
 longer runs as a validation rule. `question_count` must still BE a number (the

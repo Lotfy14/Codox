@@ -28,6 +28,9 @@ describe('customization settings', () => {
       boxPagesPerCall: 4,
       workerChunkSize: 5,
       matchingMode: 'skip',
+      plannerModel: 'gemini-3.1-flash-lite',
+      workerModel: 'gemini-3.5-flash-lite',
+      auditModel: 'gemini-3.1-flash-lite',
     })
     expect(await getCustomizationSettings()).toEqual({
       yearMode: 'ai',
@@ -38,6 +41,9 @@ describe('customization settings', () => {
       boxPagesPerCall: 4,
       workerChunkSize: 5,
       matchingMode: 'skip',
+      plannerModel: 'gemini-3.1-flash-lite',
+      workerModel: 'gemini-3.5-flash-lite',
+      auditModel: 'gemini-3.1-flash-lite',
     })
   })
 
@@ -51,6 +57,9 @@ describe('customization settings', () => {
         indexPagesPerCall: 0,
         boxPagesPerCall: 99,
         workerChunkSize: 99,
+        // An unrecognized model id (a typo, or a model removed from the menu)
+        // must never reach the engine — it narrows back to the default.
+        plannerModel: 'gemini-9-ultra',
       }),
     })
     expect(await getCustomizationSettings()).toEqual({
@@ -67,6 +76,10 @@ describe('customization settings', () => {
       // setting migrates to the 'split' default rather than to a mode that
       // would silently drop the tutor's questions.
       matchingMode: DEFAULT_CUSTOMIZATION_SETTINGS.matchingMode,
+      // Unknown / absent model ids fall back to the default primary.
+      plannerModel: DEFAULT_CUSTOMIZATION_SETTINGS.plannerModel,
+      workerModel: DEFAULT_CUSTOMIZATION_SETTINGS.workerModel,
+      auditModel: DEFAULT_CUSTOMIZATION_SETTINGS.auditModel,
     })
   })
 

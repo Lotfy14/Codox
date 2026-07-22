@@ -311,6 +311,24 @@ export const customizeMessages = {
   matchingSkip: 'Leave them out',
   matchingSkipHint:
     'Matching questions are dropped from the finished set. Everything else converts as usual.',
+  modelNewer: 'Newer model (default)',
+  modelNewerHint:
+    'Gemini 3.5 Flash-Lite — the newer model, used for every step unless you change it here.',
+  modelOlder: 'Steadier older model',
+  modelOlderHint:
+    'Gemini 3.1 Flash-Lite — the previous model. Slower to run out of the free per-minute limit and steadier on some documents.',
+  modelsPanelLabel: 'Which model does each step',
+  modelsIntro:
+    'Advanced. Each conversion runs three steps that call Gemini, and you can pick the model for each. Whichever model you do not pick is used automatically as the backup if the first one is busy or unavailable — nothing is ever left unanswered. Both run under your own key. Leave these on the default unless you have a reason to change them.',
+  plannerModelLabel: 'Finding questions (planner)',
+  plannerModelHint:
+    'The step that reads the pages to find every question, its options, and any figures. This one model covers all of that reading.',
+  workerModelLabel: 'Transcribing questions (worker)',
+  workerModelHint:
+    'The step that types out each question and its choices word for word.',
+  auditModelLabel: 'Double-checking (audit)',
+  auditModelHint:
+    'The final read-through that checks the transcribed questions against the pages before the set is finished.',
 } as const
 
 export const debugMessages = {

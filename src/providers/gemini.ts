@@ -59,6 +59,35 @@ export const FALLBACK_GEMINI_VISION_MODEL = 'gemini-3.1-flash-lite'
  */
 export const GEMINI_KEY_CHECK_MODEL = FALLBACK_GEMINI_VISION_MODEL
 
+/**
+ * The two models a tutor may assign to an engine role in Customize (Advanced —
+ * owner-approved 2026-07-22). Whichever model is NOT chosen as a role's primary
+ * becomes that role's runtime fallback ("the other one is the fallback"), so
+ * the pair is closed at two. Selection is per role; the default leaves every
+ * role on the primary with the older model as fallback — byte-identical to the
+ * pre-selection behavior. This does not touch the provider/quota rule: both
+ * models run under the same one user key; it is a second model, never a second
+ * key or provider.
+ */
+export const SELECTABLE_ENGINE_MODELS = [
+  DEFAULT_GEMINI_VISION_MODEL,
+  FALLBACK_GEMINI_VISION_MODEL,
+] as const
+
+export type EngineModel = (typeof SELECTABLE_ENGINE_MODELS)[number]
+
+/**
+ * The other of the two selectable models — a role's fallback is "the one you
+ * didn't pick." Any model outside the pair (only the two above are ever passed
+ * for an engine role) maps to the known-good fallback, never to itself, so a
+ * fallback is always genuinely a different model.
+ */
+export function otherEngineModel(model: string): EngineModel {
+  return model === DEFAULT_GEMINI_VISION_MODEL
+    ? FALLBACK_GEMINI_VISION_MODEL
+    : DEFAULT_GEMINI_VISION_MODEL
+}
+
 function keyHeaders(key: string): HeadersInit {
   return { 'x-goog-api-key': key }
 }

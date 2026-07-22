@@ -6,22 +6,28 @@
  * per-role max output tokens, JSON-only responses). Prompts go in first,
  * then the images — exactly the order §2's usage notes specify.
  */
-import { DEFAULT_GEMINI_VISION_MODEL } from '../providers/gemini'
+import { DEFAULT_GEMINI_VISION_MODEL, otherEngineModel } from '../providers/gemini'
 import type { VisionRequest } from '../providers/types'
 import { BOX_BATCH_PROMPT, BOX_PROMPT, EVIDENCE_PROMPT, FIGURE_DETECT_PROMPT, INDEX_PROMPT } from './prompts'
 import { AUDIT_PROMPT, PLANNER_PROMPT, WORKER_PROMPT } from './prompts'
 import type { AuditReport, Blueprint, MergedRow, ReducedBlueprint } from './types'
 
 /**
- * Fixed model assignments (§1.2). Every role runs the primary
+ * Default model assignments (§1.2). Every role defaults to the primary
  * gemini-3.5-flash-lite (owner decision 2026-07-22; see
- * DEFAULT_GEMINI_VISION_MODEL). The engine itself still never swaps a role's
- * model — these constants are fixed, and the engine retries the same model.
- * The one runtime model swap lives in the controller, outside the engine: a
- * request the primary cannot answer is retried on the known-good
- * FALLBACK_GEMINI_VISION_MODEL (owner-approved fallback exception 2026-07-22).
- * There is still no second provider and no fallback key (CLAUDE.md: Gemini
- * only) — the fallback is a second model under the same one key.
+ * DEFAULT_GEMINI_VISION_MODEL). As of the per-role model selection
+ * (owner-approved 2026-07-22) a tutor MAY override each role's model in
+ * Customize (Advanced) — the value is threaded in as a call argument; these
+ * constants are only the defaults. The engine itself still never swaps a
+ * role's model mid-run: the chosen model is fixed for the run and the engine
+ * retries the SAME model. The one runtime model swap lives in the controller,
+ * outside the engine: a request the primary cannot answer is retried on the
+ * role's fallback — `fallbackModelId`, set here to the OTHER selectable model
+ * ("the one the tutor didn't pick"), or the controller's global
+ * FALLBACK_GEMINI_VISION_MODEL when unset (owner-approved fallback exception
+ * 2026-07-22). There is still no second provider and no fallback key
+ * (CLAUDE.md: Gemini only) — the fallback is a second model under the same one
+ * key.
  */
 export const PLANNER_MODEL = DEFAULT_GEMINI_VISION_MODEL // gemini-3.5-flash-lite
 export const AUDIT_MODEL = 'gemini-3.5-flash-lite'
@@ -47,6 +53,7 @@ export function buildPlannerRequest(
     prompt: PLANNER_PROMPT,
     images: pages,
     modelId: plannerModel,
+    fallbackModelId: otherEngineModel(plannerModel),
     generationConfig: {
       temperature: 0,
       maxOutputTokens: PLANNER_MAX_TOKENS,
@@ -82,6 +89,7 @@ export function buildPlannerRepairRequest(
     prompt: `${PLANNER_PROMPT}\n${repairContext}`,
     images: pages,
     modelId: plannerModel,
+    fallbackModelId: otherEngineModel(plannerModel),
     generationConfig: {
       temperature: 0,
       maxOutputTokens: PLANNER_MAX_TOKENS,
@@ -115,6 +123,7 @@ export function buildWorkerRequest(
     prompt: parts.join('\n'),
     images,
     modelId: workerModel,
+    fallbackModelId: otherEngineModel(workerModel),
     generationConfig: {
       temperature: 0,
       maxOutputTokens: WORKER_MAX_TOKENS,
@@ -131,6 +140,7 @@ export function buildAuditRequest(
   blueprint: Blueprint,
   rows: readonly MergedRow[],
   images: readonly CallImage[],
+  auditModel = AUDIT_MODEL,
 ): VisionRequest {
   const prompt = [
     AUDIT_PROMPT,
@@ -144,7 +154,8 @@ export function buildAuditRequest(
   return {
     prompt,
     images,
-    modelId: AUDIT_MODEL,
+    modelId: auditModel,
+    fallbackModelId: otherEngineModel(auditModel),
     generationConfig: {
       temperature: 0,
       maxOutputTokens: AUDIT_MAX_TOKENS,
@@ -191,6 +202,7 @@ function structuredPlannerRequest(
     prompt,
     images: pages,
     modelId: plannerModel,
+    fallbackModelId: otherEngineModel(plannerModel),
     generationConfig: {
       temperature: 0,
       maxOutputTokens: PLANNER_MAX_TOKENS,

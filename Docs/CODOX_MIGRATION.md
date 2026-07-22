@@ -66,6 +66,16 @@ absent or uncertain, answers stay blank and flagged.
 | Worker | `gemini-3.1-flash-lite` | matches the audit model; each chunk still receives its own worker request and reduced blueprint |
 | Audit | `gemini-3.1-flash-lite` | deliberately the weakest model doing the hardest verification job; its accuracy is a *measured output*, never an assumption |
 
+> **Superseded — per-role selection (owner-approved 2026-07-22).** The table
+> above is historical intent, not the live assignment. Each role now defaults to
+> `gemini-3.5-flash-lite` and the tutor may override its **primary** in
+> Customize → Advanced from the two selectable models
+> (`gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`); the model not picked is
+> that role's runtime fallback under the **same one key**. Planner covers
+> INDEX/EVIDENCE/FIGURE/BOX (one shared model). The engine never swaps a role's
+> model mid-run; the one paired-fallback swap lives in the controller. See
+> CLAUDE.md "Per-role model selection" for the binding rule.
+
 ### 1.3 Step sequence (each step writes its inputs and outputs to disk before the next step starts)
 
 1. **Render pages.** Rasterize every PDF page to a fixed-scale image (reference:

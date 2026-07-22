@@ -210,8 +210,11 @@ export class GeminiController {
    * One engine-facing vision request under the locally stored key.
    *
    * The primary model (what the caller asked for) gets first refusal; a
-   * request it cannot answer is retried once on the known-good
-   * `FALLBACK_GEMINI_VISION_MODEL` (owner-approved 2026-07-22). "Cannot
+   * request it cannot answer is retried once on the request's own
+   * `fallbackModelId` — the role's paired model, set by the engine call
+   * builders to "the model the tutor didn't pick" — or, when the caller set
+   * none, the global known-good `FALLBACK_GEMINI_VISION_MODEL`
+   * (owner-approved 2026-07-22). "Cannot
    * answer" means: a per-minute rate limit, a provider error, a
    * missing/billing-gated model, or a body still empty after the primary's own
    * transient retries. `wrong-key` (same key for both models) and a user abort
@@ -227,8 +230,13 @@ export class GeminiController {
   ): Promise<VisionResult> {
     const { signal } = opts
     const primaryModel = request.modelId ?? DEFAULT_GEMINI_VISION_MODEL
+    // The role's own paired fallback ("the model the tutor didn't pick"), or the
+    // global known-good fallback when the caller set none (post-audit AI steps).
+    const fallbackModel = request.fallbackModelId ?? FALLBACK_GEMINI_VISION_MODEL
 
-    const primaryIsFallback = primaryModel === FALLBACK_GEMINI_VISION_MODEL
+    // When the primary already IS the fallback, the second attempt would be
+    // identical, so the primary attempt is the only one.
+    const primaryIsFallback = primaryModel === fallbackModel
     if (!primaryIsFallback && !this.unavailablePrimaryModels.has(primaryModel)) {
       const primary = await this.attemptModel(request, true, signal)
       switch (primaryDisposition(primary)) {
@@ -242,12 +250,12 @@ export class GeminiController {
       }
     }
 
-    // Fall back to the pinned known-good model with the full calm behavior.
+    // Fall back to the role's known-good model with the full calm behavior.
     // (When the caller already asked for the fallback model, this is the only
     // attempt and reuses the request object untouched.)
     const fallbackRequest: VisionRequest = primaryIsFallback
       ? request
-      : { ...request, modelId: FALLBACK_GEMINI_VISION_MODEL }
+      : { ...request, modelId: fallbackModel }
     return this.attemptModel(fallbackRequest, false, signal)
   }
 
