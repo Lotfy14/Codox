@@ -31,9 +31,12 @@ import { isUnresolvedFlag, type ReviewFilter } from './review-filter'
 import {
   isActivationTarget,
   isTypingTarget,
+  useCropAssets,
   useOffline,
   useSourceUrls,
+  type CropAsset,
 } from './useSourceUrls'
+import { putArtifact } from '../state/runs'
 
 const optionLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'] as const
 
@@ -101,7 +104,14 @@ export function ReviewDetail({
   const [editTopic, setEditTopic] = useState('')
   const [editSubtopic, setEditSubtopic] = useState('')
   const [editYear, setEditYear] = useState('')
+  const [editImageUrls, setEditImageUrls] = useState<string[]>([])
+  const [pastedCrops, setPastedCrops] = useState<CropAsset[]>([])
+  const [showAllPictures, setShowAllPictures] = useState(false)
   const [editSaving, setEditSaving] = useState(false)
+  // Extracted crops load only while an editor is open — the review screen
+  // itself never pays for them.
+  const dbCrops = useCropAssets(run.id, editing)
+  const cropAssets = [...dbCrops, ...pastedCrops]
 
   const topics = runTopics ?? []
   const subtopics =
@@ -274,8 +284,82 @@ export function ReviewDetail({
       setEditTopic(rowEdit?.topic ?? baseline.topic)
       setEditSubtopic(rowEdit?.subtopic ?? baseline.subtopic)
       setEditYear(rowEdit?.year ?? baseline.year)
+      setEditImageUrls([...reviewRow.row.image_urls])
+      setPastedCrops([])
+      setShowAllPictures(false)
     }
   }, [editing, reviewRow, rowEdit, baseline, resolutions])
+
+  const togglePicture = (path: string) => {
+    setEditImageUrls((current) =>
+      current.includes(path)
+        ? current.filter((linked) => linked !== path)
+        : [...current, path],
+    )
+  }
+
+  // Paste an image anywhere while editing to attach it as a linked picture:
+  // it becomes a run crop artifact and is linked to this row. Only image
+  // clipboard items are intercepted, so pasting text into a field is normal.
+  useEffect(() => {
+    if (!editing) return
+    const handlePaste = async (event: ClipboardEvent) => {
+      const items = event.clipboardData?.items
+      if (!items) return
+      for (const item of items) {
+        if (!item.type.startsWith('image/')) continue
+        const file = item.getAsFile()
+        if (!file) continue
+        event.preventDefault()
+        try {
+          const bytes = await new Promise<Uint8Array>((resolve, reject) => {
+            const img = new Image()
+            img.src = URL.createObjectURL(file)
+            img.onload = () => {
+              URL.revokeObjectURL(img.src)
+              const canvas = document.createElement('canvas')
+              canvas.width = img.naturalWidth
+              canvas.height = img.naturalHeight
+              const ctx = canvas.getContext('2d')
+              if (!ctx) {
+                reject(new Error('Canvas context not available'))
+                return
+              }
+              ctx.drawImage(img, 0, 0)
+              canvas.toBlob(
+                async (blob) => {
+                  if (!blob) {
+                    reject(new Error('JPEG conversion failed'))
+                    return
+                  }
+                  try {
+                    resolve(new Uint8Array(await blob.arrayBuffer()))
+                  } catch (err) {
+                    reject(err)
+                  }
+                },
+                'image/jpeg',
+                0.85,
+              )
+            }
+            img.onerror = (err) => reject(err)
+          })
+
+          const path = `images/pasted-${crypto.randomUUID()}.jpg`
+          await putArtifact({ runId: run.id, kind: 'crop', path, bytes })
+          const url = URL.createObjectURL(
+            new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'image/jpeg' }),
+          )
+          setPastedCrops((current) => [...current, { path, url }])
+          setEditImageUrls((current) => [...current, path])
+        } catch (err) {
+          console.error('Failed to paste image', err)
+        }
+      }
+    }
+    window.addEventListener('paste', handlePaste)
+    return () => window.removeEventListener('paste', handlePaste)
+  }, [editing, run.id])
 
   if (allResolved || reviewRow === undefined) {
     return (
@@ -324,7 +408,7 @@ export function ReviewDetail({
           topic: editTopic,
           subtopic: editSubtopic,
           year: editYear,
-          imageUrls: [...reviewRow.row.image_urls],
+          imageUrls: editImageUrls,
         },
         baseline,
         resolutions[reviewRow.row.id],
@@ -743,6 +827,88 @@ export function ReviewDetail({
               </datalist>
             </div>
           )}
+
+          {editing ? (() => {
+            const linkedAssets = cropAssets.filter((asset) => editImageUrls.includes(asset.path))
+            const unlinkedAssets = cropAssets.filter((asset) => !editImageUrls.includes(asset.path))
+            const linkedWithoutAsset = editImageUrls.filter(
+              (path) => !cropAssets.some((asset) => asset.path === path),
+            )
+            return (
+              <fieldset className="review-editor review-editor__group" style={{ marginTop: 'var(--space-3)' }}>
+                <legend className="ds-glass-input__label">{reviewMessages.editPicturesLegend}</legend>
+                {cropAssets.length === 0 && editImageUrls.length === 0 ? (
+                  <p className="ds-muted">{reviewMessages.editNoPicturesAvailable}</p>
+                ) : (
+                  <>
+                    {linkedAssets.length === 0 && linkedWithoutAsset.length === 0 ? (
+                      <p className="ds-muted">{reviewMessages.editNoPictures}</p>
+                    ) : (
+                      <div className="review-editor__pictures">
+                        {linkedAssets.map((asset) => (
+                          <button
+                            aria-label={reviewMessages.editRemovePicture(editImageUrls.indexOf(asset.path) + 1)}
+                            aria-pressed={true}
+                            className="review-editor__picture"
+                            key={asset.path}
+                            onClick={() => togglePicture(asset.path)}
+                            type="button"
+                          >
+                            <img alt={reviewMessages.editPictureAlt(asset.path)} src={asset.url} />
+                          </button>
+                        ))}
+                        {linkedWithoutAsset.map((path) => (
+                          <div className="review-editor__picture review-editor__picture--missing" key={path}>
+                            <span>{path}</span>
+                            <Button
+                              aria-label={reviewMessages.editRemovePicture(editImageUrls.indexOf(path) + 1)}
+                              onPress={() => togglePicture(path)}
+                              variant="quiet"
+                            >
+                              ✕
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {unlinkedAssets.length > 0 ? (
+                      <>
+                        <Button
+                          onPress={() => setShowAllPictures((prev) => !prev)}
+                          variant="secondary"
+                          className="review-editor__toggle-pictures"
+                        >
+                          {showAllPictures
+                            ? 'Hide other pictures in document'
+                            : `Other pictures in document (${unlinkedAssets.length})`}
+                        </Button>
+                        {showAllPictures && (
+                          <div className="review-editor__pictures review-editor__pictures--unlinked">
+                            {unlinkedAssets.map((asset) => (
+                              <button
+                                aria-label={reviewMessages.editAddPicture}
+                                aria-pressed={false}
+                                className="review-editor__picture review-editor__picture--compact"
+                                key={asset.path}
+                                onClick={() => togglePicture(asset.path)}
+                                type="button"
+                              >
+                                <img alt={reviewMessages.editPictureAlt(asset.path)} src={asset.url} />
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    ) : null}
+                  </>
+                )}
+                <p className="ds-muted review-editor__hint" style={{ marginTop: 'var(--space-2)' }}>
+                  {reviewMessages.editPastePictureHint}
+                </p>
+              </fieldset>
+            )
+          })() : null}
 
           {!editing && (
             <div aria-label={aiReviewMessages.stripLabel} className="review-ai" role="group">
