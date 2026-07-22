@@ -181,8 +181,8 @@ export const convertMessages = {
   dropHint: 'batch of PDFs supported',
   dropMoreTitle: 'Add PDFs',
   dropMoreHint: 'PDF files',
-  keyDropTitle: 'Answer key (optional)',
-  keyDropHint: 'PDF or image — paste or drop',
+  keyDropTitle: 'Answer key',
+  keyDropHint: 'this PDF only — PDF or image, paste or drop',
   batchPanelLabel: 'Batch files',
   optionsPanelLabel: 'Before you start',
   progressPanelLabel: 'Conversion progress',
@@ -195,6 +195,7 @@ export const convertMessages = {
   inplaceHighlight: 'right here',
   inplaceAfter: ' — no new tabs, no takeover screen.',
   answerKeyAdded: (fileName: string) => `${fileName} added`,
+  answerKeyAddedFor: (fileName: string) => `Key: ${fileName}`,
   remove: 'Remove',
   keepOriginalLabel: 'Keep original PDFs',
   keepOriginalHint:

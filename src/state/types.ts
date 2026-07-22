@@ -36,15 +36,22 @@ export interface JobState {
 }
 
 /**
- * One PDF stored for the current job — the exam files plus at most one
- * answer-key file and at most one topics document per job. The blob is
- * the user's original file; IndexedDB holding it is what lets a job
- * survive reloads. A `topics` entry may also be an image (png/jpeg/webp).
+ * One PDF stored for the current job — the exam files plus their answer
+ * keys and at most one topics document per job. The blob is the user's
+ * original file; IndexedDB holding it is what lets a job survive reloads.
+ * A `topics` or `answer-key` entry may also be an image (png/jpeg/webp).
  */
 export interface StoredPdf {
   id: string
   jobId: string
   kind: 'exam' | 'answer-key' | 'topics'
+  /**
+   * Per-exam answer keys (owner-approved 2026-07-22): an `answer-key` row
+   * links to the one exam it belongs to via `parentPdfId`, so a batch of
+   * exams each carries its own key instead of one key shared across all.
+   * Only set on `answer-key` rows.
+   */
+  parentPdfId?: string
   name: string
   size: number
   pageCount: number

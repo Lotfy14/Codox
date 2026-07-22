@@ -49,26 +49,53 @@ describe('stored PDFs', () => {
     expect(await db.files.count()).toBe(0)
   })
 
-  it('keeps at most one answer key per job — adding replaces', async () => {
-    await addStoredPdf(pdfEntry('exam.pdf'))
+  it('keeps at most one answer key per exam — adding replaces that exam only', async () => {
+    const examId = await addStoredPdf(pdfEntry('exam.pdf'))
     const { kind: _first, ...keyA } = pdfEntry('key_a.pdf')
     const { kind: _second, ...keyB } = pdfEntry('key_b.pdf')
-    await putAnswerKeyPdf(keyA)
-    await putAnswerKeyPdf(keyB)
+    await putAnswerKeyPdf(keyA, examId)
+    await putAnswerKeyPdf(keyB, examId)
 
     const files = await db.files.where('jobId').equals(JOB).toArray()
     const keys = files.filter((file) => file.kind === 'answer-key')
     expect(keys).toHaveLength(1)
     expect(keys[0].name).toBe('key_b.pdf')
+    expect(keys[0].parentPdfId).toBe(examId)
     // The exam file is untouched by key replacement.
     expect(files.some((file) => file.name === 'exam.pdf')).toBe(true)
   })
 
+  it('keeps a separate answer key per exam', async () => {
+    const examA = await addStoredPdf(pdfEntry('exam_a.pdf'))
+    const examB = await addStoredPdf(pdfEntry('exam_b.pdf'))
+    const { kind: _a, ...keyA } = pdfEntry('key_a.pdf')
+    const { kind: _b, ...keyB } = pdfEntry('key_b.pdf')
+    await putAnswerKeyPdf(keyA, examA)
+    await putAnswerKeyPdf(keyB, examB)
+
+    const keys = (await db.files.where('jobId').equals(JOB).toArray()).filter(
+      (file) => file.kind === 'answer-key',
+    )
+    expect(keys).toHaveLength(2)
+    expect(keys.find((k) => k.parentPdfId === examA)?.name).toBe('key_a.pdf')
+    expect(keys.find((k) => k.parentPdfId === examB)?.name).toBe('key_b.pdf')
+  })
+
+  it('removing an exam removes its linked answer key', async () => {
+    const examId = await addStoredPdf(pdfEntry('exam.pdf'))
+    const { kind: _k, ...key } = pdfEntry('key.pdf')
+    await putAnswerKeyPdf(key, examId)
+    await removeStoredPdf(examId)
+
+    expect(await db.files.count()).toBe(0)
+  })
+
   it('keeps at most one topics document per job — adding replaces', async () => {
+    const examId = await addStoredPdf(pdfEntry('exam.pdf'))
     const { kind: _first, ...key } = pdfEntry('key.pdf')
     const { kind: _second, ...topicsA } = pdfEntry('topics_a.pdf')
     const { kind: _third, ...topicsB } = pdfEntry('topics_b.png')
-    await putAnswerKeyPdf(key)
+    await putAnswerKeyPdf(key, examId)
     await putTopicsDoc(topicsA)
     await putTopicsDoc(topicsB)
 

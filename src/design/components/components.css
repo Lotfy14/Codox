@@ -1745,6 +1745,23 @@
   gap: var(--space-2);
 }
 
+/* An exam and its own answer-key slot, grouped as one unit in the list. */
+.ds-exam-item {
+  display: grid;
+  gap: var(--space-1);
+}
+
+/* The per-exam key slot sits under its exam, indented and lighter so the
+   exam name stays the anchor of the row. */
+.ds-exam-key-slot {
+  margin-inline-start: var(--space-3);
+}
+
+.ds-exam-key-slot .ds-key-file-added {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+}
+
 .ds-drop-more {
   margin-top: auto;
   padding-top: var(--space-2);

@@ -35,11 +35,13 @@ import { DebugConsole } from './DebugConsole'
 import { ExportButton } from './ExportButton'
 import {
   addStoredPdf,
+  answerKeyFor,
   putAnswerKeyPdf,
   putTopicsDoc,
   removeStoredPdf,
   useJobPdfs,
 } from '../state/files'
+import { ExamKeySlot } from './ExamKeySlot'
 import {
   useCustomizationSettings,
   type ExportTarget,
@@ -142,7 +144,6 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
   }
 
   const exams = pdfs.filter((file) => file.kind === 'exam')
-  const answerKey = pdfs.find((file) => file.kind === 'answer-key')
   const topicsDoc = pdfs.find((file) => file.kind === 'topics')
   const keepOriginal = job.keepOriginal ?? false
   const keyReady = credential?.lastValidation?.status === 'working'
@@ -211,7 +212,7 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
     }
     setStartBusy(true)
     try {
-      await conversion.start(exams, answerKey)
+      await conversion.start(exams)
     } catch {
       setNotes([convertMessages.startFailed])
     } finally {
@@ -277,6 +278,7 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
   const intake = async (
     files: File[],
     kind: 'exam' | 'answer-key' | 'topics',
+    parentPdfId?: string,
   ) => {
     setBusy(true)
     const failed: string[] = []
@@ -303,8 +305,9 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
             pageCount,
             blob: file as Blob,
           }
-          if (kind === 'answer-key') await putAnswerKeyPdf(entry)
-          else if (kind === 'topics') {
+          if (kind === 'answer-key') {
+            if (parentPdfId !== undefined) await putAnswerKeyPdf(entry, parentPdfId)
+          } else if (kind === 'topics') {
             await putTopicsDoc(entry)
             storedTopicsDoc = entry
           } else await addStoredPdf({ ...entry, kind: 'exam' })
@@ -485,17 +488,27 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
             {inlineNotes}
             <div className="ds-row-list" role="list">
               {exams.map((file) => (
-                <FileRow
-                  flagLabel={uploadMessages.flagLabel}
-                  isDisabled={busy}
-                  key={file.id}
-                  name={file.name}
-                  onRemove={() => void removeStoredPdf(file.id)}
-                  pageCountLabel={uploadMessages.pageCount(file.pageCount)}
-                  removeLabel={uploadMessages.removeFile(file.name)}
-                  role="listitem"
-                  size={file.size}
-                />
+                <div className="ds-exam-item" key={file.id} role="listitem">
+                  <FileRow
+                    flagLabel={uploadMessages.flagLabel}
+                    isDisabled={busy}
+                    name={file.name}
+                    onRemove={() => void removeStoredPdf(file.id)}
+                    pageCountLabel={uploadMessages.pageCount(file.pageCount)}
+                    removeLabel={uploadMessages.removeFile(file.name)}
+                    size={file.size}
+                  />
+                  <ExamKeySlot
+                    isDisabled={busy}
+                    keyFile={answerKeyFor(pdfs, file.id)}
+                    onAdd={(files) => void intake(files, 'answer-key', file.id)}
+                    onRejected={rejectTopicsFiles}
+                    onRemove={() => {
+                      const key = answerKeyFor(pdfs, file.id)
+                      if (key !== undefined) void removeStoredPdf(key.id)
+                    }}
+                  />
+                </div>
               ))}
             </div>
             <div className="ds-drop-more">
@@ -522,31 +535,6 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
                 label={convertMessages.keepOriginalLabel}
                 onChange={(keep) => void updateJob({ keepOriginal: keep })}
               />
-              <div className="ds-key-file-slot">
-                {answerKey !== undefined ? (
-                  <p className="ds-key-file-added" role="status">
-                    ✓ {convertMessages.answerKeyAdded(answerKey.name)}{' '}
-                    <Button
-                      onPress={() => void removeStoredPdf(answerKey.id)}
-                      variant="quiet"
-                    >
-                      {convertMessages.remove}
-                    </Button>
-                  </p>
-                ) : (
-                  <FileDropZone
-                    accept={TOPICS_ACCEPT}
-                    allowsMultiple={false}
-                    chooseLabel={uploadMessages.chooseFiles}
-                    description={convertMessages.keyDropHint}
-                    isDisabled={busy}
-                    label={convertMessages.keyDropTitle}
-                    onFiles={(files) => void intake(files, 'answer-key')}
-                    onRejected={rejectTopicsFiles}
-                    pasteImages
-                  />
-                )}
-              </div>
               {settings.yearMode === 'type' ? (
                 <YearField
                   initial={job.typedYear ?? ''}

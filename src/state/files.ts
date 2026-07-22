@@ -12,21 +12,44 @@ export async function addStoredPdf(entry: NewStoredPdf): Promise<string> {
 }
 
 /**
- * Store the job's answer-key PDF. A job has at most one answer key —
- * adding a new one replaces the old, transactionally.
+ * Store the answer-key PDF for one specific exam (`parentPdfId`). Each exam
+ * carries at most one key — adding a new one replaces that exam's old key,
+ * transactionally, and never touches another exam's key.
  */
 export async function putAnswerKeyPdf(
   entry: Omit<NewStoredPdf, 'kind'>,
+  parentPdfId: string,
 ): Promise<string> {
   const id = crypto.randomUUID()
   await db.transaction('rw', db.files, async () => {
     const existing = await db.files.where('jobId').equals(entry.jobId).toArray()
     await db.files.bulkDelete(
-      existing.filter((file) => file.kind === 'answer-key').map((file) => file.id),
+      existing
+        .filter(
+          (file) =>
+            file.kind === 'answer-key' && file.parentPdfId === parentPdfId,
+        )
+        .map((file) => file.id),
     )
-    await db.files.add({ ...entry, kind: 'answer-key', id, addedAt: Date.now() })
+    await db.files.add({
+      ...entry,
+      kind: 'answer-key',
+      parentPdfId,
+      id,
+      addedAt: Date.now(),
+    })
   })
   return id
+}
+
+/** The answer key stored for a given exam PDF, if the tutor added one. */
+export function answerKeyFor(
+  files: readonly StoredPdf[],
+  examId: string,
+): StoredPdf | undefined {
+  return files.find(
+    (file) => file.kind === 'answer-key' && file.parentPdfId === examId,
+  )
 }
 
 /**
@@ -47,8 +70,18 @@ export async function putTopicsDoc(
   return id
 }
 
+/**
+ * Remove a stored file. Removing an exam also removes the answer key linked
+ * to it (`parentPdfId`), so a key never outlives the exam it belonged to.
+ */
 export async function removeStoredPdf(id: string): Promise<void> {
-  await db.files.delete(id)
+  await db.transaction('rw', db.files, async () => {
+    await db.files.delete(id)
+    const orphans = await db.files
+      .filter((file) => file.parentPdfId === id)
+      .toArray()
+    await db.files.bulkDelete(orphans.map((file) => file.id))
+  })
 }
 
 export async function clearJobPdfs(jobId: string): Promise<void> {

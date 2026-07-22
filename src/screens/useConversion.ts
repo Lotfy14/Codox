@@ -35,10 +35,11 @@ export interface ConversionState {
   isMatching: boolean
   /** Why the last topic-matching attempt stopped, if it did. */
   topicMatchIssue: 'wrong-key' | 'failed' | null
-  start: (
-    exams: readonly StoredPdf[],
-    answerKey: StoredPdf | undefined,
-  ) => Promise<void>
+  /**
+   * Start one run per exam. Each exam's own answer key (linked by
+   * `parentPdfId`) is attached automatically — there is no shared key.
+   */
+  start: (exams: readonly StoredPdf[]) => Promise<void>
   /** Re-enters provider-stopped runs from their persisted checkpoint. */
   retry: (runIds: readonly string[]) => Promise<void>
   /** Re-runs topic matching for rows that never got a cached match. */
@@ -64,8 +65,9 @@ let globalDriving = false
 
 /**
  * The answer key that travels with a run: the run's pinned key if it still
- * exists, else the job's key file. The planner decides from evidence what
- * the extra pages mean — a key is always attached when one is present.
+ * exists, else the key linked to this exam (`parentPdfId`). The planner
+ * decides from evidence what the extra pages mean — a key is always attached
+ * when one is present.
  */
 async function answerKeyForRun(
   run: RunState,
@@ -76,7 +78,9 @@ async function answerKeyForRun(
     if (pinned !== undefined) return pinned
   }
   const files = await db.files.where('jobId').equals(exam.jobId).toArray()
-  return files.find((file) => file.kind === 'answer-key')
+  return files.find(
+    (file) => file.kind === 'answer-key' && file.parentPdfId === exam.id,
+  )
 }
 
 export function useConversion(jobId: string): ConversionState {
@@ -239,10 +243,7 @@ export function useConversion(jobId: string): ConversionState {
   }, [jobId, drive])
 
   const start = useCallback(
-    async (
-      exams: readonly StoredPdf[],
-      answerKey: StoredPdf | undefined,
-    ) => {
+    async (exams: readonly StoredPdf[]) => {
       // Snapshot the Customizations choices and the job's inputs once per
       // batch: History exports keep the columns a run was made with,
       // whatever the user changes afterwards.
@@ -252,8 +253,14 @@ export function useConversion(jobId: string): ConversionState {
         settings.topicsMode === 'on' ? (job?.topics ?? []) : []
       const typedYear =
         settings.yearMode === 'type' ? (job?.typedYear ?? '').trim() : ''
+      // Each exam pairs with the answer key linked to it (`parentPdfId`),
+      // so a batch never shares one key across unrelated exams.
+      const files = await db.files.where('jobId').equals(jobId).toArray()
       const queue: QueueItem[] = []
       for (const exam of exams) {
+        const answerKey = files.find(
+          (file) => file.kind === 'answer-key' && file.parentPdfId === exam.id,
+        )
         const runId = await createRun({
           jobId,
           pdfId: exam.id,

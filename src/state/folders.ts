@@ -86,6 +86,11 @@ export async function removeFolderPdf(pdfId: string): Promise<void> {
       }
       await db.runs.bulkDelete(runs.map((run) => run.id))
       await db.files.delete(pdfId)
+      // Drop the answer key linked to this exam, if any, so it never orphans.
+      const keys = await db.files
+        .filter((file) => file.parentPdfId === pdfId)
+        .toArray()
+      await db.files.bulkDelete(keys.map((file) => file.id))
     },
   )
 }

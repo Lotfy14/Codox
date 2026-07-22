@@ -38,7 +38,13 @@ import { ReviewExperience } from './ReviewExperience'
 import { TopicsEditor } from './TopicsEditor'
 import { useConversion } from './useConversion'
 import { useReviewSession } from './useReviewSession'
-import { addStoredPdf, useJobPdfs } from '../state/files'
+import {
+  addStoredPdf,
+  answerKeyFor,
+  putAnswerKeyPdf,
+  useJobPdfs,
+} from '../state/files'
+import { ExamKeySlot } from './ExamKeySlot'
 import { useCustomizationSettings, type ExportTarget } from '../state/customization-settings'
 import { useGeminiCredential } from '../state/credentials'
 import { useUnresolvedCounts } from './review-data'
@@ -276,6 +282,36 @@ function FolderDetail({
     }
   }
 
+  const addKey = async (parentPdfId: string, files: File[]) => {
+    setBusy(true)
+    const failed: string[] = []
+    try {
+      const { isImageMime, readPdfInfo } = await import('../pdf')
+      for (const file of files) {
+        try {
+          const isImage = isImageMime(file.type)
+          const bytes = new Uint8Array(await file.arrayBuffer())
+          const pageCount = isImage ? 1 : (await readPdfInfo(bytes)).pageCount
+          await putAnswerKeyPdf(
+            {
+              jobId: folderId,
+              name: file.name,
+              size: file.size,
+              pageCount,
+              blob: file as Blob,
+            },
+            parentPdfId,
+          )
+        } catch {
+          failed.push(uploadMessages.notPdfOrImage(file.name))
+        }
+      }
+    } finally {
+      setNotes(failed)
+      setBusy(false)
+    }
+  }
+
   const convert = async (targets: readonly StoredPdf[]) => {
     if (targets.length === 0) return
     if (!keyReady) {
@@ -283,7 +319,7 @@ function FolderDetail({
       return
     }
     try {
-      await conversion.start(targets, undefined)
+      await conversion.start(targets)
     } catch {
       setNote({ text: folderMessages.convertFailed, tone: 'danger' })
     }
@@ -400,13 +436,23 @@ function FolderDetail({
           <div className="ds-row-list" role="list">
             {exams.map((pdf) => (
               <FolderPdfRow
+                busy={busy}
                 key={pdf.id}
+                keyFile={answerKeyFor(pdfs, pdf.id)}
+                onAddKey={(files) => void addKey(pdf.id, files)}
                 onConvert={() => void convert([pdf])}
                 onExcludeChange={(excluded) => {
                   const run = runForPdf(runs, pdf)
                   if (run !== undefined) void setRunTopicExclusion(run.id, excluded)
                 }}
+                onRejectKey={(files) =>
+                  setNotes(files.map((f) => uploadMessages.notPdfOrImage(f.name)))
+                }
                 onRemove={() => void removeFolderPdf(pdf.id)}
+                onRemoveKey={() => {
+                  const key = answerKeyFor(pdfs, pdf.id)
+                  if (key !== undefined) void removeFolderPdf(key.id)
+                }}
                 onReview={(runId) => reviewSession.openNeedsReview(runId)}
                 pdf={pdf}
                 run={runForPdf(runs, pdf)}
@@ -539,26 +585,38 @@ function FolderDetail({
   )
 }
 
-/** One member PDF: its conversion status, matching opt-out, and actions. */
+/** One member PDF: its answer key, conversion status, opt-out, and actions. */
 function FolderPdfRow({
   pdf,
   run,
+  keyFile,
+  busy,
   onConvert,
   onReview,
   onRemove,
   onExcludeChange,
+  onAddKey,
+  onRemoveKey,
+  onRejectKey,
 }: {
   pdf: StoredPdf
   run: RunState | undefined
+  keyFile: StoredPdf | undefined
+  busy: boolean
   onConvert: () => void
   onReview: (runId: string) => void
   onRemove: () => void
   onExcludeChange: (excluded: boolean) => void
+  onAddKey: (files: File[]) => void
+  onRemoveKey: () => void
+  onRejectKey: (files: File[]) => void
 }) {
   const counts = useUnresolvedCounts(run?.status === 'done' ? [run.id] : [])
   const unresolved = run === undefined ? 0 : (counts?.[run.id] ?? 0)
   const converting = run?.status === 'running' || run?.status === 'paused'
   const done = run?.status === 'done'
+  // A key only feeds conversion, so hide the slot once the PDF has a run.
+  const showKeySlot = run === undefined || run.status === 'stopped'
 
   const statusBadge = () => {
     if (run === undefined) return <Badge tone="neutral">{folderMessages.statusNotConverted}</Badge>
@@ -577,6 +635,15 @@ function FolderPdfRow({
         </div>
         {statusBadge()}
       </div>
+      {showKeySlot ? (
+        <ExamKeySlot
+          isDisabled={busy}
+          keyFile={keyFile}
+          onAdd={onAddKey}
+          onRejected={onRejectKey}
+          onRemove={onRemoveKey}
+        />
+      ) : null}
       {converting ? (
         <ProgressBar
           label={pdf.name}

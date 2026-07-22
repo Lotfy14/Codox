@@ -124,6 +124,9 @@ export async function restoreHistoryRun(
         ...answerKey,
         id: crypto.randomUUID(),
         jobId: CURRENT_JOB_ID,
+        // Re-link the restored key to the restored exam, not the archived
+        // one it came from, so it attaches on the next conversion.
+        parentPdfId: examId,
         addedAt: now + 1,
       })
     }

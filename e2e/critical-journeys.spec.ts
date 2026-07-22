@@ -196,19 +196,18 @@ test('critical journey: answer-key PDF → review list/detail → named export �
   })
   await expect(page.getByText('Critical Exam.pdf')).toBeVisible()
 
-  // The answer-key slot is always visible and optional — no declaration
-  // question stands between the tutor and dropping the key. (The optional
-  // topics slot shares the same styling, so scope by the zone's label.)
+  // Each exam carries its own answer-key slot right under it, so a batch
+  // never shares one key across unrelated exams. Scope by the per-exam slot.
   await page
-    .locator('.ds-key-file-slot')
-    .filter({ hasText: 'Answer key (optional)' })
+    .locator('.ds-exam-key-slot')
+    .filter({ hasText: 'Answer key' })
     .locator('input[type="file"]')
     .setInputFiles({
     name: 'Critical Answers.pdf',
     mimeType: 'application/pdf',
     buffer: minimalPdf('Answer 1: B'),
   })
-  await expect(page.getByText('Critical Answers.pdf added')).toBeVisible()
+  await expect(page.getByText('Key: Critical Answers.pdf')).toBeVisible()
   await page.getByText('Keep original PDFs', { exact: true }).click()
   await expect(page.getByRole('switch', { name: 'Keep original PDFs' })).toBeChecked()
 
@@ -216,7 +215,7 @@ test('critical journey: answer-key PDF → review list/detail → named export �
   // its retention choice must redraw from IndexedDB, not disappear or reset.
   await page.reload()
   await expect(page.getByText('Critical Exam.pdf')).toBeVisible()
-  await expect(page.getByText('Critical Answers.pdf added')).toBeVisible()
+  await expect(page.getByText('Key: Critical Answers.pdf')).toBeVisible()
   await expect(page.getByRole('switch', { name: 'Keep original PDFs' })).toBeChecked()
 
   await page.getByRole('button', { name: 'Start converting' }).click()
@@ -335,7 +334,8 @@ test('critical journey: answer-key PDF → review list/detail → named export �
   await page.getByRole('button', { name: 'Use PDF again' }).click()
   await expect(page.getByRole('heading', { name: 'Convert' })).toBeVisible()
   await expect(page.getByText('Critical Exam.pdf')).toBeVisible()
-  await expect(page.getByText('Critical Answers.pdf added')).toBeVisible()
+  // The restored key re-links to the restored exam and shows in its slot.
+  await expect(page.getByText('Key: Critical Answers.pdf')).toBeVisible()
 })
 
 test('phone API and Help controls open bottom drawers with a large close target', async ({
