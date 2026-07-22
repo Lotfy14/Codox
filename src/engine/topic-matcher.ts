@@ -46,7 +46,12 @@ export interface MatchOptions {
 
 const DEFAULT_CHUNK_SIZE = 20
 const MATCH_MAX_TOKENS = 8_192
-export const TOPIC_MATCH_MODEL = 'gemini-3.5-flash-lite'
+// Topic/subtopic matching stays on gemini-3.1-flash-lite (owner decision
+// 2026-07-22): the newer 3.5-flash-lite primary matched questions to topics
+// less accurately here, and this is a text-only reasoning task where that
+// judgement is the whole job. The engine's vision roles still default to
+// 3.5-flash-lite; only this post-audit topic feature pins the older model.
+export const TOPIC_MATCH_MODEL = 'gemini-3.1-flash-lite'
 
 // ---------------------------------------------------------------- reading
 

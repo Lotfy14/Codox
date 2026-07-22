@@ -25,7 +25,10 @@ export interface ExtractOptions {
 }
 
 const EXTRACT_MAX_TOKENS = 8_192
-export const TOPIC_EXTRACT_MODEL = 'gemini-3.5-flash-lite'
+// Reads the tutor's topics list; pinned to gemini-3.1-flash-lite alongside
+// the matcher (owner decision 2026-07-22) so the whole topic/subtopic feature
+// runs on the older model the owner found smarter here.
+export const TOPIC_EXTRACT_MODEL = 'gemini-3.1-flash-lite'
 
 /** Sanity caps — a topics list, not an encyclopedia. */
 const MAX_TOPICS = 300

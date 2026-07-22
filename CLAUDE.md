@@ -255,6 +255,12 @@ topics-document reader (`src/engine/topic-extract.ts`) are new surface
 outside the engine path, solver-style: they never modify `merged-rows`,
 deterministic code validates every pick against the user's list, and
 unsure stays blank — a wrong topic is worse than a blank one.
+*Model pin (owner decision 2026-07-22):* both stay on
+`gemini-3.1-flash-lite`, not the newer `gemini-3.5-flash-lite` primary the
+engine's vision roles moved to — the owner found 3.1 matched questions to
+topics more accurately, and this is a text-only reasoning task where that
+judgement is the whole job. Only this post-audit topic feature pins the
+older model; the engine roles are unaffected.
 
 *Per-row match validation + post-run editor (owner-approved 2026-07-21):*
 the matcher validated a whole 20-row chunk atomically and blanked all 20
