@@ -36,12 +36,6 @@ import {
   useSourceUrls,
   type CropAsset,
 } from './useSourceUrls'
-import { FigureCropEditor } from './FigureCropEditor'
-import {
-  saveFigureCrop,
-  useFigureCrops,
-  type FigureCrops,
-} from './review-figure-crops'
 import { putArtifact } from '../state/runs'
 
 const optionLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'] as const
@@ -98,10 +92,7 @@ export function ReviewDetail({
   const confirmId = useId()
   const offline = useOffline()
   const exportTarget = useCustomizationSettings()?.exportTarget ?? 'triviadox'
-  const figureCropsMap: FigureCrops = useFigureCrops(run.id) ?? {}
-  const source = useSourceUrls(run.id, reviewRow, figureCropsMap)
-  // The figure whose crop the tutor is adjusting (bundle path), or null.
-  const [adjustingFigure, setAdjustingFigure] = useState<string | null>(null)
+  const source = useSourceUrls(run.id, reviewRow)
   const answer = reviewRow === undefined ? { index: null, source: 'none' as const } : answerSource(reviewRow, resolutions, aiAnswers)
   const seededAnswer = answer.index === null ? undefined : answer.index
   const [selected, setSelected] = useState<number | undefined>(seededAnswer)
@@ -450,50 +441,14 @@ export function ReviewDetail({
   }
 
 
-  // Default (auto) box per figure, so the crop editor can seed and reset.
-  const figureByPath = new Map(
-    (reviewRow?.figures ?? []).map((figure) => [figure.path, figure]),
-  )
-
-  const figureCrops = source.figures.map((figure, index) => {
-    const defaults = figureByPath.get(figure.path)
-    const override = figureCropsMap[figure.path]
-    const editing = adjustingFigure === figure.path
-    return (
-      <figure className="review-paper review-paper--figure" key={figure.path}>
-        <figcaption className="review-paper__label">
-          {reviewMessages.figureCaption(index + 1, source.figures.length)}
-        </figcaption>
-        <img
-          alt={reviewMessages.figureAlt(reviewRow.questionNumber, index + 1)}
-          src={figure.url}
-        />
-        {defaults !== undefined ? (
-          editing ? (
-            <FigureCropEditor
-              box={override ?? defaults.box}
-              figureNumber={index + 1}
-              hasOverride={override !== undefined}
-              onClose={() => setAdjustingFigure(null)}
-              onCommit={(box) => void saveFigureCrop(run.id, figure.path, box)}
-              pageIndex={figure.pageIndex}
-              runId={run.id}
-            />
-          ) : (
-            <Button
-              className="review-paper__adjust"
-              onPress={() => setAdjustingFigure(figure.path)}
-              variant="secondary"
-            >
-              {override !== undefined
-                ? reviewMessages.adjustFigureAdjusted
-                : reviewMessages.adjustFigure}
-            </Button>
-          )
-        ) : null}
-      </figure>
-    )
-  })
+  const figureCrops = source.figures.map((url, index) => (
+    <figure className="review-paper review-paper--figure" key={url}>
+      <figcaption className="review-paper__label">
+        {reviewMessages.figureCaption(index + 1, source.figures.length)}
+      </figcaption>
+      <img alt={reviewMessages.figureAlt(reviewRow.questionNumber, index + 1)} src={url} />
+    </figure>
+  ))
 
   return (
     <section aria-labelledby="review-heading" className="review">

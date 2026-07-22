@@ -446,17 +446,6 @@ export const reviewMessages = {
     `Figure ${figureNumber} linked to question ${questionNumber}`,
   figureCaption: (figureNumber: number, total: number) =>
     total === 1 ? 'Linked figure' : `Linked figure ${figureNumber} of ${total}`,
-  adjustFigure: 'Adjust crop',
-  adjustFigureAdjusted: 'Adjust crop · edited',
-  cropEditorHint:
-    'Drag the box or its handles to fit the whole figure — including labels and legends. Keyboard: arrows move, Shift+arrows grow a side, Alt+arrows shrink. Your crop is what gets exported.',
-  cropEditorWholePage: 'Whole page',
-  cropEditorReset: 'Reset to auto',
-  cropEditorDone: 'Done',
-  cropEditorPageAlt: (figureNumber: number) =>
-    `Full page for adjusting figure ${figureNumber}`,
-  cropEditorBoxLabel: (figureNumber: number) =>
-    `Crop region for figure ${figureNumber}`,
   pageCaption: (page: number, fileName: string, wholePage: boolean) =>
     `Page ${page} · ${fileName}${wholePage ? ' · whole page' : ''}`,
   reviewHeading: (fileName: string) => `Review · ${fileName}`,

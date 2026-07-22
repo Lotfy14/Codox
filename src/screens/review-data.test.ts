@@ -330,10 +330,9 @@ describe('loadReviewData', () => {
     await putArtifact({ runId: 'run-asset', kind: 'blueprint-valid', json: withAssets })
     const data = await loadReviewData('run-asset')
     expect(data.reviewRows[0].figures).toEqual([])
-    // 1-based asset page becomes a 0-based figure page index; the box is the
-    // engine's raw region (the tutor re-crops it in review if it clipped).
+    // 1-based asset page becomes a 0-based figure page index.
     expect(data.reviewRows[1].figures).toEqual([
-      { path: 'images/asset01.jpg', pageIndex: 1, box: [200, 100, 500, 800] },
+      { pageIndex: 1, box: [200, 100, 500, 800] },
     ])
   })
 })

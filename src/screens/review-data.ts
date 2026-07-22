@@ -35,11 +35,9 @@ export type FlagCategory =
 
 /** A figure the planner linked to this question (its own page + box). */
 export interface ReviewFigure {
-  /** Bundle crop path (e.g. `images/asset01.jpg`) — the override key. */
-  path: string
   /** 0-based page index of the figure's source region. */
   pageIndex: number
-  /** The figure's region on that page (normalized 0–1000), the engine's raw box. */
+  /** The figure's region on that page (normalized 0–1000). */
   box: Box2d
 }
 
@@ -159,15 +157,8 @@ export async function loadReviewData(runId: string): Promise<ReviewData> {
   const figureByPath: Record<string, ReviewFigure> = {}
   for (const asset of blueprint?.assets ?? []) {
     if (asset.page < 1) continue
-    const path = assetJpegPath(asset.output_path)
-    // The engine's raw figure box; the tutor re-crops it in review if the
-    // model clipped a label (`review-figure-crops`), and that override wins.
-    const figure: ReviewFigure = {
-      path,
-      pageIndex: asset.page - 1,
-      box: asset.box_2d,
-    }
-    figureByPath[path] = figure
+    const figure: ReviewFigure = { pageIndex: asset.page - 1, box: asset.box_2d }
+    figureByPath[assetJpegPath(asset.output_path)] = figure
     for (const rowId of asset.linked_row_ids) {
       const list = figuresByRow.get(rowId)
       if (list === undefined) figuresByRow.set(rowId, [figure])

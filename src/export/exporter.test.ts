@@ -255,48 +255,6 @@ describe('column projection', () => {
   })
 })
 
-describe('figure crops at export', () => {
-  async function zipFile(path: string): Promise<Uint8Array | undefined> {
-    expect(lastZip).not.toBeNull()
-    return unzipSync(new Uint8Array(await lastZip!.arrayBuffer()))[path]
-  }
-
-  it('ships the stored crop bytes when the tutor made no adjustment', async () => {
-    const runId = await seedDoneRun([row('1')])
-    const bytes = new Uint8Array([1, 2, 3, 4])
-    await putArtifact({
-      runId,
-      kind: 'crop',
-      pageIndex: 0,
-      path: 'images/asset01.jpg',
-      bytes,
-    })
-    expect(await exportRuns([(await getRun(runId))!])).toBe('downloaded')
-    expect(await zipFile('Exam Cx/images/asset01.jpg')).toEqual(bytes)
-  })
-
-  it('falls back to the stored crop when an override has no source page', async () => {
-    // An override is set but the source page artifact is gone: the export
-    // never drops the figure — it ships the crop the engine already stored.
-    const runId = await seedDoneRun([row('1')])
-    const bytes = new Uint8Array([9, 8, 7, 6])
-    await putArtifact({
-      runId,
-      kind: 'crop',
-      pageIndex: 0,
-      path: 'images/asset01.jpg',
-      bytes,
-    })
-    await putArtifact({
-      runId,
-      kind: 'review-figure-crops',
-      json: { 'images/asset01.jpg': [0, 0, 1000, 1000] },
-    })
-    expect(await exportRuns([(await getRun(runId))!])).toBe('downloaded')
-    expect(await zipFile('Exam Cx/images/asset01.jpg')).toEqual(bytes)
-  })
-})
-
 describe('review edits at export', () => {
   it('content edits reach the CSV; merged-rows stays pristine', async () => {
     const rows = [row('1', { correct_index: '2', needs_review: '' }), row('2')]
