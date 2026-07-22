@@ -8,7 +8,6 @@
  */
 import { useLiveQuery } from 'dexie-react-hooks'
 import { assetJpegPath } from '../engine/blueprint'
-import { FIGURE_BOX_PAD, padBox2d } from '../engine/boxes'
 import { parentRowId } from '../engine/matching'
 import type { Blueprint, Box2d, MergedRow, PlannedRow } from '../engine/types'
 import type { AiAnswer } from '../engine/solver'
@@ -40,7 +39,7 @@ export interface ReviewFigure {
   path: string
   /** 0-based page index of the figure's source region. */
   pageIndex: number
-  /** The figure's default region on that page (normalized 0–1000), padded. */
+  /** The figure's region on that page (normalized 0–1000), the engine's raw box. */
   box: Box2d
 }
 
@@ -161,12 +160,12 @@ export async function loadReviewData(runId: string): Promise<ReviewData> {
   for (const asset of blueprint?.assets ?? []) {
     if (asset.page < 1) continue
     const path = assetJpegPath(asset.output_path)
-    // Same ~4% pad as the exported crop (stepCrops) so the preview the tutor
-    // checks matches the JPEG that ships — a tight model box clips otherwise.
+    // The engine's raw figure box; the tutor re-crops it in review if the
+    // model clipped a label (`review-figure-crops`), and that override wins.
     const figure: ReviewFigure = {
       path,
       pageIndex: asset.page - 1,
-      box: padBox2d(asset.box_2d, FIGURE_BOX_PAD),
+      box: asset.box_2d,
     }
     figureByPath[path] = figure
     for (const rowId of asset.linked_row_ids) {

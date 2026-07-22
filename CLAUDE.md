@@ -310,25 +310,26 @@ rows stay blank). Export already keys its topic columns off the per-run
 setting, so an added-after-the-fact list flows straight into the exported
 `topic`/`subtopic` columns.
 
-*Figure crop padding + tutor re-crop (owner-approved 2026-07-22):* Flash-Lite's
-figure boxes are measured-tight and clip labels/legends, so figure/asset crops
-get two owner-approved adjustments over §1.8's "the cropper never adjusts a box"
-pin — both shape an **image only**, never a CSV row, so the pinned output
-contract, the three prompts, and the gold gate are untouched, and NEVER-GUESS is
-irrelevant (a crop is not an answer). (1) A fixed **~4% pad** (`FIGURE_BOX_PAD`,
-`padBox2d` in `src/engine/boxes.ts`) is added before clamping at both crop time
-(`stepCrops`) and in the review preview (`review-data.ts`), so preview matches
-the shipped JPEG; the degenerate-box gate still runs on the raw box. (2) When
-the pad isn't enough — a label sits outside the box across a leader-line gap —
-the tutor **re-crops the figure in Review**: `FigureCropEditor` draws an
+*Figure label clipping — prompt fix + tutor re-crop (owner decisions 2026-07-22
+/ 2026-07-23):* Flash-Lite's figure boxes are measured-tight and clip
+labels/legends. The fix is in the **BOX prompt** (`BOX_PROMPT` / `BOX_BATCH_PROMPT`
+rule 5, `src/engine/prompts.ts` — these are NOT the SHA-pinned three, so editing
+them is allowed): it now tells the model to deliberately scan the whole area
+around a figure for labels, legends, keys, panel letters, arrows, and leader
+lines — including labels set apart and joined only by a pointer — and extend the
+box to include them, erring larger not tighter. **There is deliberately no
+code-side padding** (owner reversed the 2026-07-22 ~4% pad on 2026-07-23): the
+cropper still crops the raw model box. As a safety net when the model still
+clips, the tutor **re-crops the figure in Review**: `FigureCropEditor` draws an
 adjustable box over the whole source page (drag, or keyboard: arrows move,
 Shift/Alt+arrows grow/shrink a side; plus "Whole page" and "Reset to auto").
 The chosen box lives in the `review-figure-crops` artifact keyed by bundle crop
 path — solver-style, outside the engine path, `merged-rows`/blueprint untouched
 — and is re-cut from the source page at export (`bundleCrops` in `exporter.ts`);
 a missing page or failed re-crop falls back to the stored crop, never dropping a
-figure. Only **new conversions** get the pad; existing runs keep their stored
-crops until re-run, but any run can be re-cropped by hand in Review.
+figure. The re-crop reshapes an **image only**, so the output contract and
+NEVER-GUESS are untouched. The BOX-prompt change should be re-graded on the gold
+gate (CodoxSandbox) since it alters engine planner output.
 
 ## Ship everywhere or nowhere (non-negotiable)
 
