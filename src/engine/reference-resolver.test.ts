@@ -180,13 +180,19 @@ describe('resolveQuestionReferences', () => {
       },
     ]
 
+    // A provider error on the primary model now also tries the known-good
+    // fallback model (owner-approved runtime fallback); both fail here.
+    script.push({
+      ok: false,
+      kind: 'provider-error',
+    })
     script.push({
       ok: false,
       kind: 'provider-error',
     })
 
     const result = await resolveQuestionReferences(rows, controller, runId)
-    expect(script.calls.length).toBe(1)
+    expect(script.calls.length).toBe(2)
     expect(result).toEqual(rows) // Should return original rows
   })
 })

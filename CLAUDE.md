@@ -71,7 +71,10 @@ for why each stack piece was chosen.
   Gemini API key. Codox has no shared, bundled, developer, fallback, or second
   provider key. Every cloud request uses only the key entered on that
   installation, so one user can never consume another user's Gemini quota.
-  The user may replace or remove the key, but cannot pool multiple keys.
+  The user may replace or remove the key, but cannot pool multiple keys. (This
+  bans a fallback *key/provider*; the runtime *model* fallback added
+  2026-07-22 — primary → known-good model under the **same** one key — does not
+  touch it. See the model-fallback note under "Engine semantics are pinned".)
 
 ## Engine semantics are pinned
 
@@ -84,14 +87,40 @@ Correctness is graded externally in the CodoxSandbox repo (gold gate:
 appendicitis 127/127 exact rows); do not build or duplicate a test harness
 for engine output here.
 
-*Model assignment (owner-approved 2026-07-14):* all three roles now run
-`gemini-3.1-flash-lite`, deviating from CODOX_MIGRATION §1.2's
-`gemini-3.5-flash` planner. Reason: 3.5-flash's free-tier per-minute ceiling
-made a single multi-page planner call 429 on its own, stalling real
-conversions behind minutes of back-off. The prompts, the output contract, and
-the no-fallback rule are untouched — the engine still never swaps a role's
-model at runtime. Open cost: Flash-Lite's bounding boxes are weaker, so crop
-quality is unverified until the gold gate is re-run.
+*Model assignment (owner-approved 2026-07-14, superseded 2026-07-22):* the
+2026-07-14 pin ran all roles on `gemini-3.1-flash-lite` (chosen over
+CODOX_MIGRATION §1.2's `gemini-3.5-flash` planner because 3.5-flash's free-tier
+per-minute ceiling 429'd a single multi-page planner call on its own). As of
+2026-07-22 the **primary** for every role is Google's newer
+`gemini-3.5-flash-lite` (GA; model id verified live against the Gemini docs
+2026-07-22), and `gemini-3.1-flash-lite` becomes the runtime fallback below.
+Open cost carried forward: Flash-Lite bounding boxes are weaker and the new
+model's crop quality is unmeasured, so re-run the gold gate (CodoxSandbox)
+before treating this as permanent.
+
+*Runtime model fallback (owner-approved 2026-07-22, overrides the earlier "the
+engine still never swaps a role's model at runtime" wording):* the **engine**
+still never swaps a role's model — the role constants are fixed and the engine
+retries the same model. The one runtime swap lives in the **controller**
+(`src/providers/controller.ts`), outside the engine path: a request the primary
+model cannot answer is retried once on the known-good
+`FALLBACK_GEMINI_VISION_MODEL` (`gemini-3.1-flash-lite`) under the **same one
+key** — a second model, never a second key or provider, so the
+provider/quota rule holds. "Cannot answer" = a per-minute `rate-limited`, a
+`provider-error`, a missing/billing-gated model, or a body still empty after
+the primary's own transient retries. Deliberately **not** fallback triggers:
+`wrong-key` (same key for both — a swap would only mask the real fault),
+`aborted` (user stop), and the key-wide `unreachable`/daily `quota-exhausted`
+(a model swap is futile, so the primary keeps its calm "paused, not broken"
+pause; the fallback keeps that pause too, so it still shows when BOTH models are
+stalled). COST-ZERO guard: a per-session circuit breaker disables a primary
+that returns `model-unavailable`/`billing-required`, so a key without access to
+the new primary wastes exactly one doomed call per session, not one per
+request. NEVER-GUESS is untouched — the fallback re-runs the identical request;
+it never invents an answer. The three pinned prompts and the output contract
+are untouched. Consequence: the key check runs the **fallback** model (the
+guaranteed-runnable path), so a key that lacks the new primary but can run the
+fallback still validates and converts.
 
 *Question count is code-owned (owner-approved 2026-07-14):* CODOX_MIGRATION
 §1.6's rule "`planned_rows` count equals `document_profile.question_count`" no

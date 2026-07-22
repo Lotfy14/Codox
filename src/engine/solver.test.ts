@@ -118,7 +118,7 @@ describe('solveRows', () => {
 
     expect(outcome).toEqual({ ok: true, requestsMade: 1 })
     expect(script.calls).toHaveLength(1)
-    expect(script.calls[0].modelId).toBe('gemini-3.1-flash-lite')
+    expect(script.calls[0].modelId).toBe('gemini-3.5-flash-lite')
     expect(script.calls[0].modelId).toBe(SOLVER_MODEL)
     expect(script.calls[0].prompt.startsWith('You are answering multiple-choice')).toBe(true)
     const cached = await readAiAnswers(runId)

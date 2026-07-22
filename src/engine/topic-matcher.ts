@@ -46,7 +46,7 @@ export interface MatchOptions {
 
 const DEFAULT_CHUNK_SIZE = 20
 const MATCH_MAX_TOKENS = 8_192
-export const TOPIC_MATCH_MODEL = 'gemini-3.1-flash-lite'
+export const TOPIC_MATCH_MODEL = 'gemini-3.5-flash-lite'
 
 // ---------------------------------------------------------------- reading
 

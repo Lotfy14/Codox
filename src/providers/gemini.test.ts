@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   createGeminiAdapter,
   DEFAULT_GEMINI_VISION_MODEL,
+  FALLBACK_GEMINI_VISION_MODEL,
   GEMINI_KEY_CHECK_MODEL,
 } from './gemini'
 import { blobToBase64, bytesToBase64 } from './base64'
@@ -100,10 +101,13 @@ describe('live key validation', () => {
       RequestInit,
     ]
     expect(GEMINI_KEY_CHECK_MODEL).toBe('gemini-3.1-flash-lite')
-    // The check now runs the same model every engine role runs, so a passing
-    // check proves the key can actually run a conversion.
-    expect(GEMINI_KEY_CHECK_MODEL).toBe(DEFAULT_GEMINI_VISION_MODEL)
+    // The check runs the FALLBACK model — the guaranteed-runnable path — so a
+    // passing check proves the key can run a conversion even without access to
+    // the newer primary (the engine simply degrades to this model).
+    expect(GEMINI_KEY_CHECK_MODEL).toBe(FALLBACK_GEMINI_VISION_MODEL)
+    expect(GEMINI_KEY_CHECK_MODEL).not.toBe(DEFAULT_GEMINI_VISION_MODEL)
     expect(url).toContain('gemini-3.1-flash-lite:generateContent')
+    // Never the primary (its id contains "gemini-3.5-flash").
     expect(url).not.toContain('gemini-3.5-flash')
     expect(init.method).toBe('POST')
     expect((init.headers as Record<string, string>)['x-goog-api-key']).toBe(

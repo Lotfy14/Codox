@@ -26,25 +26,38 @@ import type {
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
 
 /**
- * Default free-tier vision-capable model.
+ * Default (primary) free-tier vision-capable model.
  *
- * Owner decision (2026-07-14): every role runs on `gemini-3.1-flash-lite`.
- * `gemini-3.5-flash`'s free-tier per-minute ceiling is low enough that a
- * multi-page planner call 429s on its own, stalling real conversions behind
- * minutes of back-off. Flash-Lite's higher free-tier headroom is worth more
- * than its weaker bounding boxes. Accepted cost: crop quality drops, so
+ * Owner decision (2026-07-22): every role now runs `gemini-3.5-flash-lite`,
+ * Google's newer Flash-Lite (GA, generativelanguage v1beta — model id verified
+ * against the live docs 2026-07-22). It supersedes the 2026-07-14 pin on
+ * `gemini-3.1-flash-lite`, which is retained as the runtime FALLBACK below.
+ * Accepted-but-unverified cost: crop quality on the new model is unmeasured, so
  * re-run the gold gate (CodoxSandbox) before treating this as permanent.
  */
-export const DEFAULT_GEMINI_VISION_MODEL = 'gemini-3.1-flash-lite'
+export const DEFAULT_GEMINI_VISION_MODEL = 'gemini-3.5-flash-lite'
 
 /**
- * Cheap model used only to prove that a key can generate content. This is
- * the model every engine role uses, so a passing check means the key can run
- * a real conversion.
- * (The previous check model, gemini-2.5-flash-lite, is deprecated and now
+ * The known-good fallback model. When the primary model cannot answer a
+ * request — a missing/billing-gated model, a per-minute rate limit, a
+ * provider hiccup, or a persistently empty body — the controller retries the
+ * SAME request on this model (owner-approved runtime-fallback exception,
+ * 2026-07-22; see controller.ts). It is the previous default, proven on the
+ * free tier, so a key that cannot run the new primary still converts.
+ */
+export const FALLBACK_GEMINI_VISION_MODEL = 'gemini-3.1-flash-lite'
+
+/**
+ * Cheap model used only to prove that a key can generate content. It is the
+ * FALLBACK model — the guaranteed-runnable path — so a passing check means the
+ * key can run a real conversion even if it has no access to the new primary
+ * (the engine simply degrades to this model). Keeping the check off the
+ * primary avoids a false "setup required" for keys the app would happily serve
+ * via the fallback.
+ * (The older check model, gemini-2.5-flash-lite, is deprecated and now
  * rejects newer free-tier keys with a billing error — a false negative.)
  */
-export const GEMINI_KEY_CHECK_MODEL = 'gemini-3.1-flash-lite'
+export const GEMINI_KEY_CHECK_MODEL = FALLBACK_GEMINI_VISION_MODEL
 
 function keyHeaders(key: string): HeadersInit {
   return { 'x-goog-api-key': key }

@@ -3,7 +3,11 @@ import {
   recordKeyValidation,
 } from '../state/credentials'
 import { recordDailyRequest } from '../state/quota'
-import { geminiAdapter } from './gemini'
+import {
+  DEFAULT_GEMINI_VISION_MODEL,
+  FALLBACK_GEMINI_VISION_MODEL,
+  geminiAdapter,
+} from './gemini'
 import type { KeyValidationStatus } from '../state/types'
 import type {
   GeminiAdapter,
@@ -22,6 +26,12 @@ import type {
  * singleton credential repository (`src/state/credentials.ts`) at call
  * time. Nothing here accepts a key parameter, and no fallback credential
  * exists — see `controller.test.ts`, which fails if that changes.
+ *
+ * Model fallback (owner-approved 2026-07-22) is the one place a request's
+ * model is swapped at runtime: a request the primary model cannot answer is
+ * retried on the known-good `FALLBACK_GEMINI_VISION_MODEL` under the SAME one
+ * key. This is a second model, never a second key or provider — the key
+ * provenance rule is untouched.
  */
 
 export type ControllerStatus =
@@ -100,6 +110,14 @@ export class GeminiController {
   private readonly rpmWindowMs: number
   private readonly minRequestSpacingMs: number
   private readonly transientRetryDelaysSeconds: readonly number[]
+  /**
+   * Primary models this session's key has proven it cannot run (a missing
+   * model or a billing wall). Once a model lands here, requests for it skip
+   * straight to the fallback — so a key without the new primary wastes exactly
+   * ONE doomed call per session, not one per request (COST-ZERO). Per-instance
+   * and non-persistent: a fresh launch re-tries the primary.
+   */
+  private readonly unavailablePrimaryModels = new Set<string>()
 
   constructor(
     adapter: GeminiAdapter = geminiAdapter,
@@ -191,18 +209,60 @@ export class GeminiController {
   /**
    * One engine-facing vision request under the locally stored key.
    *
-   * - `quota-exhausted` / `rate-limited` / `unreachable` never reject the
-   *   request: the controller emits a calm paused state and retries when
-   *   Gemini's retry timing elapses or the browser comes back online.
-   * - `wrong-key` stops cloud work and is returned; there is no second
-   *   credential to fall back to, by design.
+   * The primary model (what the caller asked for) gets first refusal; a
+   * request it cannot answer is retried once on the known-good
+   * `FALLBACK_GEMINI_VISION_MODEL` (owner-approved 2026-07-22). "Cannot
+   * answer" means: a per-minute rate limit, a provider error, a
+   * missing/billing-gated model, or a body still empty after the primary's own
+   * transient retries. `wrong-key` (same key for both models) and a user abort
+   * are returned as-is, never masked by a swap; `unreachable` and daily
+   * `quota-exhausted` are key-wide, so the primary keeps its calm pause instead
+   * of a futile model swap. The fallback runs the full calm behavior — its own
+   * quota pause and offline resume — so "paused, not broken" still shows when
+   * BOTH models are stalled.
    */
   async runGeminiRequest(
     request: VisionRequest,
     opts: { signal?: AbortSignal } = {},
   ): Promise<VisionResult> {
     const { signal } = opts
+    const primaryModel = request.modelId ?? DEFAULT_GEMINI_VISION_MODEL
 
+    const primaryIsFallback = primaryModel === FALLBACK_GEMINI_VISION_MODEL
+    if (!primaryIsFallback && !this.unavailablePrimaryModels.has(primaryModel)) {
+      const primary = await this.attemptModel(request, true, signal)
+      switch (primaryDisposition(primary)) {
+        case 'return':
+          return primary
+        case 'disable-and-fall-back':
+          this.unavailablePrimaryModels.add(primaryModel)
+          break
+        case 'fall-back':
+          break
+      }
+    }
+
+    // Fall back to the pinned known-good model with the full calm behavior.
+    // (When the caller already asked for the fallback model, this is the only
+    // attempt and reuses the request object untouched.)
+    const fallbackRequest: VisionRequest = primaryIsFallback
+      ? request
+      : { ...request, modelId: FALLBACK_GEMINI_VISION_MODEL }
+    return this.attemptModel(fallbackRequest, false, signal)
+  }
+
+  /**
+   * One model's full attempt loop: RPM pacing, transient/empty retries, and
+   * the calm pause/resume for quota and offline. `failFastOnRateLimit` lets
+   * the primary bail out of a per-minute limit (returning `rate-limited`) so
+   * the caller can try the fallback model instead of waiting; the fallback
+   * runs with it off and keeps the pause.
+   */
+  private async attemptModel(
+    request: VisionRequest,
+    failFastOnRateLimit: boolean,
+    signal?: AbortSignal,
+  ): Promise<VisionResult> {
     let transientAttempt = 0
     for (;;) {
       if (signal?.aborted) return { ok: false, kind: 'aborted' }
@@ -255,6 +315,12 @@ export class GeminiController {
           return result
         case 'quota-exhausted':
         case 'rate-limited': {
+          // A per-minute limit on the primary is worth escaping to the
+          // fallback model (which may have its own RPM headroom). A per-day
+          // exhaustion is key-wide, so a swap is futile — pause instead.
+          if (failFastOnRateLimit && result.kind === 'rate-limited') {
+            return result
+          }
           const waitSeconds =
             result.retryAfterSeconds ??
             (result.kind === 'quota-exhausted'
@@ -331,6 +397,44 @@ export class GeminiController {
       if (signal?.aborted) return
       this.emit({ type: 'resumed' })
     }
+  }
+}
+
+/** What to do with a primary-model attempt's outcome. */
+type PrimaryDisposition = 'return' | 'fall-back' | 'disable-and-fall-back'
+
+/**
+ * Reads a primary-model result and decides whether the fallback model gets a
+ * turn. Only outcomes the primary attempt actually returns are considered:
+ * daily quota and offline pause internally, so they never reach here.
+ */
+function primaryDisposition(result: VisionResult): PrimaryDisposition {
+  if (result.ok) {
+    // A usable answer ends it. A body still empty after the primary's own
+    // transient retries earns one more shot on the fallback (a different model
+    // may not blank or safety-block the same page).
+    return result.text.trim() === '' ? 'fall-back' : 'return'
+  }
+  switch (result.kind) {
+    case 'wrong-key': // same key for both models — a swap would only mask it
+    case 'aborted': // user stop
+    case 'unreachable': // network, model-agnostic (does not normally surface)
+    case 'quota-exhausted': // key-wide daily cap (does not surface; primary pauses)
+      return 'return'
+    case 'rate-limited':
+      return 'fall-back'
+    case 'provider-error':
+      // A deterministic bad request fails identically on the fallback, so it
+      // returns as-is. A missing model or a billing wall is model-specific:
+      // fall back AND stop trying this primary for the session.
+      if (result.code === 'invalid-request') return 'return'
+      if (
+        result.code === 'model-unavailable' ||
+        result.code === 'billing-required'
+      ) {
+        return 'disable-and-fall-back'
+      }
+      return 'fall-back'
   }
 }
 

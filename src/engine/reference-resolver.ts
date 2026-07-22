@@ -35,7 +35,7 @@ function buildResolveRequest(
   return {
     prompt: parts.join('\n'),
     images: [],
-    modelId: 'gemini-3.1-flash-lite',
+    modelId: 'gemini-3.5-flash-lite',
     generationConfig: {
       temperature: 0,
       maxOutputTokens: 32768,

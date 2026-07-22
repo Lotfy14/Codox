@@ -53,7 +53,7 @@ export interface SolveOptions {
 
 const DEFAULT_CHUNK_SIZE = 10
 const SOLVER_MAX_TOKENS = 8_192
-export const SOLVER_MODEL = 'gemini-3.1-flash-lite'
+export const SOLVER_MODEL = 'gemini-3.5-flash-lite'
 
 // ---------------------------------------------------------------- reading
 

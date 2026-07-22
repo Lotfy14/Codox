@@ -25,7 +25,7 @@ export interface ExtractOptions {
 }
 
 const EXTRACT_MAX_TOKENS = 8_192
-export const TOPIC_EXTRACT_MODEL = 'gemini-3.1-flash-lite'
+export const TOPIC_EXTRACT_MODEL = 'gemini-3.5-flash-lite'
 
 /** Sanity caps — a topics list, not an encyclopedia. */
 const MAX_TOPICS = 300

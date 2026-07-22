@@ -6,6 +6,10 @@ import { db } from '../state/db'
 import { getGeminiCredential, saveGeminiKey } from '../state/credentials'
 import { GeminiController } from './controller'
 import type { ControllerEvent } from './controller'
+import {
+  DEFAULT_GEMINI_VISION_MODEL,
+  FALLBACK_GEMINI_VISION_MODEL,
+} from './gemini'
 import type {
   GeminiAdapter,
   KeyCheckResult,
@@ -14,11 +18,15 @@ import type {
 } from './types'
 
 function makeAdapter(overrides: {
-  complete?: (key: string) => VisionResult | Promise<VisionResult>
+  complete?: (
+    key: string,
+    modelId: string,
+  ) => VisionResult | Promise<VisionResult>
   probe?: (key: string) => ProbeResult | Promise<ProbeResult>
   validateKey?: (key: string) => KeyCheckResult | Promise<KeyCheckResult>
 }) {
   const keysSeen: string[] = []
+  const modelsSeen: string[] = []
   let completeCalls = 0
   const adapter: GeminiAdapter = {
     id: 'gemini',
@@ -35,16 +43,21 @@ function makeAdapter(overrides: {
       keysSeen.push(key)
       return { ok: true, modelIds: ['gemini-3.5-flash'] }
     },
-    async complete(_request, key) {
+    async complete(request, key) {
       keysSeen.push(key)
+      const model = request.modelId ?? DEFAULT_GEMINI_VISION_MODEL
+      modelsSeen.push(model)
       completeCalls += 1
-      return overrides.complete?.(key) ?? { ok: true, text: 'ok' }
+      return overrides.complete?.(key, model) ?? { ok: true, text: 'ok' }
     },
   }
   return {
     adapter,
     keysSeen,
+    modelsSeen,
     completeCallCount: () => completeCalls,
+    modelCallCount: (modelId: string) =>
+      modelsSeen.filter((seen) => seen === modelId).length,
   }
 }
 
@@ -249,9 +262,9 @@ describe('failure handling', () => {
     expect(completeCallCount()).toBe(3)
   })
 
-  it('returns the empty completion unchanged once transient retries are exhausted', async () => {
+  it('returns an empty completion unchanged after both models exhaust their retries', async () => {
     await saveGeminiKey('working-key')
-    const { adapter, completeCallCount } = makeAdapter({
+    const { adapter, completeCallCount, modelCallCount } = makeAdapter({
       complete: () => ({ ok: true, text: '   ', finishReason: 'STOP' }),
     })
     const controller = new GeminiController(adapter, {
@@ -261,15 +274,21 @@ describe('failure handling', () => {
 
     const result = await controller.runGeminiRequest(request)
 
-    // Still a success — downstream content validation owns the verdict.
+    // Still a success — downstream content validation owns the verdict. The
+    // primary retries the empty (4 calls), then the fallback gets its own run.
     expect(result).toMatchObject({ ok: true, text: '   ' })
-    expect(completeCallCount()).toBe(4)
+    expect(modelCallCount(DEFAULT_GEMINI_VISION_MODEL)).toBe(4)
+    expect(modelCallCount(FALLBACK_GEMINI_VISION_MODEL)).toBe(4)
+    expect(completeCallCount()).toBe(8)
   })
 
-  it('does not retry an empty completion with an abnormal finish reason', async () => {
+  it('does not retry an abnormal-finish empty on the primary, but falls back to the known-good model', async () => {
     await saveGeminiKey('working-key')
-    const { adapter, completeCallCount } = makeAdapter({
-      complete: () => ({ ok: true, text: '', finishReason: 'SAFETY' }),
+    const { adapter, modelCallCount } = makeAdapter({
+      complete: (_key, model) =>
+        model === FALLBACK_GEMINI_VISION_MODEL
+          ? { ok: true, text: 'rescued', finishReason: 'STOP' }
+          : { ok: true, text: '', finishReason: 'SAFETY' },
     })
     const controller = new GeminiController(adapter, {
       transientRetryDelaysSeconds: [0, 0, 0],
@@ -278,8 +297,11 @@ describe('failure handling', () => {
 
     const result = await controller.runGeminiRequest(request)
 
-    expect(result).toMatchObject({ ok: true, text: '', finishReason: 'SAFETY' })
-    expect(completeCallCount()).toBe(1)
+    // The abnormal finish is deterministic, so the primary is called exactly
+    // once (no transient retry) before the fallback takes over and recovers.
+    expect(result).toMatchObject({ ok: true, text: 'rescued' })
+    expect(modelCallCount(DEFAULT_GEMINI_VISION_MODEL)).toBe(1)
+    expect(modelCallCount(FALLBACK_GEMINI_VISION_MODEL)).toBe(1)
   })
 
   it('does not retry a rejected request', async () => {
@@ -300,13 +322,48 @@ describe('failure handling', () => {
     expect(completeCallCount()).toBe(1)
   })
 
-  it('a 429 produces a calm paused state, then resumes and completes', async () => {
+  it('a rate-limited primary falls back to the known-good model without pausing', async () => {
     await saveGeminiKey('quota-key')
-    let attempt = 0
+    const { adapter, modelCallCount } = makeAdapter({
+      complete: (_key, model) =>
+        model === FALLBACK_GEMINI_VISION_MODEL
+          ? { ok: true, text: 'done' }
+          : {
+              ok: false,
+              kind: 'rate-limited',
+              retryAfterSeconds: 0,
+              httpStatus: 429,
+            },
+    })
+    const controller = new GeminiController(adapter, { minRequestSpacingMs: 0 })
+    const events: ControllerEvent[] = []
+    controller.subscribe((event) => events.push(event))
+
+    const result = await controller.runGeminiRequest(request)
+
+    expect(result).toMatchObject({ ok: true, text: 'done' })
+    // The per-minute limit sends the request straight to the fallback — no
+    // "paused" flash, because the fallback answered immediately.
+    expect(events.map((event) => event.type)).toEqual(['running', 'running'])
+    expect(modelCallCount(DEFAULT_GEMINI_VISION_MODEL)).toBe(1)
+    expect(modelCallCount(FALLBACK_GEMINI_VISION_MODEL)).toBe(1)
+  })
+
+  it('a rate-limited fallback still shows the calm paused state, then resumes', async () => {
+    await saveGeminiKey('quota-key')
+    let fallbackAttempt = 0
     const { adapter } = makeAdapter({
-      complete: () => {
-        attempt += 1
-        return attempt === 1
+      complete: (_key, model) => {
+        if (model !== FALLBACK_GEMINI_VISION_MODEL) {
+          return {
+            ok: false,
+            kind: 'rate-limited',
+            retryAfterSeconds: 0,
+            httpStatus: 429,
+          }
+        }
+        fallbackAttempt += 1
+        return fallbackAttempt === 1
           ? {
               ok: false,
               kind: 'rate-limited',
@@ -323,17 +380,45 @@ describe('failure handling', () => {
     const result = await controller.runGeminiRequest(request)
 
     expect(result.ok).toBe(true)
+    // primary (running) → fallback (running) → its 429 pauses → resumes → running
     expect(events.map((event) => event.type)).toEqual([
+      'running',
       'running',
       'paused',
       'resumed',
       'running',
     ])
-    const paused = events[1]
+    const paused = events[2]
     if (paused.type === 'paused') {
       expect(paused.reason).toBe('quota')
       expect(paused.resumesAt).toBeTypeOf('number')
     }
+  })
+
+  it('a missing primary model is tried once, then skipped for the rest of the session', async () => {
+    await saveGeminiKey('working-key')
+    const { adapter, modelCallCount } = makeAdapter({
+      complete: (_key, model) =>
+        model === FALLBACK_GEMINI_VISION_MODEL
+          ? { ok: true, text: 'from-fallback' }
+          : {
+              ok: false,
+              kind: 'provider-error',
+              code: 'model-unavailable',
+              httpStatus: 404,
+            },
+    })
+    const controller = new GeminiController(adapter, { minRequestSpacingMs: 0 })
+
+    const first = await controller.runGeminiRequest(request)
+    const second = await controller.runGeminiRequest(request)
+
+    expect(first).toMatchObject({ ok: true, text: 'from-fallback' })
+    expect(second).toMatchObject({ ok: true, text: 'from-fallback' })
+    // The primary is attempted exactly once across both requests; after its
+    // model-unavailable failure the breaker routes straight to the fallback.
+    expect(modelCallCount(DEFAULT_GEMINI_VISION_MODEL)).toBe(1)
+    expect(modelCallCount(FALLBACK_GEMINI_VISION_MODEL)).toBe(2)
   })
 
   it('daily quota exhaustion also pauses as quota, using retry timing', async () => {
