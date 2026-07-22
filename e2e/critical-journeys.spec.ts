@@ -286,6 +286,10 @@ test('critical journey: answer-key PDF → review list/detail → named export �
   await page.getByRole('radio', { name: /ZIP file/ }).click()
   await page.locator('.ds-sidebar').getByRole('button', { name: 'Convert' }).click()
   await page.getByRole('button', { name: 'Download ZIP' }).click()
+  // 29 of the 30 flags are still unresolved, so export first warns that those
+  // questions are held back and asks the tutor to confirm shipping the rest
+  // (owner-approved 2026-07-21). Only the one resolved row (20) ships.
+  await page.getByRole('button', { name: 'Export the rest' }).click()
   await expect(page.getByText(/lives safely outside Codox/)).toBeVisible()
   const savedFile = await page.evaluate(
     () =>
