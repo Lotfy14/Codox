@@ -18,7 +18,7 @@ export interface DroppedQuestion {
   ref: string
   printedLabel: string
   ownerPage: number
-  rule: 'duplicate_label' | 'duplicate_anchor' | 'page_not_owned'
+  rule: 'duplicate_label' | 'duplicate_anchor' | 'page_not_owned' | 'covered_reread'
   twinRef?: string
 }
 export interface ReconciledIndex {
@@ -189,24 +189,68 @@ export function reconcileIndexWindows(
   // off its core's last page and stopped, and the next window's reading of
   // 58-60 was the only record of them. So a disowned observation is kept
   // unless something already kept is recognisably the same question.
+  //
+  // COVERED RE-READ. `twin` recognises "the same question" by its printed
+  // label or a prefix-shared anchor. Both can break across a window seam at
+  // once: the owner may number a page from a different origin (its last two
+  // questions owned as "2","3" while the neighbour re-read them as "42","43")
+  // AND word the anchor differently ("acute lower limb ischemia" vs "what is
+  // the initial treatment …", which share no tokens). `twin` then sees two
+  // distinct questions and the rescue keeps the neighbour's copy — a verbatim
+  // duplicate row.
+  //
+  // The signal that the neighbour is RE-READING the owner's page (not
+  // continuing past its tail) is alignment: the owner and the neighbour both
+  // enumerate a page top-to-bottom, so if ANY of the neighbour's disowned
+  // observations on a page twin-confirms against an owned question, the
+  // neighbour is reading that same page — and provided it re-read no MORE than
+  // the owner emitted (no genuinely-new tail to protect), every one of its
+  // disowned observations on that page is a re-read, including the ones a
+  // relabel and a reworded anchor hid from `twin`. Both conditions are load
+  // bearing: without the twin-confirmed alignment this would swallow the
+  // questions an owner truncated and a neighbour uniquely saw (the 58-60
+  // rescue, whose disowned reads twin-confirm nothing on that page); without
+  // the count ceiling it would drop a genuinely-new tail the neighbour read
+  // past the owner's stopping point.
+  const ownedByPage = new Map<number, number>()
+  for (const entry of kept) {
+    ownedByPage.set(entry.question.ownerPage, (ownedByPage.get(entry.question.ownerPage) ?? 0) + 1)
+  }
   const coveredPages = new Set(kept.map((entry) => entry.question.ownerPage))
   windows.forEach((window, windowIndex) => {
-    for (const question of window.disowned ?? []) {
+    const disowned = window.disowned ?? []
+    // Per page: how many this window re-read, and whether any re-read
+    // twin-confirms it is reading the owner's page rather than a disjoint tail.
+    const rereadCount = new Map<number, number>()
+    const alignedPages = new Set<number>()
+    for (const question of disowned) {
+      rereadCount.set(question.ownerPage, (rereadCount.get(question.ownerPage) ?? 0) + 1)
+      if (twin(question, windowIndex) !== undefined) alignedPages.add(question.ownerPage)
+    }
+    for (const question of disowned) {
+      const page = question.ownerPage
+      const ownerCount = ownedByPage.get(page) ?? 0
+      const coveredReread =
+        alignedPages.has(page) && (rereadCount.get(page) ?? 0) <= ownerCount
       // An unnumbered question with a generic anchor has no identity strong
       // enough for `twin` to recognise, so it falls back to the conservative
       // page test rather than risk duplicating a row.
       const weakIdentity =
         question.printedLabel.trim() === '' && isGenericAnchor(question.anchor)
       const duplicate = twin(question, windowIndex)
-      if (duplicate === undefined && !(weakIdentity && coveredPages.has(question.ownerPage))) {
+      if (
+        !coveredReread &&
+        duplicate === undefined &&
+        !(weakIdentity && coveredPages.has(page))
+      ) {
         kept.push({ question: { ...question, sectionKey: sectionKey(question) }, windowIndex })
         continue
       }
       drops.push({
         ref: question.ref,
         printedLabel: question.printedLabel,
-        ownerPage: question.ownerPage,
-        rule: duplicate?.rule ?? 'page_not_owned',
+        ownerPage: page,
+        rule: duplicate?.rule ?? (coveredReread ? 'covered_reread' : 'page_not_owned'),
         ...(duplicate === undefined ? {} : { twinRef: duplicate.ref }),
       })
     }

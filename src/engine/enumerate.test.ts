@@ -251,6 +251,45 @@ describe('reconcileIndexWindows', () => {
     expect(result.questions.length).toBe(1)
   })
 
+  it('drops a full page re-read the owner relabelled and reworded, not just the twin-matchable rows', () => {
+    // Real failure (Surgery Final Paper.1, page 11 in window 0's context and
+    // window 1's core). Window 1 owns the page and read all five questions;
+    // window 0 re-read the same five across the overlap. Window 1 numbered the
+    // last two from a different origin ("2","3" vs window 0's "42","43") AND
+    // worded their anchors differently, so `twin`'s label and prefix tests both
+    // miss them — the ganglion and ischemia rows shipped twice. The first three
+    // twin-confirm the re-read; the count ceiling proves there is no new tail.
+    const windows = [
+      {
+        questions: [],
+        pages: [],
+        disowned: [
+          q('w0q39', '39', 11, 'About burn eschar'),
+          q('w0q40', '40', 11, 'All the following statements about sebaceous cysts'),
+          q('w0q41', '41', 11, 'Regarding basal cell carcinoma'),
+          q('w0q42', '42', 11, 'A ganglion cyst'),
+          q('w0q43', '43', 11, 'What is the initial treatment'),
+        ],
+      },
+      {
+        questions: [
+          q('w1q0', '39', 11, 'burn eschar'),
+          q('w1q1', '40', 11, 'sebaceous cysts'),
+          q('w1q2', '41', 11, 'basal cell carcinoma'),
+          q('w1q3', '2', 11, 'ganglion cyst'),
+          q('w1q4', '3', 11, 'acute lower limb ischemia'),
+        ],
+        pages: [],
+        disowned: [],
+      },
+    ]
+    const result = reconcileIndexWindows(windows)
+    expect(result.questions.map((r: ReconciledQuestion) => r.anchor)).toEqual([
+      'burn eschar', 'sebaceous cysts', 'basal cell carcinoma', 'ganglion cyst', 'acute lower limb ischemia',
+    ])
+    expect(result.drops.filter((d) => d.rule === 'covered_reread').map((d) => d.printedLabel)).toEqual(['42', '43'])
+  })
+
   it('deduplicates questions across page boundaries with mismatched labels if one anchor is a prefix of another non-generic anchor', () => {
     const windows: IndexWindow[] = [
       {
