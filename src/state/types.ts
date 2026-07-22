@@ -18,6 +18,15 @@ export interface JobState {
   id: string
   createdAt: number
   step: AppStep
+  /**
+   * A persistent, named Folder (owner-approved 2026-07-22): a reopenable
+   * job you add PDFs to, convert inside, share one topic list across, and
+   * export as a whole. Absent on the ephemeral `current` workspace and on
+   * dated history archives — those keep the old lifecycle untouched.
+   */
+  kind?: 'folder'
+  /** The folder's display name; only set when `kind` is 'folder'. */
+  name?: string
   /** Keep the original PDF stored after conversion (History re-runs). */
   keepOriginal?: boolean
   /** User-typed year, applied to every question when yearMode is 'type'. */
@@ -107,6 +116,13 @@ export interface RunState {
   yearMode?: YearMode
   /** The job's typed year at run creation, when yearMode is 'type'. */
   typedYear?: string
+  /**
+   * Folder-only (owner-approved 2026-07-22): when true this PDF sits out of
+   * the folder's shared topic matching — it still converts and exports, but
+   * `matchFolderTopics` skips it and clears any topics so it ships blank
+   * topic columns. Absent/false everywhere else.
+   */
+  excludeFromTopicMatch?: boolean
   createdAt: number
 
   updatedAt: number

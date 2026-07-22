@@ -11,12 +11,17 @@ export interface HistoryRun {
 
 export function useHistoryRuns(): HistoryRun[] | undefined {
   return useLiveQuery(async () => {
-    const [runs, files] = await Promise.all([
+    const [runs, files, folders] = await Promise.all([
       db.runs.toArray(),
       db.files.toArray(),
+      db.jobs.where('kind').equals('folder').primaryKeys(),
     ])
     const fileIds = new Set(files.map((file) => file.id))
+    // Folder runs live in the Folders tab, not History (owner-approved
+    // 2026-07-22) — otherwise a folder's conversions would double-appear.
+    const folderJobIds = new Set(folders)
     return runs
+      .filter((run) => !folderJobIds.has(run.jobId))
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .map((run) => ({
         run,

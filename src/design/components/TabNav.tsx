@@ -1,7 +1,7 @@
 import { Button as AriaButton } from 'react-aria-components/Button'
 import type { ReactNode } from 'react'
 
-export type AppTab = 'convert' | 'customize' | 'history'
+export type AppTab = 'convert' | 'customize' | 'folders' | 'history'
 
 export interface TabNavItem<T extends string> {
   className?: string

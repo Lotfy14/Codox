@@ -68,6 +68,18 @@ export class CodoxDatabase extends Dexie {
       runArtifacts: 'id, runId, [runId+kind], [runId+kind+pageIndex]',
       logs: '++seq, t, scope, runId',
     })
+    // Folders (owner-approved 2026-07-22): index `jobs.kind` so the Folders
+    // tab lists persistent folder jobs cheaply. Additive only — existing
+    // jobs simply have no `kind` and never match the folder query.
+    this.version(7).stores({
+      jobs: 'id, kind',
+      meta: 'key',
+      credentials: 'id',
+      files: 'id, jobId',
+      runs: 'id, jobId, pdfId',
+      runArtifacts: 'id, runId, [runId+kind], [runId+kind+pageIndex]',
+      logs: '++seq, t, scope, runId',
+    })
   }
 }
 

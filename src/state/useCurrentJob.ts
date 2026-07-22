@@ -6,26 +6,32 @@ import type { AppStep, JobState } from './types'
 
 export { CURRENT_JOB_ID } from './jobs'
 
-export function useCurrentJob() {
-  const job = useLiveQuery(() => db.jobs.get(CURRENT_JOB_ID), [], null)
+/**
+ * Live view of any job (the `current` workspace or a persistent Folder) plus
+ * its writers. Only the `current` job self-heals via `ensureCurrentJob` — a
+ * folder is created explicitly, so a missing folder id stays undefined rather
+ * than being conjured back into existence.
+ */
+export function useJob(jobId: string) {
+  const job = useLiveQuery(() => db.jobs.get(jobId), [jobId], null)
 
   useEffect(() => {
-    if (job !== undefined) {
-      return
-    }
-
+    if (jobId !== CURRENT_JOB_ID || job !== undefined) return
     void ensureCurrentJob()
-  }, [job])
+  }, [jobId, job])
 
-  const setStep = useCallback(async (step: AppStep) => {
-    await db.jobs.update(CURRENT_JOB_ID, { step })
-  }, [])
+  const setStep = useCallback(
+    async (step: AppStep) => {
+      await db.jobs.update(jobId, { step })
+    },
+    [jobId],
+  )
 
   const updateJob = useCallback(
     async (patch: Partial<Omit<JobState, 'id' | 'createdAt'>>) => {
-      await db.jobs.update(CURRENT_JOB_ID, patch)
+      await db.jobs.update(jobId, patch)
     },
-    [],
+    [jobId],
   )
 
   return {
@@ -33,4 +39,8 @@ export function useCurrentJob() {
     setStep,
     updateJob,
   }
+}
+
+export function useCurrentJob() {
+  return useJob(CURRENT_JOB_ID)
 }
