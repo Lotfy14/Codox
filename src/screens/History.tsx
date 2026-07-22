@@ -3,6 +3,7 @@ import { Badge, Button, Dialog, GlassPanel } from '../design/components'
 import type { BadgeTone } from '../design/components'
 import { appMessages, exportMessages, historyMessages } from '../copy/messages'
 import {
+  countUnexportedFlagged,
   exportRuns,
   exportToTriviadox,
   triviadoxImportUrl,
@@ -54,6 +55,12 @@ export function History({ onOpenConvert }: HistoryProps) {
     text: string
     tone: 'info' | 'danger' | 'working'
   } | null>(null)
+  // Export first warns when a run still has questions needing review; only
+  // the resolved ones ship (owner-approved 2026-07-21).
+  const [exportPrompt, setExportPrompt] = useState<{
+    run: RunState
+    count: number
+  } | null>(null)
   const exportTarget = useCustomizationSettings()?.exportTarget ?? 'triviadox'
   const selected = entries?.find((entry) => entry.run.id === deleteRunId)
   const reviewRun = entries?.find((entry) => entry.run.id === reviewRunId)?.run
@@ -93,8 +100,22 @@ export function History({ onOpenConvert }: HistoryProps) {
     })
   }
 
-  /** Exports the run as it stands, to the customized destination. */
+  /**
+   * Export entry point: warn when the run still has questions needing
+   * review (only resolved ones ship), else export straight away.
+   */
   const exportRun = async (run: RunState) => {
+    if (actionBusyId !== null || exportPrompt !== null) return
+    const heldBack = await countUnexportedFlagged([run])
+    if (heldBack > 0) {
+      setExportPrompt({ run, count: heldBack })
+      return
+    }
+    await performExportRun(run)
+  }
+
+  /** Ships the run's resolved questions to the customized destination. */
+  const performExportRun = async (run: RunState) => {
     if (actionBusyId !== null) return
     setActionBusyId(run.id)
     setNotice(null)
@@ -298,6 +319,37 @@ export function History({ onOpenConvert }: HistoryProps) {
       >
         <p className="ds-muted">{historyMessages.deleteBody}</p>
       </Dialog>
+
+      <Dialog
+        description={
+          exportPrompt !== null
+            ? exportMessages.holdbackBody(exportPrompt.count)
+            : ''
+        }
+        dismissLabel={appMessages.dialogDismiss}
+        isOpen={exportPrompt !== null}
+        onOpenChange={(open) => {
+          if (!open) setExportPrompt(null)
+        }}
+        role="alertdialog"
+        title={exportMessages.holdbackTitle}
+        actions={(close) => (
+          <>
+            <Button onPress={close} variant="secondary">
+              {exportMessages.holdbackCancel}
+            </Button>
+            <Button
+              onPress={() => {
+                const run = exportPrompt?.run
+                close()
+                if (run !== undefined) void performExportRun(run)
+              }}
+            >
+              {exportMessages.holdbackConfirm}
+            </Button>
+          </>
+        )}
+      />
 
     </section>
   )

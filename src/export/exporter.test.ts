@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { MergedRow } from '../engine/types'
 import { db } from '../state/db'
 import { createRun, getArtifact, getRun, putArtifact, updateRun } from '../state/runs'
-import { exportRuns } from './exporter'
+import { countUnexportedFlagged, exportRuns } from './exporter'
 
 /**
  * Drives the real export path (rows → CSV → zip → download) on the web
@@ -41,6 +41,11 @@ beforeEach(async () => {
   await db.meta.clear()
 })
 
+/**
+ * A resolved row by default (answered, unflagged) — only resolved rows
+ * export now (owner-approved 2026-07-21), so the projection/edit tests below
+ * start from an exportable row and the exclusion tests opt into a blank one.
+ */
 function row(id: string, fill: Partial<MergedRow> = {}): MergedRow {
   return {
     id,
@@ -50,11 +55,16 @@ function row(id: string, fill: Partial<MergedRow> = {}): MergedRow {
     year: '',
     question: `Question ${id}?`,
     options: ['Alpha', 'Beta', 'Gamma', 'Delta'],
-    correct_index: '',
+    correct_index: '0',
     image_urls: [],
-    needs_review: 'no_answer_key',
+    needs_review: '',
     ...fill,
   }
+}
+
+/** An unresolved row: no confirmed answer, still flagged for review. */
+function blankRow(id: string, fill: Partial<MergedRow> = {}): MergedRow {
+  return row(id, { correct_index: '', needs_review: 'no_answer_key', ...fill })
 }
 
 async function seedDoneRun(rows: MergedRow[]): Promise<string> {
@@ -103,7 +113,9 @@ describe('export', () => {
   it('a saved AI artifact never leaks into the export by itself', async () => {
     // AI answers reach the CSV only after the tutor approves them in review
     // (they become ordinary resolutions); the cached artifact alone is inert.
-    const rows = [row('1', { correct_index: '2', needs_review: '' }), row('2')]
+    // The blank row is held back entirely — an unapproved AI answer can never
+    // fill it, so it neither ships nor gets guessed.
+    const rows = [row('1', { correct_index: '2' }), blankRow('2')]
     const runId = await seedDoneRun(rows)
     await putArtifact({
       runId,
@@ -116,10 +128,52 @@ describe('export', () => {
     const run = await getRun(runId)
 
     expect(await exportRuns([run!])).toBe('downloaded')
-    const lines = (await exportedCsv()).trimEnd().split('\r\n')
-    expect(lines[1]).toContain(',2,') // document answer intact
-    expect(lines[2]).not.toContain(',3,') // unapproved AI answer stays out
+    const csv = await exportedCsv()
+    expect(csv).toContain(',2,') // document answer intact
+    expect(csv).not.toContain('Question 2?') // blank row held back
+    expect(csv).not.toContain(',3,') // unapproved AI answer stays out
     expect(await getArtifact(runId, 'merged-rows').then((a) => a?.json)).toEqual(rows)
+  })
+
+  it('holds back rows that still need review; resolved rows still ship', async () => {
+    const runId = await seedDoneRun([
+      row('1', { correct_index: '2' }), // document answer → ships
+      blankRow('2'), // no answer, still flagged → held back
+      blankRow('3', { needs_review: 'not_mcq', options: [] }), // structural flag → held back
+    ])
+    // The tutor confirms row 2 in review; row 3 stays unresolved.
+    await putArtifact({ runId, kind: 'review-resolutions', json: { '2': 1 } })
+    const run = await getRun(runId)
+
+    expect(await exportRuns([run!])).toBe('downloaded')
+    const csv = await exportedCsv()
+    expect(csv).toContain('Question 1?')
+    expect(csv).toContain('Question 2?') // resolved in review → ships
+    expect(csv).not.toContain('Question 3?') // still flagged → held back
+  })
+
+  it('countUnexportedFlagged counts only the still-unresolved rows', async () => {
+    const runId = await seedDoneRun([
+      row('1', { correct_index: '2' }),
+      blankRow('2'),
+      blankRow('3'),
+    ])
+    await putArtifact({ runId, kind: 'review-resolutions', json: { '2': 1 } })
+    const run = await getRun(runId)
+
+    // Row 1 answered, row 2 resolved in review, row 3 still blank → 1 held back.
+    expect(await countUnexportedFlagged([run!])).toBe(1)
+  })
+
+  it('a run with nothing resolved exports an empty bundle (no answer key)', async () => {
+    const runId = await seedDoneRun([blankRow('1'), blankRow('2')])
+    const run = await getRun(runId)
+
+    expect(await countUnexportedFlagged([run!])).toBe(2)
+    expect(await exportRuns([run!])).toBe('downloaded')
+    const lines = (await exportedCsv()).trimEnd().split('\r\n')
+    // Header only — every question was held back for review.
+    expect(lines).toEqual([BASE_HEADER])
   })
 
   it('exports nothing when no run is done', async () => {

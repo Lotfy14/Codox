@@ -21,12 +21,20 @@ for why each stack piece was chosen.
    answers from model knowledge — in review only, never inside the engine
    path and no longer at export time. It never modifies `merged-rows`; an
    AI answer reaches a row only when the tutor explicitly approves it,
-   becoming an ordinary review resolution. Exports have no variants
-   (owner-approved 2026-07-17): the Export button always ships the
-   questions exactly as they stand in review — blank, tutor-answered, or
-   AI-approved — to the destination chosen in Customize (Triviadox by
-   default, ZIP optionally). The extraction engine itself still never
-   guesses.
+   becoming an ordinary review resolution. Export ships only resolved
+   questions (owner-approved 2026-07-21, superseding the 2026-07-17
+   "no variants / ships exactly as they stand" rule): a row still flagged
+   for review — no confirmed answer, or a structural flag like `not_mcq` —
+   is **held back**, not exported, and the Export button first warns the
+   tutor with the count of held-back questions and asks them to confirm
+   shipping the rest. A tutor-answered or AI-approved row (both are
+   resolutions) ships; a blank/unresolved one does not. Consequence the
+   owner accepted: a document with no answer key leaves every answer blank,
+   so it exports **nothing** until the tutor answers the questions in review.
+   Destination is still Customize's choice (Triviadox by default, ZIP
+   optionally). Exclusion is deterministic code (`isFlagged` after
+   resolutions in `exporter.ts`), not a prompt; the extraction engine itself
+   still never guesses, and `merged-rows` stays untouched.
 3. **The key stays on-device** — each user brings their own Gemini API key;
    calls go directly from their device to Gemini. No Codox-operated server ever
    sees a key or a page. First run shows a one-line notice that pages are

@@ -232,6 +232,13 @@ export function mergeRows(
       worker.correct_index,
       worker.options.length,
     )
+    // Codox ships MCQs only: a row with fewer than two options can never be
+    // a valid Triviadox question, so code flags it for the tutor instead of
+    // shipping a blank-option "question". NEVER-GUESS holds — the answer is
+    // forced blank, nothing is invented; the tutor decides in review whether
+    // to edit it into an MCQ or delete it. This takes precedence over the
+    // policy reason: "not a multiple-choice question" is the actionable one.
+    const isMcq = worker.options.length >= 2
     rows.push({
       id: planned.id,
       group_id: planned.group_id,
@@ -240,10 +247,10 @@ export function mergeRows(
       year: planned.year,
       question: assembleQuestion(planned, worker),
       options: [...worker.options],
-      correct_index: forced.correct_index,
+      correct_index: isMcq ? forced.correct_index : '',
       // The worker's needs_review was discarded during chunk narrowing;
       // this value is policy/code-owned only.
-      needs_review: forced.needs_review,
+      needs_review: isMcq ? forced.needs_review : 'not_mcq',
       image_urls: [...planned.image_urls],
     })
   }

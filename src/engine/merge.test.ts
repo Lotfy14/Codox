@@ -230,6 +230,42 @@ describe('answer-policy forcing (NEVER-GUESS)', () => {
       expect(result.rows[0].needs_review).toBe('')
     }
   })
+
+  it('a row with fewer than two options is flagged not_mcq with a blank answer', () => {
+    const blueprint = makeEvidenceBlueprint()
+    const workerRows = blueprint.planned_rows.map((planned, index) =>
+      makeWorkerRow(planned, {
+        // First row is a genuine non-MCQ (no options); the worker even
+        // supplied an index, which must be discarded — Codox is MCQ-only.
+        options: index === 0 ? [] : ['Alpha', 'Beta', 'Gamma', 'Delta'],
+        correct_index: index === 0 ? '0' : '2',
+      }),
+    )
+    const result = mergeRows(blueprint, workerRows)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.rows[0].correct_index).toBe('')
+      expect(result.rows[0].needs_review).toBe('not_mcq')
+      // The real MCQ beside it is untouched.
+      expect(result.rows[1].correct_index).toBe('2')
+      expect(result.rows[1].needs_review).toBe('')
+    }
+  })
+
+  it('a single-option row is not an MCQ either', () => {
+    const blueprint = makeEvidenceBlueprint()
+    const workerRows = blueprint.planned_rows.map((planned) =>
+      makeWorkerRow(planned, { options: ['Only one'], correct_index: '0' }),
+    )
+    const result = mergeRows(blueprint, workerRows)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      for (const row of result.rows) {
+        expect(row.correct_index).toBe('')
+        expect(row.needs_review).toBe('not_mcq')
+      }
+    }
+  })
 })
 
 describe('merge ownership', () => {

@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import {
   Badge,
   Button,
+  Dialog,
   FileDropZone,
   FileRow,
   GlassInput,
@@ -12,6 +13,7 @@ import {
 } from '../design/components'
 import type { FileAccept, StatusChipStatus } from '../design/components'
 import {
+  appMessages,
   convertMessages,
   exportMessages,
   progressMessages,
@@ -22,6 +24,7 @@ import {
 import { isBatchRunning, runProgress } from '../engine/progress'
 import { formatStageTotals } from '../pdf/timing'
 import {
+  countUnexportedFlagged,
   exportableRuns,
   exportRuns,
   exportToTriviadox,
@@ -108,6 +111,12 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
     text: string
     tone: 'info' | 'danger' | 'working'
   } | null>(null)
+  // When some questions still need review, export first asks the tutor to
+  // confirm shipping only the resolved ones (owner-approved 2026-07-21).
+  const [exportPrompt, setExportPrompt] = useState<{
+    target: ExportTarget
+    count: number
+  } | null>(null)
   const [startBusy, setStartBusy] = useState(false)
   const [resetBusy, setResetBusy] = useState(false)
   const [topicsBusy, setTopicsBusy] = useState(false)
@@ -152,8 +161,24 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
     }
   }
 
-  /** Exports the questions exactly as they stand, to the customized target. */
+  /**
+   * Export entry point: if any questions still need review they are held
+   * back, so warn the tutor with the count and let them confirm before
+   * shipping only the resolved ones. With nothing held back it exports
+   * straight away.
+   */
   const handleExport = async (target: ExportTarget) => {
+    if (exportBusy || exportPrompt !== null) return
+    const heldBack = await countUnexportedFlagged(runs)
+    if (heldBack > 0) {
+      setExportPrompt({ target, count: heldBack })
+      return
+    }
+    await performExport(target)
+  }
+
+  /** Ships the resolved questions to the customized target. */
+  const performExport = async (target: ExportTarget) => {
     if (exportBusy) return
     setExportBusy(true)
     setExportNotice(null)
@@ -350,6 +375,36 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
             {exportNotice.text}
           </p>
         ) : null}
+        <Dialog
+          description={
+            exportPrompt !== null
+              ? exportMessages.holdbackBody(exportPrompt.count)
+              : ''
+          }
+          dismissLabel={appMessages.dialogDismiss}
+          isOpen={exportPrompt !== null}
+          onOpenChange={(open) => {
+            if (!open) setExportPrompt(null)
+          }}
+          role="alertdialog"
+          title={exportMessages.holdbackTitle}
+          actions={(close) => (
+            <>
+              <Button onPress={close} variant="secondary">
+                {exportMessages.holdbackCancel}
+              </Button>
+              <Button
+                onPress={() => {
+                  const target = exportPrompt?.target
+                  close()
+                  if (target !== undefined) void performExport(target)
+                }}
+              >
+                {exportMessages.holdbackConfirm}
+              </Button>
+            </>
+          )}
+        />
         {running ? (
           <RunningStage
             onStop={() => void conversion.stop()}
