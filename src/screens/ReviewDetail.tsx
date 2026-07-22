@@ -53,6 +53,8 @@ export interface ReviewDetailProps {
   onExport: () => void
   exported: boolean
   filter: ReviewFilter
+  /** Open this row straight in edit mode (a freshly added blank row). */
+  startEditing?: boolean
 }
 
 export function ReviewDetail({
@@ -70,6 +72,7 @@ export function ReviewDetail({
   onExport,
   exported,
   filter,
+  startEditing = false,
 }: ReviewDetailProps) {
   const currentIndex = Math.max(
     0,
@@ -127,9 +130,11 @@ export function ReviewDetail({
   }, [currentRowId, seededAnswer])
 
   useEffect(() => {
-    setEditing(false)
+    // A freshly added row lands in edit mode so the tutor fills the empty
+    // form directly; any other row opens read-only.
+    setEditing(startEditing)
     setAskError(null)
-  }, [currentRowId])
+  }, [currentRowId, startEditing])
 
   const goTo = useCallback((index: number) => {
     const target = orderedRows[index]
@@ -612,6 +617,13 @@ export function ReviewDetail({
                 </Button>
               )}
             </div>
+          ) : reviewRow.row.options.length < 2 ? (
+            // Not a multiple-choice question — nothing to pick. Keyed on the
+            // live option count (not the stale flag) so the notice clears the
+            // moment the tutor edits in a second option.
+            <p className="ds-inline-note ds-inline-note--danger" role="status">
+              {reviewMessages.notMcqNotice}
+            </p>
           ) : (
             <div aria-label={reviewMessages.pickAnswer} className="review__options" role="radiogroup">
               {reviewRow.row.options.map((option, index) => (

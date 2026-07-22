@@ -19,13 +19,19 @@ import {
   getEdits,
   type Edits,
 } from './review-edits'
+import {
+  applyDeletions,
+  getAdditions,
+  getDeletions,
+} from './review-mutations'
 
-/** The four tutor-facing flag explanations (reviewMessages.whyFlagged). */
+/** The tutor-facing flag explanations (reviewMessages.whyFlagged). */
 export type FlagCategory =
   | 'blank-answer'
   | 'conflicting-marks'
   | 'length-mismatch'
   | 'low-confidence'
+  | 'not-mcq'
 
 /** A figure the planner linked to this question (its own page + box). */
 export interface ReviewFigure {
@@ -66,6 +72,12 @@ export function flaggedRows(data: ReviewData): ReviewRow[] {
  */
 export function flagCategory(reason: string, correctIndex: string): FlagCategory {
   const text = reason.toLowerCase()
+  // Checked before the generic 'option' match below: a not-MCQ row (fewer
+  // than two options) is a distinct problem — it can't be answered, only
+  // edited into an MCQ or deleted.
+  if (text.includes('not_mcq')) {
+    return 'not-mcq'
+  }
   if (text.includes('conflict') || text.includes('multiple_mark')) {
     return 'conflicting-marks'
   }
@@ -201,6 +213,38 @@ export function applyEditsToReviewRows(
             ),
     }
   })
+}
+
+/**
+ * The review rows the tutor actually sees: the engine's rows plus any
+ * tutor-added rows, with content/metadata edits applied, deleted rows
+ * dropped, and the question numbers made contiguous over what remains.
+ * An added row has no blueprint entry, so it carries no source crop or
+ * figures — the editor simply shows "source unavailable" for it.
+ */
+export function composeReviewRows(
+  baseReviewRows: readonly ReviewRow[],
+  additions: readonly MergedRow[],
+  deleted: ReadonlySet<string>,
+  edits: Edits,
+  figureByPath: Record<string, ReviewFigure>,
+): ReviewRow[] {
+  const addedRows: ReviewRow[] = additions.map((row) => ({
+    row,
+    questionNumber: 0,
+    category: isFlagged(row) ? flagCategory(row.needs_review, row.correct_index) : null,
+    pageIndex: null,
+    box: null,
+    figures: [],
+  }))
+  const edited = applyEditsToReviewRows(
+    [...baseReviewRows, ...addedRows],
+    edits,
+    figureByPath,
+  )
+  return edited
+    .filter((reviewRow) => !deleted.has(reviewRow.row.id))
+    .map((reviewRow, index) => ({ ...reviewRow, questionNumber: index + 1 }))
 }
 
 /** rowId → the option index the tutor confirmed. */
@@ -423,10 +467,17 @@ export function useUnresolvedCounts(
     for (const runId of runIds) {
       const merged = await getArtifact(runId, 'merged-rows')
       const rows = (merged?.json as MergedRow[] | undefined) ?? []
+      // Tutor-added rows count toward the flag total (a blank added row
+      // needs an answer); deleted rows never do. Both are applied exactly
+      // as export applies them, before edits.
+      const base = applyDeletions(
+        [...rows, ...(await getAdditions(runId))],
+        new Set(await getDeletions(runId)),
+      )
       // Edit-mode content edits first — an edit can blank an orphaned
       // answer (re-flagging the row), and resolutions validate against
       // the edited options, exactly as export applies them.
-      const edited = applyContentEdits(rows, await getEdits(runId))
+      const edited = applyContentEdits(base, await getEdits(runId))
       counts[runId] = unresolvedCount(edited, await getResolutions(runId))
     }
     return counts

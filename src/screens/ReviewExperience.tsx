@@ -39,10 +39,11 @@ export function ReviewExperience({
         onExport={onExport}
         onNavigate={session.navigate}
         orderedRows={session.orderedRowsForDetail}
-        pristineRows={session.data.rows}
+        pristineRows={session.pristineRows}
         resolutions={session.resolutions}
         run={session.activeRun}
         runTopics={session.runTopics}
+        startEditing={session.view.startEditing ?? false}
         topicMatches={session.topicMatches}
       />
     )
@@ -69,6 +70,7 @@ export function ReviewExperience({
         filter={session.controls.filter}
         filteredRows={session.filteredRows}
         focusRowId={session.focusRowId}
+        onAddRow={session.addRow}
         onFilterChange={session.setFilter}
         onOpenAiDialog={() => setAiDialogOpen(true)}
         onOpenRow={session.openRow}

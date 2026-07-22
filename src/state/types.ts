@@ -155,6 +155,8 @@ export type RunArtifactKind =
   | 'audit-report'
   | 'review-resolutions'
   | 'review-edits'
+  | 'review-deletions'
+  | 'review-additions'
   | 'ai-answers'
   | 'topics-list'
   | 'topic-matches'

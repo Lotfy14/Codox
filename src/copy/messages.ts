@@ -406,6 +406,8 @@ export const reviewMessages = {
   wholePage: 'Show whole page (W)',
   questionArea: 'Back to the question area (W)',
   pickAnswer: 'Pick the correct answer',
+  notMcqNotice:
+    'This item has no answer options, so it is not a multiple-choice question. Codox exports MCQs only — edit it into a question with at least two options, or delete it.',
   sourceUnavailable: 'No source image is stored for this question.',
   sourceUnavailableLabel: 'Source unavailable',
   sourceAlt: (questionNumber: number) =>
@@ -474,6 +476,13 @@ export const reviewMessages = {
   bulkCleared: (count: number) =>
     `Cleared topic, subtopic and year on ${count} question${count === 1 ? '' : 's'}.`,
   bulkNothingToApply: 'Fill in a topic, subtopic or year first.',
+  addRow: 'Add question',
+  addRowHint: 'Adds a blank question at the end for you to fill in.',
+  deleteSelected: (count: number) =>
+    `Delete ${count} question${count === 1 ? '' : 's'}`,
+  rowsDeleted: (count: number) =>
+    `Deleted ${count} question${count === 1 ? '' : 's'}. They will not be exported.`,
+  undoDelete: 'Undo',
 } as const
 
 export const exportMessages = {
@@ -493,6 +502,11 @@ export const exportMessages = {
   exportToPrefix: 'Export to',
   triviadoxName: 'Triviadox',
   downloadZip: 'Download ZIP',
+  holdbackTitle: 'Some questions still need review',
+  holdbackBody: (count: number) =>
+    `${count} question${count === 1 ? '' : 's'} still ${count === 1 ? 'needs' : 'need'} review and won’t be exported — only questions with a confirmed answer are included. Keep reviewing to include them.`,
+  holdbackConfirm: 'Export the rest',
+  holdbackCancel: 'Keep reviewing',
 } as const
 
 /** Shared copy for asking Gemini to answer questions (the Review screen). */

@@ -5,6 +5,7 @@ import type { AiAnswer } from '../engine/solver'
 import type { TopicItem } from '../state/types'
 import { effectiveAnswer, type Resolutions, type ReviewRow } from './review-data'
 import { saveRowEditsPatch, type MetaPatch } from './review-edits'
+import { setRowsDeleted } from './review-mutations'
 import {
   isUnresolvedFlag,
   jumpIndex,
@@ -27,6 +28,7 @@ export interface ReviewListProps {
   onSearchChange: (search: string) => void
   onOpenRow: (rowId: string) => void
   onOpenAiDialog: () => void
+  onAddRow: () => void
   focusRowId: string | null
 }
 
@@ -57,6 +59,7 @@ export function ReviewList({
   onSearchChange,
   onOpenRow,
   onOpenAiDialog,
+  onAddRow,
   focusRowId,
 }: ReviewListProps) {
   const rowRefs = useRef(new Map<string, HTMLButtonElement>())
@@ -68,6 +71,8 @@ export function ReviewList({
   const [bulkYear, setBulkYear] = useState('')
   const [bulkStatus, setBulkStatus] = useState('')
   const [bulkBusy, setBulkBusy] = useState(false)
+  // The rowIds of the last delete, so it can be undone in one tap.
+  const [deletedUndo, setDeletedUndo] = useState<readonly string[]>([])
   const topicListId = useId()
   const subtopicListId = useId()
   const parsedSearch = useMemo(() => parseSearch(search), [search])
@@ -93,6 +98,7 @@ export function ReviewList({
     setBulkSubtopic('')
     setBulkYear('')
     setBulkStatus('')
+    setDeletedUndo([])
   }, [runId])
 
   useEffect(() => {
@@ -155,6 +161,22 @@ export function ReviewList({
   const clearSelection = () => {
     setBulkStatus('')
     setSelected(new Set())
+  }
+
+  const deleteSelected = () => {
+    if (selected.size === 0) return
+    const ids = [...selected]
+    setBulkStatus('')
+    void setRowsDeleted(runId, ids, true).then(() => {
+      setDeletedUndo(ids)
+      setSelected(new Set())
+    })
+  }
+
+  const undoDelete = () => {
+    if (deletedUndo.length === 0) return
+    const ids = deletedUndo
+    void setRowsDeleted(runId, ids, false).then(() => setDeletedUndo([]))
   }
 
   const allFilteredSelected =
@@ -226,6 +248,9 @@ export function ReviewList({
           <Button onPress={onOpenAiDialog} variant="secondary">
             {aiReviewMessages.openDialog}
           </Button>
+          <Button onPress={onAddRow} title={reviewMessages.addRowHint} variant="secondary">
+            {reviewMessages.addRow}
+          </Button>
         </div>
         <div className="review-list__select-tools">
           <Button
@@ -242,6 +267,9 @@ export function ReviewList({
               </span>
               <Button onPress={clearSelection} variant="quiet">
                 {reviewMessages.bulkClearSelection}
+              </Button>
+              <Button onPress={deleteSelected} variant="danger">
+                {reviewMessages.deleteSelected(selected.size)}
               </Button>
             </>
           ) : null}
@@ -299,6 +327,19 @@ export function ReviewList({
           role="status"
         >
           {bulkStatus}
+        </p>
+      ) : null}
+
+      {deletedUndo.length > 0 ? (
+        <p
+          aria-live="polite"
+          className="ds-inline-note ds-inline-note--info review-list__bulk-status"
+          role="status"
+        >
+          {reviewMessages.rowsDeleted(deletedUndo.length)}{' '}
+          <Button onPress={undoDelete} variant="quiet">
+            {reviewMessages.undoDelete}
+          </Button>
         </p>
       ) : null}
 

@@ -7,6 +7,7 @@ import {
   aiApplyPlan,
   answerSource,
   applyResolutions,
+  composeReviewRows,
   effectiveAnswer,
   flagCategory,
   flaggedRows,
@@ -16,6 +17,7 @@ import {
   saveResolution,
   saveResolutions,
   unresolvedCount,
+  type ReviewRow,
 } from './review-data'
 
 function makeRow(overrides: Partial<MergedRow> = {}): MergedRow {
@@ -40,12 +42,53 @@ beforeEach(async () => {
 })
 
 describe('flagCategory', () => {
-  it('maps the merge vocabulary onto the four tutor explanations', () => {
+  it('maps the merge vocabulary onto the tutor explanations', () => {
     expect(flagCategory('conflicting_marks', '')).toBe('conflicting-marks')
     expect(flagCategory('label_style_mismatch', '')).toBe('length-mismatch')
     expect(flagCategory('key_unclear', '')).toBe('low-confidence')
     expect(flagCategory('no_answer_key', '')).toBe('blank-answer')
     expect(flagCategory('no_visible_answer', '')).toBe('blank-answer')
+    expect(flagCategory('not_mcq', '')).toBe('not-mcq')
+  })
+})
+
+describe('composeReviewRows', () => {
+  const base = (id: string): ReviewRow => ({
+    row: makeRow({ id, needs_review: '' }),
+    questionNumber: 0,
+    category: null,
+    pageIndex: 0,
+    box: null,
+    figures: [],
+  })
+
+  it('folds added rows in after the engine rows and numbers them contiguously', () => {
+    const added = makeRow({ id: 'added-x', question: 'Manual Q', needs_review: 'added_row' })
+    const rows = composeReviewRows([base('1'), base('2')], [added], new Set(), {}, {})
+    expect(rows.map((r) => r.row.id)).toEqual(['1', '2', 'added-x'])
+    expect(rows.map((r) => r.questionNumber)).toEqual([1, 2, 3])
+    // A blank added row (no correct_index) comes through flagged.
+    expect(rows[2].category).not.toBeNull()
+    // No blueprint entry → no source crop.
+    expect(rows[2].pageIndex).toBeNull()
+  })
+
+  it('drops deleted rows and renumbers what remains', () => {
+    const rows = composeReviewRows(
+      [base('1'), base('2'), base('3')],
+      [],
+      new Set(['2']),
+      {},
+      {},
+    )
+    expect(rows.map((r) => r.row.id)).toEqual(['1', '3'])
+    expect(rows.map((r) => r.questionNumber)).toEqual([1, 2])
+  })
+
+  it('leaves the engine rows untouched when there is nothing to add or delete', () => {
+    const rows = composeReviewRows([base('1'), base('2')], [], new Set(), {}, {})
+    expect(rows.map((r) => r.row.id)).toEqual(['1', '2'])
+    expect(rows.map((r) => r.questionNumber)).toEqual([1, 2])
   })
 })
 

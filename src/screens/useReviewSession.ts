@@ -3,13 +3,14 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { readRunTopics, readTopicMatches } from '../engine/topic-matcher'
 import type { RunState } from '../state/types'
 import {
-  applyEditsToReviewRows,
+  composeReviewRows,
   loadReviewData,
   useAiAnswers,
   useResolutions,
   type ReviewData,
 } from './review-data'
 import { useEdits } from './review-edits'
+import { addRow as addRowMutation, useAdditions, useDeletions } from './review-mutations'
 import {
   filterReviewRows,
   isUnresolvedFlag,
@@ -24,7 +25,7 @@ interface ReviewControls {
 
 export type ReviewView =
   | { kind: 'list' }
-  | { kind: 'detail'; rowId: string; pinnedIndex: number }
+  | { kind: 'detail'; rowId: string; pinnedIndex: number; startEditing?: boolean }
 
 export function useReviewSession(runs: readonly RunState[]) {
   const doneRuns = useMemo(() => runs.filter((run) => run.status === 'done'), [runs])
@@ -69,15 +70,24 @@ export function useReviewSession(runs: readonly RunState[]) {
   const resolutions = useResolutions(liveRunId)
   const aiAnswers = useAiAnswers(liveRunId)
   const edits = useEdits(liveRunId)
+  const additions = useAdditions(liveRunId)
+  const deletions = useDeletions(liveRunId)
   const topicMatches = useLiveQuery(() => readTopicMatches(liveRunId), [liveRunId])
   const runTopics = useLiveQuery(() => readRunTopics(liveRunId), [liveRunId])
-  // Everything downstream (list, search, detail) sees the edited rows;
-  // the pristine merged rows stay available as `data.rows` for edit mode.
+  const deletedSet = useMemo(() => new Set(deletions ?? []), [deletions])
+  // Edit mode diffs against the pristine rows: the engine's merged rows plus
+  // any tutor-added rows (a blank added row is its own pristine baseline).
+  const pristineRows = useMemo(
+    () => [...(data?.rows ?? []), ...(additions ?? [])],
+    [data, additions],
+  )
+  // Everything downstream (list, search, detail) sees the edited rows, with
+  // added rows folded in and deleted rows dropped.
   const reviewRows = useMemo(
-    () => data === undefined || edits === undefined
+    () => data === undefined || edits === undefined || additions === undefined || deletions === undefined
       ? undefined
-      : applyEditsToReviewRows(data.reviewRows, edits, data.figureByPath),
-    [data, edits],
+      : composeReviewRows(data.reviewRows, additions, deletedSet, edits, data.figureByPath),
+    [data, edits, additions, deletions, deletedSet],
   )
   const controls = controlsByRun[activeRunId] ?? { filter: 'all', search: '' }
   const filteredRows = useMemo(
@@ -128,6 +138,15 @@ export function useReviewSession(runs: readonly RunState[]) {
     setView({ kind: 'detail', rowId, pinnedIndex })
   }, [orderedRowsForDetail])
 
+  // Append a blank question and open it straight in edit mode — the tutor
+  // lands on an empty form to fill, not a read-only blank card.
+  const addRow = useCallback(async () => {
+    if (activeRunId === '') return
+    const rowId = await addRowMutation(activeRunId)
+    setFocusRowId(null)
+    setView({ kind: 'detail', rowId, pinnedIndex: filteredRows.length, startEditing: true })
+  }, [activeRunId, filteredRows.length])
+
   const back = useCallback(() => {
     if (view.kind === 'detail') setFocusRowId(view.rowId)
     setView({ kind: 'list' })
@@ -168,6 +187,7 @@ export function useReviewSession(runs: readonly RunState[]) {
   return {
     activeRun,
     activeRunId,
+    addRow,
     aiAnswers,
     back,
     controls,
@@ -179,6 +199,7 @@ export function useReviewSession(runs: readonly RunState[]) {
     openNeedsReview,
     openRow,
     orderedRowsForDetail,
+    pristineRows,
     resolutions,
     reviewRows,
     runTopics,

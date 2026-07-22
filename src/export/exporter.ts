@@ -25,7 +25,11 @@ import type { MergedRow } from '../engine/types'
 import { bytesToBase64 } from '../providers/base64'
 import { getArtifact, getArtifacts, updateRun } from '../state/runs'
 import type { RunState } from '../state/types'
-import { applyResolutions, getResolutions } from '../screens/review-data'
+import {
+  applyResolutions,
+  getResolutions,
+  isFlagged,
+} from '../screens/review-data'
 import {
   applyContentEdits,
   applyMetaEdits,
@@ -33,6 +37,11 @@ import {
   editsSetYear,
   getEdits,
 } from '../screens/review-edits'
+import {
+  applyDeletions,
+  getAdditions,
+  getDeletions,
+} from '../screens/review-mutations'
 import { emitExportCsv, exportColumns } from './export-csv'
 import {
   assembleBundleFiles,
@@ -60,10 +69,12 @@ export function exportableRuns(runs: readonly RunState[]): RunState[] {
 }
 
 /**
- * Where a prepared Triviadox upload gets imported. Exports carry the
- * questions exactly as they stand in review — answers the tutor blanked,
- * confirmed, or approved from the AI all ship as-is; there are no export
- * variants.
+ * Where a prepared Triviadox upload gets imported. Export ships only the
+ * questions the tutor has resolved (owner-approved 2026-07-21): a row still
+ * flagged for review — no confirmed answer, or a structural flag like
+ * not_mcq — is held back, and the UI warns with the count first. A run whose
+ * answers are all blank (no answer key, nothing confirmed) therefore exports
+ * nothing until the tutor answers them.
  */
 export function triviadoxImportUrl(id: string): string {
   return `${triviadoxOrigin()}/management/import?id=${id}`
@@ -76,24 +87,57 @@ function triviadoxOrigin(): string {
     : 'https://triviadox.com'
 }
 
+/**
+ * The rows of one run as they stand in review: tutor-added rows appended,
+ * deleted rows dropped, content edits applied, then the tutor's confirmed
+ * answers resolved. `isFlagged` on a returned row therefore means "still
+ * unresolved" — no confirmed answer or a structural flag left standing.
+ * Tutor-added and deleted rows are handled here so edits, resolutions and
+ * the projection treat them exactly like engine rows; deletion is reversible
+ * upstream, here it simply omits.
+ */
+async function reviewedRows(runId: string): Promise<MergedRow[]> {
+  const merged = await getArtifact(runId, 'merged-rows')
+  if (!Array.isArray(merged?.json)) {
+    throw new Error(`Finished run ${runId} has no merged rows`)
+  }
+  const rows = applyDeletions(
+    [...(merged.json as MergedRow[]), ...(await getAdditions(runId))],
+    new Set(await getDeletions(runId)),
+  )
+  // Content edits (question/options/pictures/answer override) go first so
+  // resolutions validate against the options the tutor actually saw.
+  const edited = applyContentEdits(rows, await getEdits(runId))
+  return applyResolutions(edited, await getResolutions(runId))
+}
+
+/**
+ * How many rows would be held back from export because they still need
+ * review (owner-approved 2026-07-21). The export UI shows this count and
+ * asks the tutor to confirm before shipping the rest.
+ */
+export async function countUnexportedFlagged(
+  runs: readonly RunState[],
+): Promise<number> {
+  let total = 0
+  for (const run of exportableRuns(runs)) {
+    total += (await reviewedRows(run.id)).filter(isFlagged).length
+  }
+  return total
+}
+
 async function buildBundleInputs(
   runs: readonly RunState[],
 ): Promise<BundleInput[]> {
   const names = uniqueBundleNames(runs.map((run) => run.fileName))
   const bundles: BundleInput[] = []
   for (const [index, run] of runs.entries()) {
-    const merged = await getArtifact(run.id, 'merged-rows')
-    if (!Array.isArray(merged?.json)) {
-      throw new Error(`Finished run ${run.id} has no merged rows`)
-    }
-    const rows = merged.json as MergedRow[]
-    const resolutions = await getResolutions(run.id)
+    const resolved = await reviewedRows(run.id)
+    // Only resolved rows ship (owner-approved 2026-07-21): a row still
+    // flagged for review is held back rather than exported blank or broken.
+    // The tutor was warned of the count before this ran.
     const edits = await getEdits(run.id)
-    // Content edits (question/options/pictures/answer override) go first
-    // so resolutions validate against the options the tutor actually saw.
-    const edited = applyContentEdits(rows, edits)
-    const resolved = applyResolutions(edited, resolutions)
-    let projected = resolved
+    let projected = resolved.filter((row) => !isFlagged(row))
     // Column projection (owner-approved 2026-07-14): topics come only from
     // the run's snapshot + matches (blank when matching didn't finish —
     // export never waits); year per the run's snapshot; id/group_id never.
