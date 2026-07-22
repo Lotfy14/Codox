@@ -178,6 +178,7 @@ export type RunArtifactKind =
   | 'audit-report'
   | 'review-resolutions'
   | 'review-edits'
+  | 'review-figure-crops'
   | 'review-deletions'
   | 'review-additions'
   | 'ai-answers'

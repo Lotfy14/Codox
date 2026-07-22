@@ -26,6 +26,30 @@ export function boxToCropBox(
   }
 }
 
+/**
+ * Figure crops breathe by this many 0–1000 units (~4%) before clamping, to
+ * absorb Flash-Lite's measured tight bounding boxes (they clip labels, key
+ * legends, and table edges — the "weaker bounding boxes" cost carried in
+ * CLAUDE.md). Owner-approved 2026-07-22 as the one adjustment a figure crop
+ * is allowed, over §1.3-step-4's "clamping only" pin. Applied identically at
+ * crop time (`stepCrops`) and in the review preview so they always match; the
+ * degenerate-box gate still runs on the RAW box, so padding never revives a
+ * zero-extent asset. It shapes only image assets, not CSV rows — the pinned
+ * output contract and gold gate are untouched.
+ */
+export const FIGURE_BOX_PAD = 40
+
+/** Grows a box by `pad` on every side, clamped to the 0–1000 page. */
+export function padBox2d(box: Box2d, pad: number): Box2d {
+  const [ymin, xmin, ymax, xmax] = box
+  return [
+    Math.max(0, ymin - pad),
+    Math.max(0, xmin - pad),
+    Math.min(1000, ymax + pad),
+    Math.min(1000, xmax + pad),
+  ]
+}
+
 /** A structurally valid planner box: four finite numbers (§1.6). */
 export function isBox2d(value: unknown): value is Box2d {
   return (

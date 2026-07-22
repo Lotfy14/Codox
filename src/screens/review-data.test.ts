@@ -330,9 +330,10 @@ describe('loadReviewData', () => {
     await putArtifact({ runId: 'run-asset', kind: 'blueprint-valid', json: withAssets })
     const data = await loadReviewData('run-asset')
     expect(data.reviewRows[0].figures).toEqual([])
-    // 1-based asset page becomes a 0-based figure page index.
+    // 1-based asset page becomes a 0-based figure page index; the box is
+    // padded ~4% (FIGURE_BOX_PAD) so the preview matches the exported crop.
     expect(data.reviewRows[1].figures).toEqual([
-      { pageIndex: 1, box: [200, 100, 500, 800] },
+      { path: 'images/asset01.jpg', pageIndex: 1, box: [160, 60, 540, 840] },
     ])
   })
 })

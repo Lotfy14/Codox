@@ -22,8 +22,9 @@ import {
   readTopicMatches,
 } from '../engine/topic-matcher'
 import type { MergedRow } from '../engine/types'
-import { bytesToBase64 } from '../providers/base64'
-import { getArtifact, getArtifacts, updateRun } from '../state/runs'
+import { boxToCropBox } from '../engine/boxes'
+import { blobToBytes, bytesToBase64 } from '../providers/base64'
+import { getArtifact, getArtifacts, getPageArtifact, updateRun } from '../state/runs'
 import type { RunState } from '../state/types'
 import {
   applyResolutions,
@@ -42,6 +43,7 @@ import {
   getAdditions,
   getDeletions,
 } from '../screens/review-mutations'
+import { getFigureCrops } from '../screens/review-figure-crops'
 import { emitExportCsv, exportColumns } from './export-csv'
 import {
   assembleBundleFiles,
@@ -126,6 +128,44 @@ export async function countUnexportedFlagged(
   return total
 }
 
+/**
+ * The run's figure crops for the bundle, with the tutor's review-time
+ * adjustments applied. A figure the tutor re-cropped is re-cut from its
+ * source page at export time using the override box; every other figure
+ * ships the crop the engine already stored. A missing page or a failed
+ * re-crop falls back to the stored bytes — a figure is never dropped.
+ */
+async function bundleCrops(
+  runId: string,
+): Promise<{ path: string; bytes: Uint8Array }[]> {
+  const overrides = await getFigureCrops(runId)
+  const { cropJpeg } = await import('../pdf/images')
+  const out: { path: string; bytes: Uint8Array }[] = []
+  for (const crop of await getArtifacts(runId, 'crop')) {
+    if (crop.path === undefined || crop.bytes === undefined) continue
+    const override = overrides[crop.path]
+    if (override === undefined || crop.pageIndex === undefined) {
+      out.push({ path: crop.path, bytes: crop.bytes })
+      continue
+    }
+    const page = await getPageArtifact(runId, crop.pageIndex)
+    if (page?.bytes === undefined || page.width === undefined || page.height === undefined) {
+      out.push({ path: crop.path, bytes: crop.bytes })
+      continue
+    }
+    try {
+      const recut = await cropJpeg(
+        new Blob([page.bytes as BlobPart], { type: 'image/jpeg' }),
+        boxToCropBox(override, page.width, page.height),
+      )
+      out.push({ path: crop.path, bytes: await blobToBytes(recut) })
+    } catch {
+      out.push({ path: crop.path, bytes: crop.bytes })
+    }
+  }
+  return out
+}
+
 async function buildBundleInputs(
   runs: readonly RunState[],
 ): Promise<BundleInput[]> {
@@ -166,11 +206,7 @@ async function buildBundleInputs(
         year: run.yearMode === 'ai' || typedYear !== '' || editsSetYear(edits),
       }),
     )
-    const crops = (await getArtifacts(run.id, 'crop')).flatMap((crop) =>
-      crop.path !== undefined && crop.bytes !== undefined
-        ? [{ path: crop.path, bytes: crop.bytes }]
-        : [],
-    )
+    const crops = await bundleCrops(run.id)
     bundles.push({ name: names[index], csvText, crops })
   }
   return bundles

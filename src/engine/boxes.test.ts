@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { boxToCropBox, hasPositiveExtent, isBox2d } from './boxes'
+import { boxToCropBox, FIGURE_BOX_PAD, hasPositiveExtent, isBox2d, padBox2d } from './boxes'
 
 describe('boxToCropBox', () => {
   it('maps [ymin, xmin, ymax, xmax] onto an asymmetric page — y first', () => {
@@ -39,6 +39,20 @@ describe('isBox2d', () => {
     expect(isBox2d([0, 0, 100, Number.NaN])).toBe(false)
     expect(isBox2d({ ymin: 0 })).toBe(false)
     expect(isBox2d(null)).toBe(false)
+  })
+})
+
+describe('padBox2d', () => {
+  it('grows a mid-page box by pad on every side', () => {
+    expect(padBox2d([200, 100, 500, 800], FIGURE_BOX_PAD)).toEqual([
+      160, 60, 540, 840,
+    ])
+  })
+
+  it('clamps the padded box to the 0–1000 page edges', () => {
+    expect(padBox2d([10, 20, 990, 985], FIGURE_BOX_PAD)).toEqual([
+      0, 0, 1000, 1000,
+    ])
   })
 })
 

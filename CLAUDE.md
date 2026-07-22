@@ -310,6 +310,26 @@ rows stay blank). Export already keys its topic columns off the per-run
 setting, so an added-after-the-fact list flows straight into the exported
 `topic`/`subtopic` columns.
 
+*Figure crop padding + tutor re-crop (owner-approved 2026-07-22):* Flash-Lite's
+figure boxes are measured-tight and clip labels/legends, so figure/asset crops
+get two owner-approved adjustments over §1.8's "the cropper never adjusts a box"
+pin — both shape an **image only**, never a CSV row, so the pinned output
+contract, the three prompts, and the gold gate are untouched, and NEVER-GUESS is
+irrelevant (a crop is not an answer). (1) A fixed **~4% pad** (`FIGURE_BOX_PAD`,
+`padBox2d` in `src/engine/boxes.ts`) is added before clamping at both crop time
+(`stepCrops`) and in the review preview (`review-data.ts`), so preview matches
+the shipped JPEG; the degenerate-box gate still runs on the raw box. (2) When
+the pad isn't enough — a label sits outside the box across a leader-line gap —
+the tutor **re-crops the figure in Review**: `FigureCropEditor` draws an
+adjustable box over the whole source page (drag, or keyboard: arrows move,
+Shift/Alt+arrows grow/shrink a side; plus "Whole page" and "Reset to auto").
+The chosen box lives in the `review-figure-crops` artifact keyed by bundle crop
+path — solver-style, outside the engine path, `merged-rows`/blueprint untouched
+— and is re-cut from the source page at export (`bundleCrops` in `exporter.ts`);
+a missing page or failed re-crop falls back to the stored crop, never dropping a
+figure. Only **new conversions** get the pad; existing runs keep their stored
+crops until re-run, but any run can be re-cropped by hand in Review.
+
 ## Ship everywhere or nowhere (non-negotiable)
 
 A fix is not done until it is **committed and pushed to `main`** — that one

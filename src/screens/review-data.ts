@@ -8,6 +8,7 @@
  */
 import { useLiveQuery } from 'dexie-react-hooks'
 import { assetJpegPath } from '../engine/blueprint'
+import { FIGURE_BOX_PAD, padBox2d } from '../engine/boxes'
 import { parentRowId } from '../engine/matching'
 import type { Blueprint, Box2d, MergedRow, PlannedRow } from '../engine/types'
 import type { AiAnswer } from '../engine/solver'
@@ -35,9 +36,11 @@ export type FlagCategory =
 
 /** A figure the planner linked to this question (its own page + box). */
 export interface ReviewFigure {
+  /** Bundle crop path (e.g. `images/asset01.jpg`) — the override key. */
+  path: string
   /** 0-based page index of the figure's source region. */
   pageIndex: number
-  /** The figure's region on that page (normalized 0–1000). */
+  /** The figure's default region on that page (normalized 0–1000), padded. */
   box: Box2d
 }
 
@@ -157,8 +160,15 @@ export async function loadReviewData(runId: string): Promise<ReviewData> {
   const figureByPath: Record<string, ReviewFigure> = {}
   for (const asset of blueprint?.assets ?? []) {
     if (asset.page < 1) continue
-    const figure: ReviewFigure = { pageIndex: asset.page - 1, box: asset.box_2d }
-    figureByPath[assetJpegPath(asset.output_path)] = figure
+    const path = assetJpegPath(asset.output_path)
+    // Same ~4% pad as the exported crop (stepCrops) so the preview the tutor
+    // checks matches the JPEG that ships — a tight model box clips otherwise.
+    const figure: ReviewFigure = {
+      path,
+      pageIndex: asset.page - 1,
+      box: padBox2d(asset.box_2d, FIGURE_BOX_PAD),
+    }
+    figureByPath[path] = figure
     for (const rowId of asset.linked_row_ids) {
       const list = figuresByRow.get(rowId)
       if (list === undefined) figuresByRow.set(rowId, [figure])

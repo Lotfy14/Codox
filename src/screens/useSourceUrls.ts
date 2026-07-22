@@ -2,12 +2,22 @@ import { useEffect, useState } from 'react'
 import { boxToCropBox } from '../engine/boxes'
 import { getArtifacts, getPageArtifact } from '../state/runs'
 import type { ReviewRow } from './review-data'
+import type { FigureCrops } from './review-figure-crops'
+
+/** One linked figure's preview: its crop URL and the override key. */
+export interface FigurePreview {
+  url: string
+  /** Bundle crop path — the key an adjust-crop override is stored under. */
+  path: string
+  /** 0-based page index the figure lives on (for the crop editor). */
+  pageIndex: number
+}
 
 interface SourceUrls {
   crop: string | null
   page: string | null
   /** Cropped linked figures, in blueprint order. */
-  figures: string[]
+  figures: FigurePreview[]
 }
 
 export function isTypingTarget(target: EventTarget | null): boolean {
@@ -84,6 +94,7 @@ export function useCropAssets(runId: string, enabled: boolean): CropAsset[] {
 export function useSourceUrls(
   runId: string,
   reviewRow: ReviewRow | undefined,
+  figureOverrides?: FigureCrops,
 ): SourceUrls {
   const [urls, setUrls] = useState<SourceUrls>({ crop: null, page: null, figures: [] })
 
@@ -138,23 +149,27 @@ export function useSourceUrls(
 
       const questionPage = pages.get(reviewRow.pageIndex)!
       const cropUrl = await cropFrom(questionPage, reviewRow.box)
-      const figureUrls: string[] = []
+      const figureList: FigurePreview[] = []
       for (const figure of reviewRow.figures) {
         const source = await pageFor(figure.pageIndex)
         if (source === null) continue
-        const url = await cropFrom(source, figure.box)
-        if (url !== null) figureUrls.push(url)
+        // The tutor's adjusted crop wins over the auto (padded) box.
+        const box = figureOverrides?.[figure.path] ?? figure.box
+        const url = await cropFrom(source, box)
+        if (url !== null) {
+          figureList.push({ url, path: figure.path, pageIndex: figure.pageIndex })
+        }
       }
       const pageUrl = URL.createObjectURL(questionPage.blob)
       if (cancelled) {
         if (cropUrl !== null) URL.revokeObjectURL(cropUrl)
-        for (const url of figureUrls) URL.revokeObjectURL(url)
+        for (const figure of figureList) URL.revokeObjectURL(figure.url)
         URL.revokeObjectURL(pageUrl)
         return
       }
       if (cropUrl !== null) created.push(cropUrl)
-      created.push(...figureUrls, pageUrl)
-      setUrls({ crop: cropUrl, page: pageUrl, figures: figureUrls })
+      created.push(...figureList.map((figure) => figure.url), pageUrl)
+      setUrls({ crop: cropUrl, page: pageUrl, figures: figureList })
     }
     void load()
     return () => {
@@ -162,7 +177,7 @@ export function useSourceUrls(
       for (const url of created) URL.revokeObjectURL(url)
       setUrls({ crop: null, page: null, figures: [] })
     }
-  }, [runId, reviewRow])
+  }, [runId, reviewRow, figureOverrides])
 
   return urls
 }

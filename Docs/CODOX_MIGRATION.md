@@ -226,6 +226,15 @@ One repair round maximum (§1.3 step 3).
   images to the models, and map boxes back onto those same rasters. Never
   re-render at a different scale between planning and cropping.
 - The planner owns all boxes; code crops them; the cropper never adjusts them.
+  *Exceptions (owner-approved 2026-07-22), both on **figure/asset crops only**,
+  never on CSV rows — the pinned output contract and gold gate are untouched:*
+  (1) a fixed **~4% pad** (`FIGURE_BOX_PAD`, `src/engine/boxes.ts`) is added
+  before clamping so Flash-Lite's measured-tight boxes stop clipping labels and
+  legends; the degenerate-box gate still runs on the raw box. (2) a tutor may
+  **re-crop a clipped figure in Review** (`review-figure-crops` artifact,
+  applied at export by `applyFigureCropOverrides`/`bundleCrops` in
+  `exporter.ts`); their chosen region ships. Both reshape an image only —
+  NEVER-GUESS is untouched.
 - The worker receives both full page images (for transcription) and the crops
   (as focused visual reference and as the final `image_urls` assets).
 

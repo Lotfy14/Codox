@@ -77,7 +77,7 @@ import {
   type LocalizedWindow,
   type PageWindow,
 } from './windows'
-import { boxToCropBox, hasPositiveExtent } from './boxes'
+import { boxToCropBox, FIGURE_BOX_PAD, hasPositiveExtent, padBox2d } from './boxes'
 import { emitCsv } from './csv'
 import { mergeRows, validateWorkerChunk } from './merge'
 import { stripEnumerationLabels, stripTableBlock } from './normalize'
@@ -972,7 +972,14 @@ async function stepCrops(
       continue
     }
     try {
-      const box = boxToCropBox(asset.box_2d, page.width, page.height)
+      // Pad the figure box (~4%) so tight model boxes don't clip labels or
+      // key legends. The degenerate gate above ran on the raw box, so this
+      // never revives a zero-extent asset; `cropJpeg` clamps to page bounds.
+      const box = boxToCropBox(
+        padBox2d(asset.box_2d, FIGURE_BOX_PAD),
+        page.width,
+        page.height,
+      )
       const pageJpeg = new Blob([page.bytes as BlobPart], { type: JPEG })
       const cropped = await cropJpeg(pageJpeg, box)
       await putArtifact({
