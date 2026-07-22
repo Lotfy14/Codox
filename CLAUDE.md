@@ -284,6 +284,22 @@ top-level topic (and its own subtopics) under another, and "Make topic"
 promotes a subtopic back — so a flat extraction the tutor knows should be
 nested can be restructured by hand before converting, not just retyped.
 
+*Post-run topic matching from scratch (owner-approved 2026-07-22):*
+`RunTopicsPanel` no longer hides when a run finished with no topic list. A
+run converted without topics (topics mode off, or no list supplied) now
+shows an **"Add topic matching"** entry in review: the tutor builds a list
+in `TopicsEditor` and matches every extracted row against it — no re-run.
+The engine already supported this — `rematchRunTopics`'s `writeRunTopics`
+creates the `topics-list` snapshot on first save — so this is a pure UI
+unlock (the old `runTopics === undefined` early-return is gone), still
+outside the engine path with `merged-rows` untouched and NEVER-GUESS intact
+(unsure rows stay blank). Export already keys its topic columns off the
+per-run `topics-list` artifact (`hasTopics` in `exporter.ts`), not the
+global topics setting, so an added-after-the-fact list flows straight into
+the exported `topic`/`subtopic` columns. Scope was deliberately kept to a
+typed/pasted list — no topics-document upload in review (owner call
+2026-07-22).
+
 ## Ship everywhere or nowhere (non-negotiable)
 
 A fix is not done until it is **committed and pushed to `main`** — that one

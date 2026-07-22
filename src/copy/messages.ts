@@ -382,6 +382,11 @@ export const topicsMessages = {
     'Your Gemini allowance is resting — try Save & re-match again shortly. Any matches already made are kept.',
   rematchUnreachable:
     "Can't reach Gemini right now — try Save & re-match again in a moment. Any matches already made are kept.",
+  // Shown when a finished run had no topic list at all — the tutor can add
+  // one now and match without re-running the conversion.
+  addOpen: 'Add topic matching',
+  addHint:
+    'Build a topic list — type each topic and any subtopics — then match. This labels every question against your list without re-running the conversion.',
 } as const
 
 export const reviewMessages = {

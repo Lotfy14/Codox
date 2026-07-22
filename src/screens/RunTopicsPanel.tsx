@@ -16,7 +16,11 @@ import { TopicsEditor } from './TopicsEditor'
 
 interface PanelProps {
   runId: string
-  /** The run's current taxonomy; undefined when it never had a topic list. */
+  /**
+   * The run's current taxonomy; undefined when it never had a topic list.
+   * A run without one is still editable here — the tutor can add a list
+   * after extraction and match, no re-run needed (owner-approved 2026-07-22).
+   */
   runTopics: TopicItem[] | undefined
 }
 
@@ -46,11 +50,15 @@ export function RunTopicsPanel({ runId, runTopics }: PanelProps) {
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
   const [note, setNote] = useState<Note | null>(null)
 
-  // A run that never had a topic list has nothing to edit here.
-  if (runTopics === undefined) return null
+  // A run with no list yet gets the "add topic matching" entry; one that
+  // already has topics gets the "edit & re-match" entry. Both build a draft
+  // in TopicsEditor and persist through rematchRunTopics, which creates the
+  // topics-list snapshot on first save.
+  const existing = runTopics ?? []
+  const hasList = existing.length > 0
 
   const openEditor = () => {
-    setDraft(cloneTopics(runTopics))
+    setDraft(cloneTopics(existing))
     setNote(null)
     setProgress(null)
     setOpen(true)
@@ -86,7 +94,9 @@ export function RunTopicsPanel({ runId, runTopics }: PanelProps) {
     <section className="review-topics-panel" aria-label={topicsMessages.editorLabel}>
       {open ? (
         <div className="review-topics-panel__body">
-          <p className="ds-muted review-topics-panel__hint">{topicsMessages.rematchHint}</p>
+          <p className="ds-muted review-topics-panel__hint">
+            {hasList ? topicsMessages.rematchHint : topicsMessages.addHint}
+          </p>
           <TopicsEditor
             isDisabled={saving}
             onCommit={setDraft}
@@ -112,7 +122,7 @@ export function RunTopicsPanel({ runId, runTopics }: PanelProps) {
         </div>
       ) : (
         <Button onPress={openEditor} variant="secondary">
-          {topicsMessages.rematchOpen}
+          {hasList ? topicsMessages.rematchOpen : topicsMessages.addOpen}
         </Button>
       )}
       {note !== null ? (
