@@ -226,12 +226,15 @@ One repair round maximum (§1.3 step 3).
   images to the models, and map boxes back onto those same rasters. Never
   re-render at a different scale between planning and cropping.
 - The planner owns all boxes; code crops them; the cropper never adjusts them.
-  Figure boxes clip labels when the model draws them tight; the fix is in the
-  **BOX prompt** (rule 5), which now tells the model to scan the whole area
-  around a figure for labels, legends, keys, panel letters, arrows, and leader
-  lines — including labels set apart and joined only by a pointer — and to
-  extend the box to include them (owner decision 2026-07-23: no code-side
-  padding). *Exception (owner-approved 2026-07-22), on **figure/asset crops
+  Figure boxes clip labels when tight and swallow the question when greedy; the
+  **BOX prompt** (rule 5) threads the needle — include annotation that is part
+  of the figure (labels, legends, keys, panel letters, arrows, leader lines,
+  including a label joined to the drawing by a line/pointer), and for a table or
+  boxed figure place the box just OUTSIDE its outer ruled frame so the border
+  lines aren't sliced off, but hard-exclude the question prompt, the options,
+  other questions, and page furniture (owner
+  decision 2026-07-23: no code-side padding; an earlier "err larger not tighter"
+  wording over-included the question and was retuned to this precise version). *Exception (owner-approved 2026-07-22), on **figure/asset crops
   only**, never on CSV rows — the pinned output contract and gold gate are
   untouched:* a tutor may **re-crop a clipped figure in Review**
   (`review-figure-crops` artifact, applied at export by `bundleCrops` in

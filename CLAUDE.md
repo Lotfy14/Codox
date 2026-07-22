@@ -314,10 +314,16 @@ setting, so an added-after-the-fact list flows straight into the exported
 / 2026-07-23):* Flash-Lite's figure boxes are measured-tight and clip
 labels/legends. The fix is in the **BOX prompt** (`BOX_PROMPT` / `BOX_BATCH_PROMPT`
 rule 5, `src/engine/prompts.ts` — these are NOT the SHA-pinned three, so editing
-them is allowed): it now tells the model to deliberately scan the whole area
-around a figure for labels, legends, keys, panel letters, arrows, and leader
-lines — including labels set apart and joined only by a pointer — and extend the
-box to include them, erring larger not tighter. **There is deliberately no
+them is allowed): it tells the model to include annotation that is **part of**
+the figure (labels, legends, keys, panel letters, arrows, leader lines, incl. a
+label joined to the drawing by a line/pointer; and for a table/boxed figure the
+box sits just **outside** the outer ruled frame so border lines aren't sliced
+off) but **hard-exclude the question prompt, the options, other questions, and
+page furniture**. An earlier "err
+larger not tighter" wording (2026-07-23) made the weak model greedy: it
+swallowed the question stem and neighbours, and was retuned to this precise
+version the same day; do not re-add a "make it bigger" bias.
+**There is deliberately no
 code-side padding** (owner reversed the 2026-07-22 ~4% pad on 2026-07-23): the
 cropper still crops the raw model box. As a safety net when the model still
 clips, the tutor **re-crops the figure in Review**: `FigureCropEditor` draws an
