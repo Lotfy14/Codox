@@ -18,11 +18,13 @@ import {
   ProgressBar,
   Toggle,
 } from '../design/components'
+import type { FileAccept } from '../design/components'
 import {
   agentImportMessages,
   appMessages,
   exportMessages,
   folderMessages,
+  topicsMessages,
   uploadMessages,
 } from '../copy/messages'
 import { AgentImport } from './AgentImport'
@@ -64,6 +66,12 @@ import {
 import type { JobState, RunState, StoredPdf, TopicItem } from '../state/types'
 
 type Note = { text: string; tone: 'info' | 'danger' | 'working' }
+
+/** Same set the setup screen's topics drop zone accepts. */
+const TOPICS_ACCEPT: FileAccept = {
+  mimeTypes: ['application/pdf', 'image/png', 'image/jpeg', 'image/webp'],
+  extensions: ['.pdf', '.png', '.jpg', '.jpeg', '.webp'],
+}
 
 export interface FoldersProps {
   onRequestApiKey: () => void
@@ -233,6 +241,10 @@ function FolderDetail({
   const [matchProgress, setMatchProgress] = useState<{ done: number; total: number } | null>(null)
   const [exportBusy, setExportBusy] = useState(false)
   const [exportPrompt, setExportPrompt] = useState<{ target: ExportTarget; count: number } | null>(null)
+  const [topicsBusy, setTopicsBusy] = useState(false)
+  // TopicsEditor seeds from `topics` only at mount; bump this to remount it
+  // when a read replaces the whole list wholesale.
+  const [topicsNonce, setTopicsNonce] = useState(0)
 
   if (job === undefined || pdfs === undefined || settings === undefined) return null
 
@@ -363,6 +375,59 @@ function FolderDetail({
     }
   }
 
+  /**
+   * Reads a dropped/pasted topics document (PDF or image) with Gemini and
+   * replaces the folder's shared topic list with what it finds — the same
+   * extraction the setup screen runs, read in place (no job PDF is stored).
+   * Failures map to the setup notes so bad key ≠ quota ≠ unreachable stays
+   * distinguishable. Outside the pinned engine path.
+   */
+  const readTopicsDoc = async (files: File[]) => {
+    const file = files[0]
+    if (file === undefined || topicsBusy) return
+    if (!keyReady) {
+      onRequestApiKey()
+      return
+    }
+    setTopicsBusy(true)
+    setNote({ text: topicsMessages.reading, tone: 'working' })
+    try {
+      const { extractTopicsFromDocument } = await import('../engine/topic-extract')
+      const bytes = new Uint8Array(await file.arrayBuffer())
+      const mimeType = file.type === '' ? 'application/pdf' : file.type
+      const outcome = await extractTopicsFromDocument({ bytes, mimeType })
+      if (outcome.ok) {
+        await updateJob({ topics: outcome.topics })
+        setTopicsNonce((nonce) => nonce + 1)
+        setNote(
+          outcome.topics.length > 0
+            ? { text: topicsMessages.readSuccess(file.name), tone: 'info' }
+            : { text: topicsMessages.readUnreadable, tone: 'info' },
+        )
+      } else if ('invalid' in outcome) {
+        setNote({ text: topicsMessages.readUnreadable, tone: 'info' })
+      } else if (outcome.failure.kind !== 'aborted') {
+        const kind = outcome.failure.kind
+        const paused = kind === 'quota-exhausted' || kind === 'rate-limited'
+        setNote({
+          text:
+            kind === 'wrong-key'
+              ? topicsMessages.readWrongKey
+              : paused
+                ? topicsMessages.readQuotaPaused
+                : kind === 'unreachable'
+                  ? topicsMessages.readUnreachable
+                  : topicsMessages.readFailed,
+          tone: paused || kind === 'unreachable' ? 'info' : 'danger',
+        })
+      }
+    } catch {
+      setNote({ text: topicsMessages.readFailed, tone: 'danger' })
+    } finally {
+      setTopicsBusy(false)
+    }
+  }
+
   async function handleExport(target: ExportTarget) {
     if (exportBusy || exportPrompt !== null) return
     const heldBack = await countUnexportedFlagged(runs)
@@ -485,8 +550,25 @@ function FolderDetail({
             <div className="ds-key-file-slot">
               <strong>{folderMessages.topicsHeading}</strong>
               <p className="ds-muted">{folderMessages.topicsHint}</p>
+              <FileDropZone
+                accept={TOPICS_ACCEPT}
+                allowsMultiple={false}
+                chooseLabel={uploadMessages.chooseFiles}
+                description={topicsMessages.dropHint}
+                isDisabled={matchProgress !== null || topicsBusy}
+                label={topicsMessages.dropTitle}
+                onFiles={(files) => void readTopicsDoc(files)}
+                onRejected={(files) =>
+                  setNote({
+                    text: uploadMessages.notPdfOrImage(files[0]?.name ?? ''),
+                    tone: 'danger',
+                  })
+                }
+                pasteImages
+              />
               <TopicsEditor
-                isDisabled={matchProgress !== null}
+                isDisabled={matchProgress !== null || topicsBusy}
+                key={topicsNonce}
                 onCommit={(topics: TopicItem[]) => void updateJob({ topics })}
                 topics={job.topics ?? []}
               />

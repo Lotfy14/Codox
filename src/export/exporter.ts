@@ -81,10 +81,17 @@ export function triviadoxImportUrl(id: string): string {
 }
 
 function triviadoxOrigin(): string {
-  return typeof window !== 'undefined' &&
-    window.location.origin.includes('localhost')
-    ? 'http://localhost:3000'
-    : 'https://triviadox.com'
+  // Local dev only — the Vite server on localhost. Match the hostname
+  // exactly, never a substring: the Tauri desktop webview serves the app
+  // from `http://tauri.localhost`, which *contains* "localhost" but is NOT
+  // the dev server. A substring check there pointed every desktop export at
+  // a nonexistent `http://localhost:3000` and failed the whole export.
+  if (typeof window === 'undefined') return 'https://triviadox.com'
+  const { hostname, protocol } = window.location
+  const isLocalDev =
+    (protocol === 'http:' || protocol === 'https:') &&
+    (hostname === 'localhost' || hostname === '127.0.0.1')
+  return isLocalDev ? 'http://localhost:3000' : 'https://triviadox.com'
 }
 
 /**
