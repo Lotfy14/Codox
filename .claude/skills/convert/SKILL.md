@@ -51,6 +51,11 @@ Work in page order and write `questions[]` incrementally — do not hold a
 For every question: text and options **verbatim** with the printed numbering
 stripped, the 1-based `page`, and an `answer` whose `source` is honest:
 
+When the document prints no option list — the choices are rows of a table
+("Which row is correct?") or lettered items in a drawing — emit
+`["A","B","C","D"]` and crop the table or drawing as the figure. Never flatten a
+table's rows into option text; see QUALITY.md.
+
 - `extracted` — you saw it, and `evidence` says where
 - `reasoned` — you worked it out; safe, the tutor approves it in Codox
 - `none` — absent, conflicting, or illegible

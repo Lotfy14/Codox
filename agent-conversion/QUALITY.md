@@ -59,6 +59,32 @@ answer is not `extracted`.
 - Fewer than two options is not a multiple-choice question: emit it with what
   you read and `"flag": "not_mcq"`. The tutor turns it into one or deletes it.
 
+### When the options are lettered entries in a table or a picture
+
+Some questions print no option list at all. The choices are rows of a table
+("Which row is correct?"), or lettered items inside a drawing — four test-tubes
+labelled A–D, four farms on a map, arrows into a diagram of the kidney. There
+the letter *is* the option.
+
+**Emit `["A", "B", "C", "D"]` and crop the table or the drawing as the figure.**
+The tutor picks a letter and reads the row off the picture, exactly as a
+candidate does.
+
+Do **not** flatten a table's rows into option text. Writing row B as
+`movement of water: yes, energy from respiration used: no, …` invents a layout
+the document never used, and it is the one shape of paraphrase that is easy to
+talk yourself into — every word is still the document's, so it feels verbatim.
+It isn't: the table is a picture, and it belongs in `figures[]`.
+
+- Crop the **whole** table, including any key beside it (`✓ = yes`, `✗ = no`) —
+  without the key the crop is unreadable.
+- When the question has a diagram **and** an option table, let one crop span
+  both, including the line of question text between them. The figure should
+  carry everything the question needs, in printed order.
+- A question that *does* print a real option list keeps it as text, even when
+  the options are terse (`1` / `2` / `4` / `6`, `P, Q and Z`, `1 → 3 → 2`). The
+  test is whether the document printed a list, not how short the entries are.
+
 ## Not-quite-MCQ formats
 
 - **Matching questions** (a left column paired to a right column) cannot be one
@@ -74,7 +100,9 @@ answer is not `extracted`.
 
 - Crop what the question needs to be answerable: the image, its label, and any
   lettering pointing into it. Not the question text, not the neighbouring
-  question.
+  question. (The exception is the option table above — when the table carries
+  the choices, the crop takes the table and whatever question text sits between
+  it and the diagram.)
 - **Look at every crop you make.** A clipped label is the most common defect
   and it is invisible unless you open the file.
 - One figure serving several questions is declared once in `figures[]` and
@@ -95,6 +123,8 @@ answer is not `extracted`.
 
 - Every exam page accounted for — no page silently skipped.
 - Question count matches what the document claims, if it claims one.
+- No option text that the document never printed as a list — every
+  "Which row is correct?" is `["A","B","C","D"]` with the table cropped.
 - Every figure crop opened and checked.
 - `node scripts/agent-validate.mjs …` reports zero errors.
 - `NOTES.md` written, including anything you were unsure about.
