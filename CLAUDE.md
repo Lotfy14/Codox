@@ -35,6 +35,33 @@ for why each stack piece was chosen.
    optionally). Exclusion is deterministic code (`isFlagged` after
    resolutions in `exporter.ts`), not a prompt; the extraction engine itself
    still never guesses, and `merged-rows` stays untouched.
+   *Agent-conversion import (owner-approved 2026-07-23):* `agent-conversion/`
+   lets a strong coding agent (Claude/GPT/Gemini, the tutor's own
+   subscription) extract an exam outside the app, and Folders imports the
+   result (`src/agent-import/`). The protocol lives in
+   `agent-conversion/AGENTS.md` so any agent can follow it; Claude Code also
+   gets it as the `/convert` skill (`.claude/skills/convert/`), which is the
+   same procedure, not a second one. NEVER-GUESS holds by making provenance part
+   of the contract: each question's `answer.source` is **declared**.
+   `extracted` — the agent read it off the page (a mark on an option, a
+   letter in an answer column or margin, a key page) — fills `correct_index`,
+   the same standing the worker's observation has. `reasoned` — the agent
+   worked it out from knowledge — lands in the existing `ai-answers`
+   artifact: the row imports **blank and flagged**, and the answer reaches it
+   only when the tutor approves it in Review, becoming an ordinary
+   resolution, exactly like Ask-AI. `none`, an out-of-range index, or a
+   missing one is blank + flagged; deterministic code (`validateAgentExam`,
+   `toMergedRow`) demotes rather than repairs, so a bad index never becomes a
+   different option. The import is **outside the engine path** and makes no
+   network request of any kind — no Gemini call, no key — so the
+   provider/quota rule is untouched, and COST-ZERO holds because the agent is
+   the tutor's own tool, exactly like their own API key. The three pinned
+   prompts and the output contract are untouched; an imported run writes the
+   same artifacts a finished conversion writes, so Review, edit mode, topic
+   matching, and export work on it unchanged. Import is a **folder picker**
+   (owner's call over a zip path), so it is a desktop/web action — the button
+   feature-detects `webkitdirectory` and says so where it is missing;
+   everything after import works on every platform as usual.
 3. **The key stays on-device** — each user brings their own Gemini API key;
    calls go directly from their device to Gemini. No Codox-operated server ever
    sees a key or a page. First run shows a one-line notice that pages are

@@ -714,3 +714,34 @@ export const folderMessages = {
   convertFailed: 'Could not start the conversion.',
   needsKey: 'Add a working Gemini API key first.',
 } as const
+
+/**
+ * Importing a folder an agent produced (agent-conversion/). Deliberately says
+ * "read from the document" vs "worked out" rather than naming any model — what
+ * matters to a tutor is whether a human still has to approve the answer.
+ */
+export const agentImportMessages = {
+  importFolder: 'Import agent folder',
+  importIntoFolder: 'Import agent folder',
+  hint: 'Bring in questions a coding agent extracted with agent-conversion. Pick the output folder it wrote.',
+  unsupported:
+    'Choosing a folder needs a desktop browser or the Windows app — this device cannot open a folder picker.',
+  working: 'Reading the folder…',
+  progress: (done: number, total: number, name: string) =>
+    `Importing ${name} — ${done} of ${total}…`,
+  summaryTitle: 'Imported',
+  nothingFound:
+    'No exam.json was found in that folder. Pick the folder agent-prepare wrote, or the batch folder above it.',
+  failedTitle: (name: string) => `${name} could not be imported`,
+  examLine: (name: string, questions: number) =>
+    `${name} — ${questions} question${questions === 1 ? '' : 's'}`,
+  answersRead: (count: number) => `${count} answered from the document`,
+  answersPending: (count: number) =>
+    `${count} suggested answer${count === 1 ? '' : 's'} waiting for you to approve`,
+  answersFlagged: (count: number) =>
+    `${count} still need${count === 1 ? 's' : ''} review`,
+  warningsTitle: 'Worth a look',
+  reportTitle: "The agent's notes",
+  done: 'Open review',
+  failed: 'That folder could not be imported.',
+} as const

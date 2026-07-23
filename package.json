@@ -9,6 +9,9 @@
     "lint": "oxlint",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "agent:prepare": "node scripts/agent-prepare.mjs",
+    "agent:crop": "node scripts/agent-crop.mjs",
+    "agent:validate": "node scripts/agent-validate.mjs",
     "preview": "npm run build && wrangler dev",
     "deploy": "npm run build && wrangler deploy"
   },
@@ -46,6 +49,7 @@
     "happy-dom": "^20.10.6",
     "oxlint": "^1.71.0",
     "playwright-core": "^1.61.1",
+    "sharp": "^0.33.5",
     "typescript": "~6.0.2",
     "vite": "^8.1.1",
     "vite-plugin-pwa": "^1.3.0",

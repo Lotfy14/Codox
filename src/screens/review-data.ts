@@ -39,6 +39,14 @@ export interface ReviewFigure {
   pageIndex: number
   /** The figure's region on that page (normalized 0–1000). */
   box: Box2d
+  /**
+   * Bundle path of the crop this figure ships as. `useSourceUrls` prefers
+   * those stored bytes over re-cropping the page, so the tutor always
+   * previews the exact image the export will contain — identical for an
+   * engine run (the stored crop IS this box), and load-bearing for an
+   * imported agent bundle, whose image files the agent produced itself.
+   */
+  path: string
 }
 
 export interface ReviewRow {
@@ -157,8 +165,13 @@ export async function loadReviewData(runId: string): Promise<ReviewData> {
   const figureByPath: Record<string, ReviewFigure> = {}
   for (const asset of blueprint?.assets ?? []) {
     if (asset.page < 1) continue
-    const figure: ReviewFigure = { pageIndex: asset.page - 1, box: asset.box_2d }
-    figureByPath[assetJpegPath(asset.output_path)] = figure
+    const path = assetJpegPath(asset.output_path)
+    const figure: ReviewFigure = {
+      pageIndex: asset.page - 1,
+      box: asset.box_2d,
+      path,
+    }
+    figureByPath[path] = figure
     for (const rowId of asset.linked_row_ids) {
       const list = figuresByRow.get(rowId)
       if (list === undefined) figuresByRow.set(rowId, [figure])

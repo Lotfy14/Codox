@@ -19,11 +19,13 @@ import {
   Toggle,
 } from '../design/components'
 import {
+  agentImportMessages,
   appMessages,
   exportMessages,
   folderMessages,
   uploadMessages,
 } from '../copy/messages'
+import { AgentImport } from './AgentImport'
 import { isBatchRunning, runProgress } from '../engine/progress'
 import {
   countUnexportedFlagged,
@@ -124,7 +126,9 @@ function FolderList({
 
       <div className="ds-done-actions">
         <Button onPress={() => setCreating(true)}>{folderMessages.newFolder}</Button>
+        <AgentImport onImported={onOpen} />
       </div>
+      <p className="ds-muted">{agentImportMessages.hint}</p>
 
       {folders === undefined ? null : folders.length === 0 ? (
         <GlassPanel as="div" padding="default">
@@ -468,6 +472,11 @@ function FolderDetail({
               onFiles={(files) => void intake(files)}
               onRejected={(files) => setNotes(files.map((f) => uploadMessages.notPdf(f.name)))}
             />
+          </div>
+          {/* Exams an agent already extracted come in here rather than
+              through the PDF zone: they arrive finished, not queued. */}
+          <div className="ds-done-actions">
+            <AgentImport folderId={folderId} variant="quiet" />
           </div>
         </GlassPanel>
 

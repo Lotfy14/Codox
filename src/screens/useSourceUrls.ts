@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { boxToCropBox } from '../engine/boxes'
-import { getArtifacts, getPageArtifact } from '../state/runs'
+import { getArtifacts, getCropByPath, getPageArtifact } from '../state/runs'
 import type { ReviewRow } from './review-data'
 
 interface SourceUrls {
@@ -140,6 +140,21 @@ export function useSourceUrls(
       const cropUrl = await cropFrom(questionPage, reviewRow.box)
       const figureUrls: string[] = []
       for (const figure of reviewRow.figures) {
+        // The stored crop is what export will actually ship, so preview that
+        // rather than re-cutting the page. For an engine run the two are the
+        // same image; for an imported agent bundle the stored file is the one
+        // the agent cropped and checked by eye.
+        const stored = await getCropByPath(runId, figure.path)
+        if (stored?.bytes !== undefined) {
+          figureUrls.push(
+            URL.createObjectURL(
+              new Blob([stored.bytes as Uint8Array<ArrayBuffer>], {
+                type: 'image/jpeg',
+              }),
+            ),
+          )
+          continue
+        }
         const source = await pageFor(figure.pageIndex)
         if (source === null) continue
         const url = await cropFrom(source, figure.box)

@@ -183,6 +183,12 @@ export type RunArtifactKind =
   | 'ai-answers'
   | 'topics-list'
   | 'topic-matches'
+  /**
+   * An imported agent bundle's `NOTES.md` — the agent's own report on what it
+   * read, what it was unsure about, and what it left for the tutor. Text
+   * only, never read by the engine or the exporter.
+   */
+  | 'agent-report'
 
 export interface RunArtifact {
   id: string
