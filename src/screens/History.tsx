@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { openExternal } from '../external-open'
 import { Badge, Button, Dialog, GlassPanel } from '../design/components'
 import type { BadgeTone } from '../design/components'
 import { appMessages, exportMessages, historyMessages } from '../copy/messages'
@@ -123,7 +124,7 @@ export function History({ onOpenConvert }: HistoryProps) {
       if (exportTarget === 'triviadox') {
         const res = await exportToTriviadox([run])
         if (res.success && res.id) {
-          window.open(triviadoxImportUrl(res.id), '_blank')
+          void openExternal(triviadoxImportUrl(res.id))
           setNotice({
             runId: run.id,
             text: exportMessages.triviadoxDone,

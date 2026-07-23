@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Button } from '../design/components'
 import { coachmarkMessages, keyMessages } from '../copy/messages'
+import { openExternal } from '../external-open'
 
 export interface ApiCoachmarkProps {
   onDismiss: () => void
@@ -56,6 +57,10 @@ export function ApiCoachmark({ onDismiss, onOpenApi }: ApiCoachmarkProps) {
           {keyMessages.aiStudioBeforeLink}
           <a
             href={keyMessages.aiStudioUrl}
+            onClick={(event) => {
+              event.preventDefault()
+              void openExternal(keyMessages.aiStudioUrl)
+            }}
             rel="noreferrer"
             target="_blank"
           >

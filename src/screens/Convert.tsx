@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { openExternal } from '../external-open'
 import {
   Badge,
   Button,
@@ -187,7 +188,7 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
       if (target === 'triviadox') {
         const res = await exportToTriviadox(runs)
         if (res.success && res.id) {
-          window.open(triviadoxImportUrl(res.id), '_blank')
+          void openExternal(triviadoxImportUrl(res.id))
           setExportNotice({ text: exportMessages.triviadoxDone, tone: 'info' })
         } else if (res.error === 'nothing') {
           setExportNotice({ text: exportMessages.nothingToExport, tone: 'info' })

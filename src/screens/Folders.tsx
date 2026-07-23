@@ -8,6 +8,7 @@
  * a single Export-all. Nothing here touches the pinned engine path.
  */
 import { useState } from 'react'
+import { openExternal } from '../external-open'
 import {
   Badge,
   Button,
@@ -446,7 +447,7 @@ function FolderDetail({
       if (target === 'triviadox') {
         const res = await exportToTriviadox(runs)
         if (res.success && res.id) {
-          window.open(triviadoxImportUrl(res.id), '_blank')
+          void openExternal(triviadoxImportUrl(res.id))
           setNote({ text: exportMessages.triviadoxDone, tone: 'working' })
         } else {
           setNote({

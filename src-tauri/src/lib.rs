@@ -22,7 +22,10 @@ pub fn run() {
   #[cfg(windows)]
   wipe_stale_service_worker();
 
-  let builder = tauri::Builder::default();
+  let builder = tauri::Builder::default()
+    // Opens external URLs (Triviadox import, the AI Studio key page) in the
+    // user's real browser — WebView2 ignores window.open / target=_blank.
+    .plugin(tauri_plugin_opener::init());
 
   // Desktop-only auto-update: the frontend checks GitHub Releases on
   // startup, installs silently, and relaunches (see src/updater.ts).

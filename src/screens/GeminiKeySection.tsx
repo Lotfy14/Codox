@@ -3,6 +3,7 @@ import { Button as AriaButton } from 'react-aria-components/Button'
 import { Button, GlassInput, StatusChip } from '../design/components'
 import type { StatusChipStatus } from '../design/components'
 import { keyMessages } from '../copy/messages'
+import { openExternal } from '../external-open'
 import { geminiController } from '../providers/controller'
 import {
   removeGeminiKey,
@@ -140,6 +141,10 @@ export function GeminiKeySection({ allowRemove = false }: GeminiKeySectionProps)
         {keyMessages.aiStudioBeforeLink}
         <a
           href={keyMessages.aiStudioUrl}
+          onClick={(event) => {
+            event.preventDefault()
+            void openExternal(keyMessages.aiStudioUrl)
+          }}
           rel="noreferrer"
           target="_blank"
         >
