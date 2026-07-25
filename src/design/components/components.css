@@ -2294,6 +2294,11 @@
   font-size: clamp(var(--font-size-md), 2.2vw, var(--font-size-xl));
   line-height: 1.3;
   color: var(--color-text-strong);
+  /* A question's own line breaks are content: the numbered statement list in
+     "1 …  2 …  3 …  Which of these …?" is unreadable collapsed onto one line,
+     and the blank line separating a case stem from its prompt is the format
+     merge.ts writes. Both arrive as real newlines; render them. */
+  white-space: pre-wrap;
 }
 
 .review__mobile-source {
