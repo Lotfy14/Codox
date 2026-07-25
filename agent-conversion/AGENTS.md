@@ -53,6 +53,13 @@ an `exam.json` skeleton per exam under `agent-conversion/output/<folder>/`.
 Answer-key pages are appended after the exam's pages and marked
 `"role": "answer-key"`.
 
+A key is recognised as `<exam>-key.pdf`, `<exam> key.pdf`,
+`<exam>-answers.pdf`, anything in a `keys/` subfolder, or a Cambridge mark
+scheme (`0610_m20_ms_12.pdf` pairs with `0610_m20_qp_12.pdf`). If a key is not
+recognised it renders as an exam of its own and the real paper imports with
+**no answers at all** — so check the `answer key:` line in the output before
+extracting.
+
 ### 2. Look at every page
 
 Open `pages/page-001.jpg`, `page-002.jpg`, … in order. Before writing anything,
@@ -74,9 +81,17 @@ Fill `questions[]` in `exam.json`, in document order. Per question: the text,
 the options verbatim, the answer with its `source`, the 1-based `page` it sits
 on, and its `topic`/`subtopic`/`year` if the document states them.
 
-`box` is optional. Give one when you can — it is the crop the tutor sees beside
-the question while reviewing — but the whole page is used when you omit it, and
-a whole page is far better than a wrong box.
+**Give every question a `box`** — the region the tutor sees beside it while
+reviewing. It covers that question's whole block: first line, its own diagram
+and option table, down to its last option. The one thing it must not contain is
+any part of a *neighbouring* question — not its stem, its options, or its
+figure. The figures ship separately in `figures[]` too; that is the close-up,
+the box is the question as printed.
+
+Omit `box` only for a question you genuinely cannot bound (it crosses a page
+break, or is interleaved with another), and note that in NOTES.md. Omitting it
+falls back to the **whole page**, which means the tutor hunts for the question
+on a full page of exam — fine as a rare fallback, bad as a habit.
 
 ### 4. Crop each figure, then LOOK at it
 
@@ -88,10 +103,22 @@ Boxes are `[ymin, xmin, ymax, xmax]`, normalized 0–1000 against the rendered
 page. **y comes first** — swapping x and y produces a wrong crop that looks
 plausible.
 
-**Open the file the script wrote.** Is the whole figure inside it, with its
-label and any lettering, and nothing from the neighbouring question? If not,
-widen the box and run it again. Repeat until it is right. Only then add it to
-`figures[]` and reference its `id` from the question.
+**One picture, one figure.** A question with a diagram *and* an option table
+gets two crops, two entries in `figures[]`, both ids on the question in printed
+order — never one crop spanning both.
+
+**Open the file the script wrote.** Two things can be wrong, in opposite
+directions, and you must check for both:
+
+- **Clipped** — a label, a letter, or a limb of the diagram is cut off. Widen.
+- **Bleeding** — any part of the *next* question is visible, even a single
+  trailing line of its stem. Lower `ymax` until it is gone.
+
+Bleeding is the one that gets shipped, because the figure itself is complete
+and the crop looks plausible. It is still wrong: the tutor sees another
+question's text inside this question's picture. Re-run and re-open the file
+after every adjustment. Only then add it to `figures[]` and reference its `id`
+from the question.
 
 This step is why an agent is worth the effort. Do not skip the looking.
 

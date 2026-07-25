@@ -9,9 +9,10 @@
  * waiting.
  *
  * An answer key is matched to its exam by name (`<exam>-key.pdf`,
- * `<exam> key.pdf`, `<exam>-answers.pdf`, or anything inside a `keys/`
- * subfolder). Its pages are appended AFTER the exam's, which is the same
- * page-offset convention the engine's executor uses.
+ * `<exam> key.pdf`, `<exam>-answers.pdf`, anything inside a `keys/`
+ * subfolder, or a Cambridge mark scheme `..._ms_NN.pdf` beside its question
+ * paper `..._qp_NN.pdf`). Its pages are appended AFTER the exam's, which is
+ * the same page-offset convention the engine's executor uses.
  *
  * Usage:
  *   node scripts/agent-prepare.mjs <input-folder> [--out <dir>] [--dpi 200]
@@ -86,21 +87,41 @@ async function collectPdfs(dir) {
   return found
 }
 
+/**
+ * Cambridge (CAIE) past papers name a mark scheme `0610_m20_ms_12.pdf` beside
+ * its question paper `0610_m20_qp_12.pdf` — the two differ only in `ms`/`qp`.
+ * A mark scheme IS the answer key, so pair them rather than rendering every
+ * mark scheme as an exam of its own (which imports the paper with no answers).
+ */
+const CAIE_MARK_SCHEME = /(^|[-_ ])ms([-_ ])/i
+
+/** `…_ms_12.pdf` → `…_qp_12.pdf`, the question paper it marks. */
+function caieQuestionPaper(name) {
+  return name.replace(CAIE_MARK_SCHEME, (_, before, after) => `${before}qp${after}`)
+}
+
 /** True when this PDF reads as an answer key rather than an exam. */
 function looksLikeKey({ file, parent }) {
   const name = path.basename(file).toLowerCase()
   return (
     /(^|[-_ ])(key|keys|answers?|answer[-_ ]?key)\.pdf$/.test(name) ||
+    CAIE_MARK_SCHEME.test(name) ||
     /^(keys|answers)$/.test(parent.toLowerCase())
   )
 }
 
 /** The exam a key belongs to: longest shared stem wins, else the only exam. */
 function keyOwner(key, exams) {
-  const keyStem = slugify(path.basename(key.file)).replace(
-    /-(key|keys|answers?|answer-key)$/,
-    '',
-  )
+  const keyName = path.basename(key.file)
+
+  // A CAIE mark scheme belongs to its `qp` twin, wherever that sits.
+  if (CAIE_MARK_SCHEME.test(keyName)) {
+    const twin = slugify(caieQuestionPaper(keyName))
+    const paired = exams.find((exam) => slugify(path.basename(exam.file)) === twin)
+    if (paired !== undefined) return paired
+  }
+
+  const keyStem = slugify(keyName).replace(/-(key|keys|answers?|answer-key)$/, '')
   const exact = exams.find((exam) => slugify(path.basename(exam.file)) === keyStem)
   if (exact !== undefined) return exact
   return exams.length === 1 ? exams[0] : undefined
