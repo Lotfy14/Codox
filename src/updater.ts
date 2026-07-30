@@ -43,6 +43,17 @@ export async function checkForUpdate(): Promise<UpdateInfo | null> {
         platform: 'windows',
         version: update.version,
         install: async () => {
+          // The NSIS installer kills this process to replace the binary. A
+          // hard kill with IndexedDB writes in flight leaves the leveldb
+          // journal and the on-disk blob tree disagreeing, and WebView2's
+          // recovery for that is to destroy the whole origin database —
+          // history, folders and all (observed 2026-07-24: the IndexedDB
+          // store was recreated minutes after an auto-update while Local
+          // Storage, which has no blob tree, survived untouched). Closing
+          // Dexie first flushes and quiesces the database so there is
+          // nothing half-written for the kill to corrupt.
+          const { db } = await import('./state/db')
+          db.close()
           await update.downloadAndInstall()
           const { relaunch } = await import('@tauri-apps/plugin-process')
           await relaunch()

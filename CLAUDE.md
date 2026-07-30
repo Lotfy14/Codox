@@ -581,6 +581,34 @@ affected and what the user must do on each.
   design target is a ~100 MB working set (iPhone-SE-class).
 - Export-early is law: the app must never be the sole holder of a user's
   work; loud or automatic export when review completes.
+- **Stored work is protected and backed up** (owner-approved 2026-07-31):
+  IndexedDB is *evictable by default* — a browser short of disk may drop the
+  whole origin without asking, which is how a tutor loses history and folders
+  "after an update". Two defences, both outside the engine path.
+  (1) `src/state/persist.ts` requests `navigator.storage.persist()` the first
+  time work is stored (`addStoredPdf`, `createRun`, `createFolder`) rather than
+  at cold start, so Firefox's prompt arrives with a visible reason; the History
+  panel reports the state and can re-ask, since Chrome grants on engagement.
+  (2) `src/state/backup.ts` is a single-zip backup/restore. Two scopes: `work`
+  (rows, CSV, review resolutions/edits/deletions/additions, approved AI
+  answers, topics, crops — small) and `everything` (plus page images and the
+  original PDFs). The Gemini key is **never** in a backup — it stays
+  on-device and a backup file travels. Restore is additive and idempotent
+  (`bulkPut` by id), never writes the `current` workspace, and **demotes rather
+  than repairs**: a record that fails validation is skipped and counted, so a
+  damaged archive never yields an invented row. `src/state/auto-backup.ts`
+  writes a `work` backup into a folder the tutor picks once (File System
+  Access, **feature-detected not platform-detected**) after each batch and at
+  launch when stale, keeping five; pruning only ever touches files carrying
+  the automatic name prefix, never a hand-saved backup.
+- **Never let a shell kill the app mid-write.** The Windows NSIS updater kills
+  the process to swap the binary; a hard kill with IndexedDB writes in flight
+  leaves the leveldb journal and the on-disk blob tree disagreeing, and
+  WebView2's recovery is to destroy the whole origin database. Observed
+  2026-07-24: the IndexedDB store was recreated minutes after an auto-update
+  while Local Storage — which has no blob tree — survived from Jul 14
+  untouched. `updater.ts` therefore closes Dexie before
+  `downloadAndInstall()`. Any future shell-driven restart must do the same.
 - One bad page never crashes a job — flag it and continue. There is no
   answer-source declaration: the planner's evidence-based policy is the only
   authority on where answers live; the answer-key drop zone is optional and

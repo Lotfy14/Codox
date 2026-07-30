@@ -12,6 +12,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { executeRun, type RunOutcome } from '../engine/executor'
 import { matchRunTopics } from '../engine/topic-matcher'
 import { geminiController, type ControllerStatus } from '../providers/controller'
+import { runAutoBackup } from '../state/auto-backup'
 import { getCustomizationSettings } from '../state/customization-settings'
 import { db } from '../state/db'
 import {
@@ -186,6 +187,13 @@ export function useConversion(jobId: string): ConversionState {
         driving.current = false
         globalDriving = false
         setIsDriving(false)
+        // Export-early law's safety net: the batch is settled, so write the
+        // work into the tutor's backup folder if they configured one. Outside
+        // the engine path, never awaited by anything the user is waiting on,
+        // and a no-op when no folder is set.
+        void runAutoBackup(__APP_VERSION__, 'batch-finished').catch(
+          () => undefined,
+        )
       }
     },
     [jobId, matchTopics],

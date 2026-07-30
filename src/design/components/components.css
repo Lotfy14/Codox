@@ -1987,6 +1987,40 @@
   color: var(--color-danger-foreground);
 }
 
+/* Backup & restore panel (History tab). */
+.backup-panel {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.backup-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.backup-panel__head h2 {
+  margin: 0;
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-heading);
+}
+
+.backup-panel__sub {
+  margin: var(--space-2) 0 0;
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-heading);
+}
+
+.backup-panel__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
 @media (min-width: 75rem) {
   .ds-upload-layout {
     grid-template-columns: minmax(0, 1.15fr) minmax(20rem, 0.85fr);

@@ -10,6 +10,7 @@ import {
   triviadoxImportUrl,
   type ExportOutcome,
 } from '../export/exporter'
+import { BackupPanel } from './BackupPanel'
 import { ExportButton } from './ExportButton'
 import { useCustomizationSettings } from '../state/customization-settings'
 import {
@@ -203,13 +204,17 @@ export function History({ onOpenConvert }: HistoryProps) {
           />
         </div>
       ) : entries === undefined ? null : entries.length === 0 ? (
-        <GlassPanel as="div" padding="default">
-          <div className="ds-empty-state">
-            <h2>{historyMessages.emptyTitle}</h2>
-            <p>{historyMessages.emptyBody}</p>
-          </div>
-        </GlassPanel>
+        <div className="ds-stack">
+          <GlassPanel as="div" padding="default">
+            <div className="ds-empty-state">
+              <h2>{historyMessages.emptyTitle}</h2>
+              <p>{historyMessages.emptyBody}</p>
+            </div>
+          </GlassPanel>
+          <BackupPanel />
+        </div>
       ) : (
+        <div className="ds-stack">
         <div className="history-list" role="list">
           {entries.map(({ isCurrent, originalKept, run }) => (
             <GlassPanel
@@ -293,6 +298,8 @@ export function History({ onOpenConvert }: HistoryProps) {
               </div>
             </GlassPanel>
           ))}
+        </div>
+        <BackupPanel />
         </div>
       )}
 

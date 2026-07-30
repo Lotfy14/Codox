@@ -6,12 +6,16 @@
  */
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from './db'
+import { ensureStoragePersisted } from './persist'
 import type { RunArtifact, RunArtifactKind, RunState } from './types'
 
 export async function createRun(
   entry: Omit<RunState, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'step'> &
     Partial<Pick<RunState, 'status' | 'step'>>,
 ): Promise<string> {
+  // A run is about to write every page and every extracted row to disk; ask
+  // the browser to protect the origin before it does. See state/persist.ts.
+  void ensureStoragePersisted()
   const id = crypto.randomUUID()
   const now = Date.now()
   await db.runs.add({

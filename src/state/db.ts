@@ -13,6 +13,17 @@ export interface MetadataEntry {
   value: string
 }
 
+/**
+ * A live handle to something outside the database — currently only the folder
+ * the tutor picked for automatic backups. Handles are structured-cloneable, so
+ * IndexedDB is the only place they can be kept across reloads; they cannot go
+ * in `meta`, whose value is a string.
+ */
+export interface HandleEntry {
+  key: string
+  handle: FileSystemDirectoryHandle
+}
+
 export class CodoxDatabase extends Dexie {
   jobs!: Table<JobState, string>
   meta!: Table<MetadataEntry, string>
@@ -21,6 +32,7 @@ export class CodoxDatabase extends Dexie {
   runs!: Table<RunState, string>
   runArtifacts!: Table<RunArtifact, string>
   logs!: Table<LogEvent, number>
+  handles!: Table<HandleEntry, string>
 
   constructor() {
     super('codox')
@@ -79,6 +91,18 @@ export class CodoxDatabase extends Dexie {
       runs: 'id, jobId, pdfId',
       runArtifacts: 'id, runId, [runId+kind], [runId+kind+pageIndex]',
       logs: '++seq, t, scope, runId',
+    })
+    // Automatic backups: the picked folder's handle. Additive only — a
+    // database with no handle simply has no automatic backup configured.
+    this.version(8).stores({
+      jobs: 'id, kind',
+      meta: 'key',
+      credentials: 'id',
+      files: 'id, jobId',
+      runs: 'id, jobId, pdfId',
+      runArtifacts: 'id, runId, [runId+kind], [runId+kind+pageIndex]',
+      logs: '++seq, t, scope, runId',
+      handles: 'key',
     })
   }
 }

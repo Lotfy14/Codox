@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from './db'
+import { ensureStoragePersisted } from './persist'
 import type { StoredPdf } from './types'
 
 type NewStoredPdf = Omit<StoredPdf, 'id' | 'addedAt'>
@@ -7,6 +8,11 @@ type NewStoredPdf = Omit<StoredPdf, 'id' | 'addedAt'>
 /** Store one exam PDF for a job. */
 export async function addStoredPdf(entry: NewStoredPdf): Promise<string> {
   const id = crypto.randomUUID()
+  // Adding a PDF is the first moment this device holds work worth keeping —
+  // the right moment to ask the browser not to evict it. Memoized, so the
+  // browser is asked once per session however many files are added, and a
+  // refusal never blocks the write.
+  void ensureStoragePersisted()
   await db.files.add({ ...entry, id, addedAt: Date.now() })
   return id
 }

@@ -661,6 +661,82 @@ export const historyMessages = {
   },
 } as const
 
+export const backupMessages = {
+  title: 'Backup & restore',
+  intro:
+    'Your history and folders live in this browser’s storage. A backup is a single file you keep outside Codox, so a cleared browser, a new device, or a reinstall never costs you a conversion.',
+  protectionHeading: 'Storage protection',
+  protectionBadge: {
+    protected: 'Protected',
+    'best-effort': 'At risk',
+    unsupported: 'Unknown',
+    checking: 'Checking…',
+  },
+  protectionProtected:
+    'Protected — this browser has promised not to clear Codox’s data on its own.',
+  protectionBestEffort:
+    'Not protected yet. This browser may clear Codox’s stored work when it runs short of disk space, without asking first.',
+  protectionUnsupported:
+    'This browser does not offer storage protection. Keep a backup — it is the only safety net here.',
+  protectionChecking: 'Checking storage protection…',
+  protectAction: 'Protect my work',
+  protectRefused:
+    'The browser did not grant protection this time. It often grants it once you have used Codox a few times, or after installing it as an app — try again later, and keep backups meanwhile.',
+
+  backupHeading: 'Save a backup',
+  scopeLabel: 'What to include',
+  scopeWork: 'Questions and answers',
+  scopeWorkHint:
+    'Extracted questions, your review answers and edits, topics, and the figures export ships. Small file.',
+  scopeEverything: 'Everything',
+  scopeEverythingHint:
+    'The above plus your original PDFs and every rendered page image, so restored runs keep their page previews and can be re-run. Much larger file.',
+  saveAction: 'Save a backup',
+  saveDone: (folders: number, runs: number) =>
+    `Backup saved — ${runs} run${runs === 1 ? '' : 's'} and ${folders} folder${folders === 1 ? '' : 's'}.`,
+  saveDownloaded: (folders: number, runs: number) =>
+    `Backup saved to your browser’s Downloads folder — ${runs} run${runs === 1 ? '' : 's'} and ${folders} folder${folders === 1 ? '' : 's'}.`,
+  saveCancelled: 'Backup cancelled. Nothing was written.',
+  saveFailed: 'Codox could not build the backup. Nothing on this device changed.',
+  saveEmpty: 'There is nothing to back up yet — convert an exam or make a folder first.',
+  keyNote:
+    'Backups never contain your Gemini API key. You will enter it again on a new device.',
+
+  autoHeading: 'Automatic backups',
+  autoIntro:
+    'Pick a folder once and Codox writes a fresh backup into it after every conversion, keeping the five most recent.',
+  autoUnsupported:
+    'This browser cannot write to a folder on its own, so automatic backups are unavailable here. Use Save a backup instead — and Codox on Windows or in Chrome/Edge can do it automatically.',
+  autoOff: 'Off — no folder chosen.',
+  autoOn: (folder: string) => `On — writing to “${folder}”.`,
+  autoNeedsPermission: (folder: string) =>
+    `Paused — this browser needs your permission again to write to “${folder}”.`,
+  autoLast: (when: string) => `Last automatic backup: ${when}.`,
+  autoNever: 'No automatic backup written yet.',
+  autoChooseAction: 'Choose a folder',
+  autoChangeAction: 'Change folder',
+  autoReconnectAction: 'Reconnect folder',
+  autoOffAction: 'Turn off',
+  autoFailed:
+    'The last automatic backup could not be written. Save one by hand, or pick the folder again.',
+
+  restoreHeading: 'Restore a backup',
+  restoreIntro:
+    'Restoring adds the backup’s runs and folders to this device. Work already here is kept — nothing is deleted.',
+  restoreAction: 'Restore from a backup',
+  restoreDone: (summary: { folders: number; runs: number }) =>
+    `Restored ${summary.runs} run${summary.runs === 1 ? '' : 's'} and ${summary.folders} folder${summary.folders === 1 ? '' : 's'}.`,
+  restoreSkipped: (count: number) =>
+    ` ${count} damaged record${count === 1 ? ' was' : 's were'} skipped rather than guessed at.`,
+  restoreNotABackup:
+    'That file is not a Codox backup. Pick the .codoxbackup file you saved.',
+  restoreNewer:
+    'That backup was made by a newer version of Codox. Update Codox first, then restore it.',
+  restoreFailed: 'Codox could not read that backup. Nothing on this device changed.',
+  restoreWorkNote:
+    'Restored runs open in History and Folders. A “questions and answers” backup does not carry page images, so those runs review without the page preview — the questions, answers, edits and figures are all there.',
+} as const
+
 export const folderMessages = {
   title: 'Folders',
   intro:

@@ -27,6 +27,7 @@ import {
   dismissApiCoachmark,
   useApiCoachmarkDismissed,
 } from './state/settings'
+import { runAutoBackup } from './state/auto-backup'
 import { useGeminiCredential } from './state/credentials'
 import { archiveFinishedCurrentJobOnStartup } from './state/jobs'
 import { useDailyQuota } from './state/quota'
@@ -178,6 +179,14 @@ function App() {
   // clean Convert workspace. A run still in flight is left to resume.
   useEffect(() => {
     void archiveFinishedCurrentJobOnStartup().catch(() => undefined)
+  }, [])
+
+  // Automatic backup, when a folder has been chosen: only fires at launch if
+  // the newest one there is stale, so this is at most one small write a day.
+  // A missing folder, a lapsed permission, or any failure is a silent no-op —
+  // the backup panel is where that state is reported, never a launch dialog.
+  useEffect(() => {
+    void runAutoBackup(__APP_VERSION__, 'startup').catch(() => undefined)
   }, [])
 
   const hideCoachmark = () => {

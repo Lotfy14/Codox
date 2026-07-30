@@ -12,6 +12,7 @@
  */
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from './db'
+import { ensureStoragePersisted } from './persist'
 import { getArtifact } from './runs'
 import { clearTopicMatches, rematchRunTopics } from '../engine/topic-matcher'
 import type { JobState, RunState, StoredPdf } from './types'
@@ -21,6 +22,8 @@ export function isFolderId(id: string): boolean {
 }
 
 export async function createFolder(name: string): Promise<string> {
+  // A folder is durable by design; protect the origin before it fills up.
+  void ensureStoragePersisted()
   const id = `folder-${Date.now()}-${crypto.randomUUID()}`
   const folder: JobState = {
     id,
