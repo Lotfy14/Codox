@@ -490,6 +490,15 @@ when the planner's per-row policy explicitly points to visible answer evidence.
 If the policy says no_answer_key, uncertain, or blank, leave correct_index empty
 even if you think you know the answer.
 
+When the policy does point to visible answer evidence, the answer is marked on
+the page for that row. Find it and fill correct_index. Look for a mark on one
+option -- a tick, check, circle, strike, underline, highlight, or bold text --
+or the answer letter written beside the question, in an answer column, an
+answer cell, or the margin next to it. Read that mark and return its 0-based
+index into that row's own options. Do this for every row in the chunk, not only
+the first few; each row has its own answer to read. Leave correct_index empty
+only when the mark genuinely cannot be read.
+
 Output:
 {
   "rows": [

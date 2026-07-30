@@ -253,6 +253,36 @@ reason bypasses the controller's transient empty-response retry, and the
 old path had no fallback. The WORKER prompt and output contract are
 untouched; failure diagnostics now record the finish reason.
 
+*WORKER prompt edit — answer extraction (owner-approved 2026-07-30):* the
+second edit ever to a pinned prompt (after the 2026-07-15 output split). The
+worker was dropping `correct_index` for an ENTIRE request at a time: on two
+answered surgery exams (`EOR SUR MCQ 2025-194`, 65 questions each, a large
+handwritten answer letter beside every question) 8 of 22 chunks returned all
+six answers blank with perfect question text, at normal speed, no retry, no
+truncation, no model fallback — while rows in the SAME call reading the SAME
+page image were answered. Cause: the prompt only ever *forbade* answering.
+Nothing told the worker an answer existed to look for or where it lives, so
+whether a response filled answers at all was decided once per response. The
+answer paragraph now adds a positive instruction — find the mark (option mark,
+or the letter in an answer column/cell/margin), return its 0-based index, "for
+every row in the chunk, not only the first few" — closing with ONE clause
+permitting blank when the mark genuinely cannot be read. New SHA in
+`PROMPT_SHA256.worker` (`274e8002…`, previously `b2b42964…`), doc block §2.2
+updated byte-identically, `prompts.test.ts` re-pinned.
+
+**Deliberately calibrated, not maximal:** a first attempt appended a
+NEVER-GUESS-heavy directive (three separate sentences on returning empty) and
+the owner measured the result as **worse** — pressure to leave blanks is
+itself a failure mode, and the engine's real guarantee lives in code, not in
+prompt hedging (`forceAnswer` still forces blanks per policy, still rejects a
+non-numeric or out-of-range index, and still discards the worker's
+`needs_review`). One clause, once. Do not re-add hedging to this prompt.
+
+**Open:** the external gold gate (CodoxSandbox, appendicitis 127/127) is now
+two prompt edits stale — its case-stem rows already needed regenerating from
+2026-07-15, and this edit compounds that. The unmeasured question is whether
+the directive raises answer recall without raising wrong answers.
+
 *Matching-question policy (owner-approved 2026-07-18):* a true matching
 question — one row whose answer is a set of pairings — cannot be carried by a
 single-`correct_index` Triviadox row. Customize's **"Matching questions"**
