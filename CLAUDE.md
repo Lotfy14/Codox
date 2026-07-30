@@ -151,6 +151,20 @@ keeps it calm — bounded, not a busy loop. Demotion is per controller instance
 and non-persistent: a fresh launch starts every model clean. The
 provider/quota rule is untouched — this is a second model, never a second key.
 
+*The header tally is per model too (2026-07-30):* the same correction applies to
+the free-tier strip, which was one combined bar out of 400 and could therefore
+read "full" while the model actually in use had most of its day left.
+`src/state/quota.ts` now tallies per model id (`recordDailyRequest(model)`,
+stored as `{day, counts}`) and the strip shows **one bar per selectable model,
+each out of `DAILY_FREE_REQUESTS_PER_MODEL` = 500** — which is what tells a
+tutor which model the controller can still fall back to. Still device-local and
+still a floor, not an exact meter: Google's own counter is not readable with an
+API key, so requests the same key makes from another device are invisible. A
+pre-split stored row is migrated by attributing its single count to the default
+model (before the split, near enough everything ran on a step's primary), not
+discarded. The key check counts against `GEMINI_KEY_CHECK_MODEL`, the model it
+actually runs on.
+
 *Per-step model selection (owner-approved 2026-07-22):* the fixed one-model-
 for-every-role pin above is now a **default**, not a lock. Customize's Advanced
 "Which model does each step" lists **every request-making engine step

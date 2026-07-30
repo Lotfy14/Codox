@@ -56,21 +56,54 @@ try {
       .textContent())?.includes('4 pages') ?? false,
   )
 
-  // --- Save a (fake) key: the strip appears at 0 of 400.
+  // --- Save a (fake) key: the strip appears with ONE BAR PER MODEL at 0 of 500.
   await page.getByRole('button', { name: 'API', exact: true }).first().click()
   await page.getByLabel('Google Gemini API key').fill('AIza-not-a-real-key')
   await page.getByRole('button', { name: 'Check key' }).click()
   await page.locator('.ds-quota-strip').waitFor({ timeout: 15000 })
   check('quota strip appears once a key exists', true)
-  const meterText = await page
-    .locator('.ds-quota-strip .ds-storage-meter')
-    .textContent()
+
+  const meters = page.locator('.ds-quota-strip .ds-storage-meter')
+  check('strip shows one bar per model', (await meters.count()) === 2)
   check(
-    'strip reads 0 of 400',
-    (meterText?.includes('0 of 400') ?? false) && (meterText?.includes('Gemini free requests today') ?? false),
+    'strip keeps its heading',
+    (await page.locator('.ds-quota-strip__label').textContent()) ===
+      'Gemini free requests today',
+  )
+  const newerText = (await meters.nth(0).textContent()) ?? ''
+  const olderText = (await meters.nth(1).textContent()) ?? ''
+  check(
+    'newer model bar names itself and reads 0 of 500',
+    newerText.includes('3.5 Flash-Lite') && newerText.includes('0 of 500'),
+  )
+  check(
+    'older model bar names itself and reads 0 of 500',
+    olderText.includes('3.1 Flash-Lite') && olderText.includes('0 of 500'),
   )
   await page.keyboard.press('Escape')
   await page.screenshot({ path: `${OUT}quota-strip.png` })
+
+  // --- The two bars must sit side by side on a wide viewport and stack on a
+  // narrow one, without either the strip or the frame scrolling sideways.
+  const sideBySide = await meters.evaluateAll((nodes) => {
+    const [a, b] = nodes.map((node) => node.getBoundingClientRect())
+    return Math.abs(a.top - b.top) < 2 && a.left !== b.left
+  })
+  check('bars sit side by side at 1200px', sideBySide)
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  const stacked = await meters.evaluateAll((nodes) => {
+    const [a, b] = nodes.map((node) => node.getBoundingClientRect())
+    return b.top > a.top + 4
+  })
+  check('bars stack on a phone-width viewport', stacked)
+  check(
+    'no horizontal overflow at 390px',
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth + 1,
+    ),
+  )
+  await page.screenshot({ path: `${OUT}quota-strip-narrow.png` })
 } finally {
   await browser.close()
 }

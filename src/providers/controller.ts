@@ -6,6 +6,7 @@ import { recordDailyRequest } from '../state/quota'
 import {
   DEFAULT_GEMINI_VISION_MODEL,
   FALLBACK_GEMINI_VISION_MODEL,
+  GEMINI_KEY_CHECK_MODEL,
   geminiAdapter,
 } from './gemini'
 import type { KeyValidationStatus } from '../state/types'
@@ -256,8 +257,9 @@ export class GeminiController {
     if (credential === undefined) return MISSING_KEY_FAILURE
 
     const result = await this.adapter.validateKey(credential.apiKey, signal)
-    // The key check is a real (tiny) generation, so it counts too.
-    if (result.ok) await recordDailyRequest()
+    // The key check is a real (tiny) generation, so it counts too — against
+    // the model it actually runs on (the guaranteed-runnable check model).
+    if (result.ok) await recordDailyRequest(GEMINI_KEY_CHECK_MODEL)
     if (!result.ok && result.kind === 'aborted') return result
     await recordKeyValidation(
       result.ok ? 'working' : toValidationStatus(result),
@@ -375,9 +377,9 @@ export class GeminiController {
       )
 
       if (result.ok) {
-        // Every answered generation counts against the key's daily free
+        // Every answered generation counts against this MODEL's daily free
         // allowance (429/offline attempts never reached generation).
-        await recordDailyRequest()
+        await recordDailyRequest(model)
         // A 200 with an empty body and a normal finish is a provider hiccup
         // (observed on Flash-Lite: two consecutive empty responses killed a
         // 30-page run at its last worker chunk). No prompt in this app ever

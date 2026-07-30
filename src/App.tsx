@@ -10,6 +10,11 @@ import {
 import type { AppTab, TabNavItem } from './design/components'
 import { appMessages, privacyMessages } from './copy/messages'
 import { geminiController } from './providers/controller'
+import {
+  DEFAULT_GEMINI_VISION_MODEL,
+  FALLBACK_GEMINI_VISION_MODEL,
+  type EngineModel,
+} from './providers/gemini'
 import { Convert } from './screens/Convert'
 import { Customizations } from './screens/Customizations'
 import { ApiCoachmark } from './screens/ApiCoachmark'
@@ -28,11 +33,19 @@ import { useDailyQuota } from './state/quota'
 import { useStorageEstimate } from './state/storage'
 import { UpdateBanner } from './UpdateBanner.tsx'
 
+/** Each bar names its own model, so the two are never mistaken for one total. */
+const MODEL_QUOTA_LABELS: Record<EngineModel, string> = {
+  [DEFAULT_GEMINI_VISION_MODEL]: appMessages.quotaModelNewer,
+  [FALLBACK_GEMINI_VISION_MODEL]: appMessages.quotaModelOlder,
+}
+
 /**
  * The Gemini free-tier tally above the frame: requests this device sent
- * today against AI Studio's daily allowance. Device-local — other devices
- * on the same key are invisible to it. Resets at 00:00 UTC and whenever
- * the stored key is replaced. Hidden until a key exists.
+ * today against AI Studio's daily allowance. One bar PER MODEL, because the
+ * allowance is metered per model — a full bar on one model says nothing about
+ * the other, which is exactly what the controller's fallback depends on.
+ * Device-local — other devices on the same key are invisible to it. Resets at
+ * 00:00 UTC and whenever the stored key is replaced. Hidden until a key exists.
  */
 function DailyQuotaStrip() {
   const credential = useGeminiCredential()
@@ -40,12 +53,20 @@ function DailyQuotaStrip() {
   if (credential === null || credential === undefined) return null
   return (
     <div className="ds-quota-strip">
-      <StorageMeter
-        formatValue={(value) => `${Math.round(value)}`}
-        label={appMessages.quotaLabel}
-        total={quota.limit}
-        used={quota.used}
-      />
+      <p className="ds-quota-strip__label" id="daily-quota-label">
+        {appMessages.quotaLabel}
+      </p>
+      <div className="ds-quota-strip__meters">
+        {quota.map(({ model, used, limit }) => (
+          <StorageMeter
+            key={model}
+            formatValue={(value) => `${Math.round(value)}`}
+            label={MODEL_QUOTA_LABELS[model]}
+            total={limit}
+            used={used}
+          />
+        ))}
+      </div>
     </div>
   )
 }

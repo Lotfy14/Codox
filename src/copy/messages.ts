@@ -91,6 +91,10 @@ export const appMessages = {
   railPrivacy: 'Privacy',
   storageLabel: 'On-device storage',
   quotaLabel: 'Gemini free requests today',
+  // "Gemini" is already in the strip heading — repeating it on both bars only
+  // crowds each label against its own number.
+  quotaModelNewer: '3.5 Flash-Lite (newer)',
+  quotaModelOlder: '3.1 Flash-Lite (older)',
   apiDialogTitle: 'Gemini API key',
   helpDialogTitle: 'Help',
   privacyDialogTitle: 'Privacy',
