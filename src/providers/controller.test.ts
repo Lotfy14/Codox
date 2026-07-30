@@ -452,20 +452,118 @@ describe('failure handling', () => {
     expect(modelCallCount(FALLBACK_GEMINI_VISION_MODEL)).toBe(2)
   })
 
-  it('daily quota exhaustion also pauses as quota, using retry timing', async () => {
+  const dailyQuotaFailure = {
+    ok: false,
+    kind: 'quota-exhausted',
+    retryAfterSeconds: 0,
+    httpStatus: 429,
+  } as const
+
+  it("a primary out of DAILY quota falls back instead of pausing — Gemini's free tier meters per day PER MODEL", async () => {
     await saveGeminiKey('quota-key')
-    let attempt = 0
+    const { adapter } = makeAdapter({
+      complete: (_key, model) =>
+        model === FALLBACK_GEMINI_VISION_MODEL
+          ? { ok: true, text: 'from-fallback' }
+          : dailyQuotaFailure,
+    })
+    const controller = new GeminiController(adapter, { minRequestSpacingMs: 0 })
+    const events: ControllerEvent[] = []
+    controller.subscribe((event) => events.push(event))
+
+    const result = await controller.runGeminiRequest(request)
+
+    expect(result).toMatchObject({ ok: true, text: 'from-fallback' })
+    // No pause: the exhausted model is abandoned, not waited on.
+    expect(events.map((event) => event.type)).toEqual(['running', 'running'])
+  })
+
+  it('a daily-exhausted primary is demoted on the FIRST strike, so later requests skip it', async () => {
+    await saveGeminiKey('quota-key')
+    const { adapter, modelCallCount } = makeAdapter({
+      complete: (_key, model) =>
+        model === FALLBACK_GEMINI_VISION_MODEL
+          ? { ok: true, text: 'from-fallback' }
+          : dailyQuotaFailure,
+    })
+    const controller = new GeminiController(adapter, { minRequestSpacingMs: 0 })
+
+    for (let i = 0; i < 4; i += 1) await controller.runGeminiRequest(request)
+
+    expect(modelCallCount(DEFAULT_GEMINI_VISION_MODEL)).toBe(1)
+    expect(modelCallCount(FALLBACK_GEMINI_VISION_MODEL)).toBe(4)
+  })
+
+  it('a transient failure takes 3 consecutive strikes to demote, and a success resets the count', async () => {
+    await saveGeminiKey('flaky-key')
+    let primaryHealthy = false
+    const { adapter, modelCallCount } = makeAdapter({
+      complete: (_key, model) => {
+        if (model === FALLBACK_GEMINI_VISION_MODEL) {
+          return { ok: true, text: 'from-fallback' }
+        }
+        return primaryHealthy
+          ? { ok: true, text: 'from-primary' }
+          : { ok: false, kind: 'rate-limited', retryAfterSeconds: 0, httpStatus: 429 }
+      },
+    })
+    const controller = new GeminiController(adapter, { minRequestSpacingMs: 0 })
+
+    // Two strikes, then a good answer — the streak restarts, no demotion.
+    await controller.runGeminiRequest(request)
+    await controller.runGeminiRequest(request)
+    primaryHealthy = true
+    await controller.runGeminiRequest(request)
+    primaryHealthy = false
+    // Three more consecutive strikes now demote it.
+    await controller.runGeminiRequest(request)
+    await controller.runGeminiRequest(request)
+    await controller.runGeminiRequest(request)
+    expect(modelCallCount(DEFAULT_GEMINI_VISION_MODEL)).toBe(6)
+
+    // Demoted: the primary slot is skipped from here on.
+    await controller.runGeminiRequest(request)
+    await controller.runGeminiRequest(request)
+    expect(modelCallCount(DEFAULT_GEMINI_VISION_MODEL)).toBe(6)
+  })
+
+  it('the strict swap: when the stand-in main is demoted too, the model it replaced gets its turn back', async () => {
+    await saveGeminiKey('quota-key')
+    // Both models hit their daily cap, so each one demotes the other in turn.
+    const calls: string[] = []
+    const { adapter } = makeAdapter({
+      complete: (_key, model) => {
+        calls.push(model)
+        // Every first touch of a model is a daily 429; the fallback's own
+        // retry succeeds so the request can finish and be observed.
+        return calls.length <= 2 ? dailyQuotaFailure : { ok: true, text: 'done' }
+      },
+    })
+    const controller = new GeminiController(adapter, { minRequestSpacingMs: 0 })
+
+    // Request 1: the primary 429s and is demoted; the fallback then 429s, is
+    // demoted itself, and hands the primary slot back to the model it replaced.
+    await controller.runGeminiRequest(request)
+    expect(calls.slice(0, 2)).toEqual([
+      DEFAULT_GEMINI_VISION_MODEL,
+      FALLBACK_GEMINI_VISION_MODEL,
+    ])
+
+    // Request 2: so the primary is tried first again rather than shut out for
+    // the session — the two trade places instead of both being demoted.
+    const before = calls.length
+    await controller.runGeminiRequest(request)
+    expect(calls[before]).toBe(DEFAULT_GEMINI_VISION_MODEL)
+  })
+
+  it('both models out of daily quota still ends in the calm paused state, not an error', async () => {
+    await saveGeminiKey('quota-key')
+    let calls = 0
     const { adapter } = makeAdapter({
       complete: () => {
-        attempt += 1
-        return attempt === 1
-          ? {
-              ok: false,
-              kind: 'quota-exhausted',
-              retryAfterSeconds: 0,
-              httpStatus: 429,
-            }
-          : { ok: true, text: 'done' }
+        calls += 1
+        // Primary 429s, fallback 429s once, then recovers on its retry.
+        return calls <= 2 ? dailyQuotaFailure : { ok: true, text: 'done' }
       },
     })
     const controller = new GeminiController(adapter, { minRequestSpacingMs: 0 })
@@ -473,8 +571,16 @@ describe('failure handling', () => {
     controller.subscribe((event) => events.push(event))
 
     const result = await controller.runGeminiRequest(request)
+
     expect(result.ok).toBe(true)
-    expect(events[1]).toMatchObject({ type: 'paused', reason: 'quota' })
+    expect(events.map((event) => event.type)).toEqual([
+      'running',
+      'running',
+      'paused',
+      'resumed',
+      'running',
+    ])
+    expect(events[2]).toMatchObject({ type: 'paused', reason: 'quota' })
   })
 
   it('network loss pauses as offline and the online event resumes it without user action', async () => {

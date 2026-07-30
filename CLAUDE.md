@@ -102,19 +102,54 @@ model cannot answer is retried once on the known-good
 `FALLBACK_GEMINI_VISION_MODEL` (`gemini-3.1-flash-lite`) under the **same one
 key** — a second model, never a second key or provider, so the
 provider/quota rule holds. "Cannot answer" = a per-minute `rate-limited`, a
+per-day `quota-exhausted` (see the 2026-07-30 correction below), a
 `provider-error`, a missing/billing-gated model, or a body still empty after
 the primary's own transient retries. Deliberately **not** fallback triggers:
 `wrong-key` (same key for both — a swap would only mask the real fault),
-`aborted` (user stop), and the key-wide `unreachable`/daily `quota-exhausted`
-(a model swap is futile, so the primary keeps its calm "paused, not broken"
-pause; the fallback keeps that pause too, so it still shows when BOTH models are
-stalled). COST-ZERO guard: a per-session circuit breaker disables a primary
+`aborted` (user stop), and `unreachable` (a network fact, model-agnostic, so
+the primary keeps its calm "paused, not broken" pause; the fallback keeps that
+pause too, so it still shows when BOTH models are stalled). COST-ZERO guard: a
+per-session circuit breaker disables a primary
 that returns `model-unavailable`/`billing-required`, so a key without access to
 the new primary wastes exactly one doomed call per session, not one per
 request. The fallback re-runs the identical request; it never invents an answer. The three pinned prompts and the output contract
 are untouched. Consequence: the key check runs the **fallback** model (the
 guaranteed-runnable path), so a key that lacks the new primary but can run the
 fallback still validates and converts.
+
+*Daily quota is per MODEL, not per key — correction + model demotion
+(owner-approved 2026-07-30):* the paragraph above originally excluded daily
+`quota-exhausted` from the fallback as "key-wide … a model swap is futile".
+**That was wrong.** Gemini's free-tier requests-per-day is metered per model —
+the violated quota Google returns is literally named
+`GenerateRequestsPerDayPerProjectPerModel-FreeTier` — so
+`gemini-3.5-flash-lite` being out says nothing about `gemini-3.1-flash-lite`.
+Reported live: a run sat at 0% showing "Resting until quota returns", re-probing
+the one exhausted model every 5 minutes forever, while its pair had a full day's
+allowance untouched. A per-day 429 is now the **strongest** fallback trigger.
+
+Alongside it the swap became **sticky**, because re-trying a doomed model once
+per request is the same waste the `model-unavailable` breaker already existed to
+prevent. `recordModelFailure` (`controller.ts`) counts **consecutive**
+demote-worthy failures per model; any usable answer resets the count. A per-day
+`quota-exhausted` demotes on the **first** strike — Gemini has already stated
+the answer cannot change before the 00:00 UTC reset, so further attempts are
+guaranteed 429s. Every other kind (`rate-limited`, a non-transient
+`provider-error`, a body still empty after all transient retries) is genuinely
+transient and takes **3** consecutive strikes. A demoted model is skipped in the
+**primary** slot only; the paired model is always attempted, and that attempt
+still carries the calm quota/offline pause. `invalid-request` never counts — a
+deterministic bad request is the caller's fault, not the model's.
+
+*Strict swap (owner call 2026-07-30):* demoting a model **un-demotes its pair**,
+so when the stand-in main earns its own demotion the model it replaced gets its
+turn back rather than both ending up shut out. This is why the two can never
+deadlock, and why a run spanning the 00:00 UTC reset returns to the tutor's
+chosen primary on its own. When both models really are exhausted the pair
+alternates one doomed call per pause cycle and the fallback attempt's pause
+keeps it calm — bounded, not a busy loop. Demotion is per controller instance
+and non-persistent: a fresh launch starts every model clean. The
+provider/quota rule is untouched — this is a second model, never a second key.
 
 *Per-step model selection (owner-approved 2026-07-22):* the fixed one-model-
 for-every-role pin above is now a **default**, not a lock. Customize's Advanced

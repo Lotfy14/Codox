@@ -32,6 +32,10 @@ import type {
  * retried on the known-good `FALLBACK_GEMINI_VISION_MODEL` under the SAME one
  * key. This is a second model, never a second key or provider — the key
  * provenance rule is untouched.
+ *
+ * Demotion (owner-approved 2026-07-30) makes that swap stick. A model that
+ * keeps failing loses the primary slot for the session instead of being
+ * re-tried, and doomed, on every single request. See `recordModelFailure`.
  */
 
 export type ControllerStatus =
@@ -55,6 +59,14 @@ const RATE_LIMIT_RECHECK_SECONDS = 30
 const QUOTA_RECHECK_SECONDS = 5 * 60
 const UNREACHABLE_RECHECK_SECONDS = 60
 const TRANSIENT_RETRY_DELAYS_SECONDS = [1, 2, 4] as const
+
+/**
+ * Consecutive failures that cost a model the primary slot for the session.
+ * Only transient kinds have to reach it — a per-day quota exhaustion demotes
+ * on the first strike, because Gemini has already told us the answer will not
+ * change before the UTC reset.
+ */
+const DEMOTION_STRIKES = 3
 
 const MISSING_KEY_FAILURE: ProviderFailure = {
   ok: false,
@@ -118,6 +130,18 @@ export class GeminiController {
    * and non-persistent: a fresh launch re-tries the primary.
    */
   private readonly unavailablePrimaryModels = new Set<string>()
+  /**
+   * Consecutive demote-worthy failures per model. Any usable answer from a
+   * model clears its count — the strikes must be consecutive.
+   */
+  private readonly failureStreaks = new Map<string, number>()
+  /**
+   * Models that have lost the primary slot for this session (see
+   * `recordModelFailure`). A request whose primary is in here skips straight
+   * to its paired model; the paired model is still always attempted, so the
+   * calm quota/offline pause is never lost. Per-instance and non-persistent.
+   */
+  private readonly demotedModels = new Set<string>()
 
   constructor(
     adapter: GeminiAdapter = geminiAdapter,
@@ -153,6 +177,51 @@ export class GeminiController {
       this.status = { kind: event.type }
     }
     for (const listener of this.listeners) listener(event)
+  }
+
+  /** A usable answer proves the model is healthy — the streak restarts. */
+  private clearModelFailures(model: string): void {
+    this.failureStreaks.delete(model)
+  }
+
+  /**
+   * Records one demote-worthy failure against `model` and decides whether it
+   * loses the primary slot for the session.
+   *
+   * `definitive` is set for a per-day quota exhaustion: Gemini's free-tier
+   * requests-per-day is metered PER MODEL (the violated quota is literally
+   * named `…PerDayPerProjectPerModel-FreeTier`), so one such 429 is a
+   * complete answer about that model and re-trying it before the 00:00 UTC
+   * reset can only produce more 429s. Every other kind is transient, so it
+   * takes `DEMOTION_STRIKES` consecutive ones.
+   *
+   * Strict swap (owner call 2026-07-30): demoting a model gives its pair the
+   * primary slot back. When the stand-in main earns its own demotion, the
+   * model it replaced is un-demoted and tried again — the two trade places
+   * rather than both ending up shut out. Deadlock is impossible because the
+   * paired model is attempted whether or not it is demoted, and that attempt
+   * carries the calm pause when both models really are out.
+   */
+  private recordModelFailure(
+    model: string,
+    pairedModel: string,
+    definitive: boolean,
+  ): void {
+    const strikes = (this.failureStreaks.get(model) ?? 0) + 1
+    this.failureStreaks.set(model, strikes)
+    if (!definitive && strikes < DEMOTION_STRIKES) return
+    if (this.demotedModels.has(model)) return
+
+    this.demotedModels.add(model)
+    if (this.demotedModels.has(pairedModel)) {
+      this.demotedModels.delete(pairedModel)
+      this.failureStreaks.delete(pairedModel)
+    }
+  }
+
+  /** True when `model` has lost the primary slot and should be skipped there. */
+  private isDemoted(model: string): boolean {
+    return this.unavailablePrimaryModels.has(model) || this.demotedModels.has(model)
   }
 
   /**
@@ -215,14 +284,18 @@ export class GeminiController {
    * builders to "the model the tutor didn't pick" — or, when the caller set
    * none, the global known-good `FALLBACK_GEMINI_VISION_MODEL`
    * (owner-approved 2026-07-22). "Cannot
-   * answer" means: a per-minute rate limit, a provider error, a
-   * missing/billing-gated model, or a body still empty after the primary's own
-   * transient retries. `wrong-key` (same key for both models) and a user abort
-   * are returned as-is, never masked by a swap; `unreachable` and daily
-   * `quota-exhausted` are key-wide, so the primary keeps its calm pause instead
-   * of a futile model swap. The fallback runs the full calm behavior — its own
-   * quota pause and offline resume — so "paused, not broken" still shows when
-   * BOTH models are stalled.
+   * answer" means: a per-minute rate limit, a **per-day quota exhaustion**, a
+   * provider error, a missing/billing-gated model, or a body still empty after
+   * the primary's own transient retries. `wrong-key` (same key for both
+   * models) and a user abort are returned as-is, never masked by a swap;
+   * `unreachable` is a network fact and model-agnostic, so the primary keeps
+   * its calm pause instead of a futile swap. The fallback runs the full calm
+   * behavior — its own quota pause and offline resume — so "paused, not broken"
+   * still shows when BOTH models are stalled.
+   *
+   * A model that keeps failing is demoted out of the primary slot for the rest
+   * of the session (`recordModelFailure`), so the swap costs one doomed call,
+   * not one per request.
    */
   async runGeminiRequest(
     request: VisionRequest,
@@ -237,8 +310,13 @@ export class GeminiController {
     // When the primary already IS the fallback, the second attempt would be
     // identical, so the primary attempt is the only one.
     const primaryIsFallback = primaryModel === fallbackModel
-    if (!primaryIsFallback && !this.unavailablePrimaryModels.has(primaryModel)) {
-      const primary = await this.attemptModel(request, true, signal)
+    if (!primaryIsFallback && !this.isDemoted(primaryModel)) {
+      const primary = await this.attemptModel(
+        request,
+        fallbackModel,
+        true,
+        signal,
+      )
       switch (primaryDisposition(primary)) {
         case 'return':
           return primary
@@ -256,21 +334,24 @@ export class GeminiController {
     const fallbackRequest: VisionRequest = primaryIsFallback
       ? request
       : { ...request, modelId: fallbackModel }
-    return this.attemptModel(fallbackRequest, false, signal)
+    return this.attemptModel(fallbackRequest, primaryModel, false, signal)
   }
 
   /**
    * One model's full attempt loop: RPM pacing, transient/empty retries, and
-   * the calm pause/resume for quota and offline. `failFastOnRateLimit` lets
-   * the primary bail out of a per-minute limit (returning `rate-limited`) so
-   * the caller can try the fallback model instead of waiting; the fallback
-   * runs with it off and keeps the pause.
+   * the calm pause/resume for quota and offline. `isPrimaryAttempt` lets the
+   * primary bail out of a quota limit (returning it) so the caller can try the
+   * paired model instead of waiting; the fallback runs with it off and keeps
+   * the pause. `pairedModel` is the model this one would swap with, needed to
+   * apply the strict swap when this attempt earns a demotion.
    */
   private async attemptModel(
     request: VisionRequest,
-    failFastOnRateLimit: boolean,
+    pairedModel: string,
+    isPrimaryAttempt: boolean,
     signal?: AbortSignal,
   ): Promise<VisionResult> {
+    const model = request.modelId ?? DEFAULT_GEMINI_VISION_MODEL
     let transientAttempt = 0
     for (;;) {
       if (signal?.aborted) return { ok: false, kind: 'aborted' }
@@ -309,7 +390,16 @@ export class GeminiController {
           result.text.trim() === '' &&
           (result.finishReason === undefined || result.finishReason === 'STOP')
         const retryDelay = this.transientRetryDelaysSeconds[transientAttempt]
-        if (!emptyBody || retryDelay === undefined) return result
+        if (!emptyBody) {
+          this.clearModelFailures(model)
+          return result
+        }
+        if (retryDelay === undefined) {
+          // Still empty after every transient retry: a demote-worthy failure
+          // of this model, even though the result itself is returned as `ok`.
+          this.recordModelFailure(model, pairedModel, false)
+          return result
+        }
         transientAttempt += 1
         await waitForResume(retryDelay, signal)
         if (signal?.aborted) return { ok: false, kind: 'aborted' }
@@ -323,12 +413,17 @@ export class GeminiController {
           return result
         case 'quota-exhausted':
         case 'rate-limited': {
-          // A per-minute limit on the primary is worth escaping to the
-          // fallback model (which may have its own RPM headroom). A per-day
-          // exhaustion is key-wide, so a swap is futile — pause instead.
-          if (failFastOnRateLimit && result.kind === 'rate-limited') {
-            return result
-          }
+          // Gemini's free tier meters BOTH windows per model, so either limit
+          // is worth escaping to the paired model rather than waiting on the
+          // one that is out. A per-day exhaustion is definitive (it cannot
+          // clear before the UTC reset) and demotes this model immediately;
+          // a per-minute limit clears in seconds, so it only counts a strike.
+          this.recordModelFailure(
+            model,
+            pairedModel,
+            result.kind === 'quota-exhausted',
+          )
+          if (isPrimaryAttempt) return result
           const waitSeconds =
             result.retryAfterSeconds ??
             (result.kind === 'quota-exhausted'
@@ -359,7 +454,14 @@ export class GeminiController {
             result.httpStatus === 499 ||
             (result.httpStatus !== undefined && result.httpStatus >= 500)
           const defaultWait = this.transientRetryDelaysSeconds[transientAttempt]
-          if (!transient || defaultWait === undefined) return result
+          if (!transient || defaultWait === undefined) {
+            // A deterministic bad request is the caller's fault, not the
+            // model's, so it never counts against the model.
+            if (result.code !== 'invalid-request') {
+              this.recordModelFailure(model, pairedModel, false)
+            }
+            return result
+          }
           const waitSeconds = result.retryAfterSeconds ?? defaultWait
           transientAttempt += 1
           await waitForResume(waitSeconds, signal)
@@ -414,7 +516,9 @@ type PrimaryDisposition = 'return' | 'fall-back' | 'disable-and-fall-back'
 /**
  * Reads a primary-model result and decides whether the fallback model gets a
  * turn. Only outcomes the primary attempt actually returns are considered:
- * daily quota and offline pause internally, so they never reach here.
+ * offline pauses internally, so it never reaches here. Demotion is recorded
+ * separately, by the attempt itself, because the fallback attempt earns
+ * strikes too and never returns through here.
  */
 function primaryDisposition(result: VisionResult): PrimaryDisposition {
   if (result.ok) {
@@ -427,8 +531,8 @@ function primaryDisposition(result: VisionResult): PrimaryDisposition {
     case 'wrong-key': // same key for both models — a swap would only mask it
     case 'aborted': // user stop
     case 'unreachable': // network, model-agnostic (does not normally surface)
-    case 'quota-exhausted': // key-wide daily cap (does not surface; primary pauses)
       return 'return'
+    case 'quota-exhausted': // per-DAY, per-MODEL: the pair may still have room
     case 'rate-limited':
       return 'fall-back'
     case 'provider-error':
