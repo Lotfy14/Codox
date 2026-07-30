@@ -21,19 +21,6 @@ excludes `answer_evidence` so the question preview never reveals the answer.
 The on-page `answer_evidence` region is the whole page (a permission/validation
 placeholder — the worker sees the whole page), not a located mark.
 
-**The worker can drop a whole request's answers** (measured 2026-07-30). Being
-permitted to extract is not the same as being told to look: the row's
-`answer_evidence` is the whole page, `marking_style` is `''` unless a separate
-key PDF ran EVIDENCE, and the pinned WORKER prompt only ever *forbids*
-answering — no instruction describes finding a mark. On `EOR SUR MCQ 2025-194`
-(1st and 2nd Answered, 65 questions each, a large handwritten letter beside
-every question) 8 of 22 chunks came back with every `correct_index` blank and
-perfect question text, non-deterministically — the same chunk succeeded in one
-file and failed in the other. `repairUnansweredRows` re-asks those rows singly
-and takes the answer only when the options come back identical. Do not read a
-blank answer as "no mark on the page" without checking whether its whole chunk
-is blank.
-
 **Separate answer key** is the one case that is NOT `answer_present`: its
 answer is on other pages. It keeps the richer `EvidenceState` vocabulary in
 the EVIDENCE stage, which can still report a key mark as `ambiguous` or

@@ -1,17 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import {
-  placeholderWorkerRow,
-  repairTargetPages,
-  unansweredRowIds,
-  underTranscribedRowIds,
-} from './executor'
+import { placeholderWorkerRow, repairTargetPages, underTranscribedRowIds } from './executor'
 import { mergeRows, validateWorkerChunk } from './merge'
-import {
-  makeBlueprint,
-  makeEvidenceBlueprint,
-  makePlannedRow,
-  makeWorkerRow,
-} from './fixtures'
+import { makeBlueprint, makePlannedRow, makeWorkerRow } from './fixtures'
 
 describe('repairTargetPages', () => {
   const exam = new Set([1, 2, 3, 4, 5])
@@ -74,60 +64,6 @@ describe('underTranscribedRowIds', () => {
     const blueprint = makeBlueprint({ planned_rows: [p1] })
     const rows = [makeWorkerRow(p1, { options: ['True', 'False'] })]
     expect(underTranscribedRowIds(blueprint, rows)).toEqual([])
-  })
-})
-
-describe('unansweredRowIds', () => {
-  const evidence = () => makeEvidenceBlueprint()
-
-  it('flags a permitted row the worker returned with no answer', () => {
-    const blueprint = evidence()
-    const [p1, p2] = blueprint.planned_rows
-    const rows = [
-      makeWorkerRow(p1, { options: ['A', 'B', 'C', 'D'], correct_index: '' }),
-      makeWorkerRow(p2, { options: ['A', 'B', 'C', 'D'], correct_index: '2' }),
-    ]
-    expect(unansweredRowIds(blueprint, rows)).toEqual(['1'])
-  })
-
-  it('ignores every row when the document policy forbids answers', () => {
-    // no_answer_key: blank is the policy working, not a miss to re-ask.
-    const p1 = makePlannedRow('1')
-    const blueprint = makeBlueprint({ planned_rows: [p1] })
-    const rows = [makeWorkerRow(p1, { options: ['A', 'B'], correct_index: '' })]
-    expect(unansweredRowIds(blueprint, rows)).toEqual([])
-  })
-
-  it("ignores a row the planner's own policy forces blank", () => {
-    const blueprint = evidence()
-    const [p1, p2] = blueprint.planned_rows
-    p1.correct_index_policy = {
-      type: 'blank_conflicting_marks',
-      value: '',
-      needs_review: 'conflicting_marks',
-    }
-    const rows = [
-      makeWorkerRow(p1, { options: ['A', 'B'], correct_index: '' }),
-      makeWorkerRow(p2, { options: ['A', 'B'], correct_index: '' }),
-    ]
-    expect(unansweredRowIds(blueprint, rows)).toEqual(['2'])
-  })
-
-  it('ignores a non-MCQ row, which ships flagged whatever its answer', () => {
-    const blueprint = evidence()
-    const [p1, p2] = blueprint.planned_rows
-    const rows = [
-      makeWorkerRow(p1, { options: ['Only one'], correct_index: '' }),
-      makeWorkerRow(p2, { options: [], correct_index: '' }),
-    ]
-    expect(unansweredRowIds(blueprint, rows)).toEqual([])
-  })
-
-  it('treats a whitespace-only answer as blank', () => {
-    const blueprint = evidence()
-    const [p1] = blueprint.planned_rows
-    const rows = [makeWorkerRow(p1, { options: ['A', 'B'], correct_index: '  ' })]
-    expect(unansweredRowIds(blueprint, rows)).toEqual(['1'])
   })
 })
 

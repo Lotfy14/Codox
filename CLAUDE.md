@@ -253,45 +253,6 @@ reason bypasses the controller's transient empty-response retry, and the
 old path had no fallback. The WORKER prompt and output contract are
 untouched; failure diagnostics now record the finish reason.
 
-*Worker answer repair (owner-approved 2026-07-30):* the worker drops
-`correct_index` for an **entire request at a time**. Measured on two answered
-surgery exams (`EOR SUR MCQ 2025-194`, 65 questions each, every question
-carrying a large handwritten answer letter in the right margin): 8 of 22
-worker chunks returned all six answers blank with perfect question text, at
-normal speed, with no retry, no truncation and no model fallback — while rows
-in the SAME call reading the SAME page image were answered correctly. Both
-files lost exactly 23 rows (4 failed chunks × 6, last chunk 5), which is why
-both showed an identical review count. It is not perception: INDEX correctly
-returned `answer_present` for 65/65 and the pages were rendered and checked.
-The cause is that nothing tells the worker an answer exists to look for — the
-row's `answer_evidence` is the whole page (a permission placeholder),
-`marking_style` is `''` whenever no separate key PDF ran the EVIDENCE stage,
-and the SHA-pinned WORKER prompt contains only prohibitions about answers, never
-an instruction to find one. So whether the model fills answers at all is
-decided once per response.
-So `repairUnansweredRows` (`executor.ts`) re-asks each answered-but-blank row
-**on its own** after the existing text repair — the same "genuinely different
-request" lever as the chunk split-retry and the per-page INDEX repair, and it
-reuses the pinned WORKER prompt unchanged. Candidates are only rows
-`rowPermitsAnswer` accepts (document policy claims evidence AND the row's own
-policy does not force blank), so a document with no marks produces none and
-costs nothing. NEVER-GUESS is deterministic code, twice: only `correct_index`
-is taken from the re-ask, and only when the re-ask returns the **same options
-in the same order** (`sameOptions`) — a differing list means the index would
-point into a list the tutor never sees, so it is discarded rather than
-reconciled. A row still blank stays blank and flagged. Skipped when EVERY
-permitted row is blank (a layout the worker cannot read at all, where per-row
-re-asking burns one call per question to learn nothing), mirroring the INDEX
-repair's "gated on the step having mostly worked". The three pinned prompts
-and the output contract are untouched. Open: the recovery RATE is unmeasured —
-the deterministic gates are unit-tested, but how often a single-row re-ask
-actually recovers the answer needs a real run.
-
-*Diagnosability gap found 2026-07-30 (not yet fixed):* `controller.ts` never
-logs which model answered a request, so a primary→fallback swap leaves no
-trace and had to be ruled out from wall-clock timings. Worth fixing before the
-next provider-layer investigation.
-
 *Matching-question policy (owner-approved 2026-07-18):* a true matching
 question — one row whose answer is a set of pairings — cannot be carried by a
 single-`correct_index` Triviadox row. Customize's **"Matching questions"**

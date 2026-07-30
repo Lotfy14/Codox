@@ -79,7 +79,7 @@ import {
 } from './windows'
 import { boxToCropBox, hasPositiveExtent } from './boxes'
 import { emitCsv } from './csv'
-import { mergeRows, rowPermitsAnswer, validateWorkerChunk } from './merge'
+import { mergeRows, validateWorkerChunk } from './merge'
 import { stripEnumerationLabels, stripTableBlock } from './normalize'
 import { parseAuditReport, validateFinalRows } from './validate'
 import { resolveQuestionReferences } from './reference-resolver'
@@ -1111,126 +1111,6 @@ async function repairUnderTranscribedRows(
   return rows.map((row) => byId.get(row.id) ?? row)
 }
 
-/**
- * Rows the blueprint says carry a visible answer but that came back with a
- * blank `correct_index`. INDEX already observed the answer per question
- * (`answer_present`), so on these rows a blank is a transcription miss, not
- * the policy working — `forceAnswer` cannot tell the two apart and keeps the
- * blank either way. Rows the policy forces blank are never candidates, so a
- * document with no marks produces none of these; nor do non-MCQ rows, which
- * ship flagged `not_mcq` regardless of any answer.
- */
-export function unansweredRowIds(
-  blueprint: Blueprint,
-  rows: readonly WorkerRow[],
-): string[] {
-  const permitted = new Set(
-    blueprint.planned_rows
-      .filter((planned) => rowPermitsAnswer(blueprint, planned))
-      .map((planned) => planned.id),
-  )
-  return rows
-    .filter(
-      (row) =>
-        permitted.has(row.id) &&
-        row.correct_index.trim() === '' &&
-        row.options.length >= 2,
-    )
-    .map((row) => row.id)
-}
-
-/** Same option list, tolerating only whitespace differences in re-transcription. */
-function sameOptions(a: readonly string[], b: readonly string[]): boolean {
-  const norm = (value: string) => value.trim().replace(/\s+/g, ' ')
-  return (
-    a.length === b.length &&
-    a.every((option, index) => norm(option) === norm(b[index] ?? ''))
-  )
-}
-
-/**
- * Re-asks each answered-but-blank row on its own (measured 2026-07-30, owner-
- * approved). The worker drops `correct_index` for an ENTIRE request at a time:
- * on a surgery exam whose every question carries a large handwritten answer
- * letter in the margin, 8 of 22 chunks came back with all six answers blank
- * and perfect question text, at normal speed, with no retry and no model
- * fallback — while neighbouring rows on the same page image in the same call
- * were answered. Nothing caught it: `underTranscribedRowIds` re-asks missing
- * TEXT only, and a row with good text and no answer looks complete to every
- * gate. A single-row request is a genuinely different request (the same lever
- * the chunk split-retry and the per-page INDEX repair pull), so a chunk-wide
- * omission does not repeat.
- *
- * NEVER-GUESS is code here, twice over. Only `correct_index` is taken from the
- * re-ask — the row's text is whatever the original chunk transcribed — and it
- * is taken ONLY when the re-ask returns the same options in the same order.
- * A differing list means the index would point into a list the tutor will
- * never see, so it is discarded, not reconciled. A row still blank afterwards
- * stays blank and flagged.
- *
- * Skipped entirely when EVERY permitted row is blank: that is a systemic
- * layout the worker cannot read at all, where per-row re-asking would burn one
- * call per question to learn nothing — the same "gated on the step having
- * mostly worked" rule the per-page INDEX repair follows.
- */
-async function repairUnansweredRows(
-  runId: string,
-  blueprint: Blueprint,
-  rows: WorkerRow[],
-  controller: GeminiController,
-  workerModel: string,
-  signal: AbortSignal | undefined,
-  skipIds: ReadonlySet<string> = new Set(),
-): Promise<WorkerRow[]> {
-  const blankIds = unansweredRowIds(blueprint, rows).filter(
-    (id) => !skipIds.has(id),
-  )
-  if (blankIds.length === 0) return rows
-  const permittedCount = blueprint.planned_rows.filter((planned) =>
-    rowPermitsAnswer(blueprint, planned),
-  ).length
-  if (blankIds.length >= permittedCount) {
-    await logEvent({
-      scope: 'engine', level: 'warn', event: 'engine.worker.answer_repair.skipped', runId,
-      detail: { blank: blankIds.length, permitted: permittedCount },
-    })
-    return rows
-  }
-  await logEvent({
-    scope: 'engine', level: 'info', event: 'engine.worker.answer_repair', runId,
-    detail: { count: blankIds.length, ids: blankIds },
-  })
-  const plannedById = new Map(blueprint.planned_rows.map((row) => [row.id, row]))
-  const byId = new Map(rows.map((row) => [row.id, row]))
-  let recovered = 0
-  await mapConcurrent(blankIds, CALL_CONCURRENCY, async (id) => {
-    const planned = plannedById.get(id)
-    const current = byId.get(id)
-    if (planned === undefined || current === undefined) return
-    const reduced = buildReducedBlueprint(blueprint, [planned])
-    const images = [
-      ...(await pageImages(runId, chunkPages(reduced).map((page) => page - 1))),
-      ...(await cropImages(runId, reduced.assets.map((asset) => asset.output_path))),
-    ]
-    const response = await timed(runId, `worker answer repair ${id}`, () =>
-      call(controller, runId, buildWorkerRequest(reduced, images, workerModel), signal),
-    )
-    if (wasTruncated(response.finishReason)) return
-    const validation = validateWorkerChunk(response.text, [planned])
-    if (!validation.ok) return
-    const repaired = validation.rows[0]
-    if (repaired === undefined || repaired.correct_index.trim() === '') return
-    if (!sameOptions(repaired.options, current.options)) return
-    byId.set(id, { ...current, correct_index: repaired.correct_index })
-    recovered += 1
-  })
-  await logEvent({
-    scope: 'engine', level: 'info', event: 'engine.worker.answer_repair.done', runId,
-    detail: { asked: blankIds.length, recovered },
-  })
-  return rows.map((row) => byId.get(row.id) ?? row)
-}
-
 async function stepWorker(
   runId: string,
   blueprint: Blueprint,
@@ -1435,13 +1315,8 @@ async function stepWorker(
     return { ok: false }
   }
 
-  const transcribed = await repairUnderTranscribedRows(
+  const rows = await repairUnderTranscribedRows(
     runId, blueprint, flatRows, controller, workerModel, signal, failedIds,
-  )
-  // After the text repair, so a row whose options were just recovered is
-  // judged on the list it will actually ship with.
-  const rows = await repairUnansweredRows(
-    runId, blueprint, transcribed, controller, workerModel, signal, failedIds,
   )
   return { ok: true, rows }
 }
