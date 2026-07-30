@@ -279,3 +279,20 @@ export function policyClaimsEvidence(
 ): boolean {
   return EVIDENCE_POLICY_TYPES.includes(policyType)
 }
+
+/**
+ * Whether the blueprint permits this row to carry an extracted answer: the
+ * document policy claims visible evidence AND the row's own policy does not
+ * force a blank. Exactly the two gates `forceAnswer` applies before it will
+ * accept a worker value, exported so the answer-repair pass can pick the rows
+ * whose blank answer is a defect rather than the policy working as designed.
+ */
+export function rowPermitsAnswer(
+  blueprint: Blueprint,
+  planned: PlannedRow,
+): boolean {
+  return (
+    policyClaimsEvidence(blueprint.document_profile.answer_policy.type) &&
+    !rowPolicyForcesBlank(planned)
+  )
+}
