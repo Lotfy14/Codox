@@ -49,7 +49,7 @@ import {
   buildBoxBatchRequest, buildBoxRequest, buildEvidenceRequest, buildFigureDetectRequest, buildIndexRequest,
 } from './calls'
 import { DEFAULT_ENGINE_MODELS, type EngineModels } from './model-steps'
-import { assembleBlueprint } from './assemble'
+import { assembleBlueprint, pageBoundaryOptionRowIds } from './assemble'
 import { mapConcurrent } from './concurrency'
 import {
   localizeIndexWindow,
@@ -626,6 +626,36 @@ async function planOneWindow(
 
 // ---------------------------------------------------------------- step 4
 
+/**
+ * The document answer policy, reconciling what EVIDENCE read on the attached
+ * KEY pages with what INDEX observed on the EXAM pages.
+ *
+ * EVIDENCE only ever sees the key pages, yet its parsed `type` becomes the
+ * whole document's policy — and `forceAnswer` blanks EVERY row when that type
+ * is `uncertain` or `no_answer_key`, before any per-row logic runs. So a PDF
+ * carrying both an attached key AND answers marked on its own pages lost every
+ * answer INDEX had correctly seen whenever the key itself came back unreadable
+ * (reported 2026-07-30 on a folder mixing keyed and inline-marked exams).
+ *
+ * A key the EVIDENCE stage could not read does not unsee the marks on the exam
+ * pages. The honest type for "some answers here, a key over there" is `mixed`,
+ * which permits extraction and hands the decision back to each row's own
+ * policy — a row with no observed evidence still blanks as `no_visible_answer`,
+ * an illegible per-ref state still blanks as `key_unclear`, and every value the
+ * worker returns is still range-checked. Nothing is invented; the
+ * document-level veto just stops overriding a per-question observation it never
+ * looked at. Per-ref evidence from the key is carried through untouched.
+ */
+export function keepIndexObservedMarks(
+  keyEvidence: EvidenceMap,
+  indexSawMarks: boolean,
+): EvidenceMap {
+  const keyUnusable =
+    keyEvidence.type === 'uncertain' || keyEvidence.type === 'no_answer_key'
+  if (!keyUnusable || !indexSawMarks) return keyEvidence
+  return { ...keyEvidence, type: 'mixed' }
+}
+
 /** New enumerate-first planner. Legacy blueprints remain readable only as a
  * checkpoint compatibility fallback, never as a new request format. */
 async function stepPlanAndValidate(
@@ -792,7 +822,19 @@ async function stepPlanAndValidate(
       models.evidence,
     ), signal))
     const parsed = wasTruncated(response.finishReason) ? undefined : parseEvidenceMap(response.text)
-    return parsed?.ok ? parsed.value : defaultEvidence
+    const observed = parsed?.ok ? parsed.value : defaultEvidence
+    const reconciledEvidence = keepIndexObservedMarks(
+      observed,
+      defaultEvidence.type === 'inline_marks',
+    )
+    if (reconciledEvidence.type !== observed.type) {
+      await logEvent({
+        scope: 'engine', level: 'warn', event: 'engine.evidence.mixed', runId,
+        reason: 'attached key unreadable, but INDEX saw answers on the exam pages',
+        detail: { keyPolicy: observed.type, documentPolicy: reconciledEvidence.type },
+      })
+    }
+    return reconciledEvidence
   }
 
   // Detection is independent of INDEX's observation, so a false index flag
@@ -1039,13 +1081,46 @@ export function placeholderWorkerRow(planned: PlannedRow): WorkerRow {
   }
 }
 
+/** Below this many options-bearing rows a document has no meaningful shape. */
+const MIN_ROWS_FOR_OPTION_MODE = 4
+
 /**
- * Worker rows the transcription model clearly cut short: the blueprint says
- * the question has options, but fewer than two came back. No multiple-choice
- * item — not even True/False — has one option, so <2 is an unambiguous
- * under-transcription (the weakest model abbreviating a long chunk), never a
- * genuinely short question. Partial drops (3–4 of 5) are indistinguishable
- * from real short questions and are left to the chunk-size lever, not guessed.
+ * The option count most of this document's rows share, or null when they
+ * disagree too much for it to mean anything (a mixed paper). Only rows that
+ * already look like MCQs vote, so the very rows under suspicion of being cut
+ * to one option cannot drag the norm down.
+ */
+export function modalOptionCount(rows: readonly WorkerRow[]): number | null {
+  const counts = rows.map((row) => row.options.length).filter((n) => n >= 2)
+  if (counts.length < MIN_ROWS_FOR_OPTION_MODE) return null
+  const tally = new Map<number, number>()
+  for (const count of counts) tally.set(count, (tally.get(count) ?? 0) + 1)
+  let mode = 0
+  let best = 0
+  for (const [count, hits] of tally) {
+    if (hits > best || (hits === best && count > mode)) {
+      mode = count
+      best = hits
+    }
+  }
+  return best * 2 >= counts.length ? mode : null
+}
+
+/**
+ * Worker rows the transcription model clearly cut short. Two rules:
+ *
+ * 1. The blueprint says the question has options but fewer than two came back.
+ *    No multiple-choice item — not even True/False — has one option, so <2 is
+ *    an unambiguous under-transcription (the weakest model abbreviating a long
+ *    chunk), never a genuinely short question.
+ * 2. The row's options are the last thing on their page AND it came back with
+ *    fewer options than the document's own norm. On its own, a partial drop
+ *    (3 of 4) is indistinguishable from a real short question — which is why
+ *    rule 1 stopped there — but at a page boundary it is not: the options were
+ *    printed across the break and only the page-N part was transcribed
+ *    (confirmed 2026-07-30, `pageBoundaryOptionRowIds`). Geometry alone would
+ *    fire on every complete last-question-on-a-page, and the count alone would
+ *    fire on every genuinely short question, so both are required.
  */
 export function underTranscribedRowIds(
   blueprint: Blueprint,
@@ -1056,8 +1131,16 @@ export function underTranscribedRowIds(
       .filter((row) => row.regions.options !== null)
       .map((row) => row.id),
   )
+  const atPageBreak = new Set(pageBoundaryOptionRowIds(blueprint))
+  const mode = modalOptionCount(rows)
   return rows
-    .filter((row) => hasOptions.has(row.id) && row.options.length < 2)
+    .filter((row) => {
+      if (!hasOptions.has(row.id)) return false
+      if (row.options.length < 2) return true
+      return (
+        mode !== null && atPageBreak.has(row.id) && row.options.length < mode
+      )
+    })
     .map((row) => row.id)
 }
 
@@ -1067,6 +1150,13 @@ export function underTranscribedRowIds(
  * replaces the clipped one (never a shorter one — a re-ask that came back worse
  * is discarded). Rows still short afterward are left untouched and flagged
  * downstream, never silently shipped.
+ *
+ * A row suspected of running off the bottom of its page also gets the NEXT
+ * page — image and `source_pages` — because no image of page N can contain the
+ * options printed on page N+1. That widening is deliberately confined to this
+ * re-ask: doing it in the blueprint would put an extra page image into every
+ * worker chunk of every run, and the tutor pays for those in their own free-tier
+ * quota. Here it costs one small request per genuinely suspect row.
  */
 async function repairUnderTranscribedRows(
   runId: string,
@@ -1089,11 +1179,22 @@ async function repairUnderTranscribedRows(
   })
   const plannedById = new Map(blueprint.planned_rows.map((row) => [row.id, row]))
   const byId = new Map(rows.map((row) => [row.id, row]))
+  const atPageBreak = new Set(pageBoundaryOptionRowIds(blueprint))
   await mapConcurrent(brokenIds, CALL_CONCURRENCY, async (id) => {
     const planned = plannedById.get(id)
     const current = byId.get(id)
     if (planned === undefined || current === undefined) return
-    const reduced = buildReducedBlueprint(blueprint, [planned])
+    const optionsPage = planned.regions.options?.page
+    const forWorker =
+      atPageBreak.has(id) && optionsPage !== undefined
+        ? {
+            ...planned,
+            source_pages: [
+              ...new Set([...(planned.source_pages ?? []), optionsPage + 1]),
+            ].sort((a, b) => a - b),
+          }
+        : planned
+    const reduced = buildReducedBlueprint(blueprint, [forWorker])
     const images = [
       ...(await pageImages(runId, chunkPages(reduced).map((page) => page - 1))),
       ...(await cropImages(runId, reduced.assets.map((asset) => asset.output_path))),
@@ -1102,7 +1203,7 @@ async function repairUnderTranscribedRows(
       call(controller, runId, buildWorkerRequest(reduced, images, workerModel), signal),
     )
     if (wasTruncated(response.finishReason)) return
-    const validation = validateWorkerChunk(response.text, [planned])
+    const validation = validateWorkerChunk(response.text, [forWorker])
     if (validation.ok && validation.rows[0] !== undefined &&
         validation.rows[0].options.length > current.options.length) {
       byId.set(id, validation.rows[0])
@@ -1406,6 +1507,22 @@ export async function executeRun(
         .filter((planned) => planned.regions.options !== null)
         .map((planned) => planned.id),
     )
+    // Rows whose options end a page and came back short of the document's own
+    // norm, and that the re-ask did not recover. Measured 2026-07-30 on
+    // `IM Final MCQ 6th 2025.pdf`: the detector named exactly the 7 rows at
+    // risk (one per page, no false positives) and the worker still returned
+    // 2 of 4 options for Q23 and 3 of 4 for Q11 — the printed list continues at
+    // the top of the next page and it transcribed only the part on this one.
+    // Flagging is the guarantee: a truncated question must never ship as if it
+    // were whole. It matters most on an ANSWERED exam, where such a row would
+    // otherwise carry a real correct_index into an option list missing the
+    // right answer, and pass unflagged.
+    const boundaryIds = new Set(pageBoundaryOptionRowIds(blueprint))
+    const cutAtPageBreak = new Set(
+      underTranscribedRowIds(blueprint, worker.rows).filter((id) =>
+        boundaryIds.has(id),
+      ),
+    )
     const rows: MergedRow[] = resolvedRows.map((row) => {
       const normalized = stripEnumerationLabels(row.options)
       const incompleteOptions =
@@ -1429,18 +1546,22 @@ export async function executeRun(
         question,
         options: normalized.options,
         // A one-option row is the most urgent defect (the tutor must restore
-        // the choices), so it wins over an existing policy flag; then empties,
-        // then ambiguous labels. The blank-answer flag re-surfaces on its own
-        // (correct_index stays empty), so nothing is lost.
+        // the choices), so it wins over an existing policy flag; a list cut off
+        // by a page break is the same defect one step milder and wins for the
+        // same reason; then empties, then ambiguous labels. The blank-answer
+        // flag re-surfaces on its own (correct_index stays empty), so nothing
+        // is lost.
         needs_review: incompleteOptions
           ? 'incomplete_options'
-          : row.needs_review !== ''
-            ? row.needs_review
-            : emptyQuestion
-              ? 'empty_question'
-              : normalized.ambiguous
-                ? 'possible_merge'
-                : '',
+          : cutAtPageBreak.has(row.id)
+            ? 'options_cut_at_page_break'
+            : row.needs_review !== ''
+              ? row.needs_review
+              : emptyQuestion
+                ? 'empty_question'
+                : normalized.ambiguous
+                  ? 'possible_merge'
+                  : '',
       }
     })
 

@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { placeholderWorkerRow, repairTargetPages, underTranscribedRowIds } from './executor'
+import {
+  keepIndexObservedMarks,
+  modalOptionCount,
+  placeholderWorkerRow,
+  repairTargetPages,
+  underTranscribedRowIds,
+} from './executor'
 import { mergeRows, validateWorkerChunk } from './merge'
 import { makeBlueprint, makePlannedRow, makeWorkerRow } from './fixtures'
+import type { EvidenceMap } from './index-pass'
+import type { Blueprint, PlannedRow } from './types'
 
 describe('repairTargetPages', () => {
   const exam = new Set([1, 2, 3, 4, 5])
@@ -64,6 +72,150 @@ describe('underTranscribedRowIds', () => {
     const blueprint = makeBlueprint({ planned_rows: [p1] })
     const rows = [makeWorkerRow(p1, { options: ['True', 'False'] })]
     expect(underTranscribedRowIds(blueprint, rows)).toEqual([])
+  })
+})
+
+/**
+ * The 2026-07-30 page-boundary defect: a question's prompt and first options
+ * print at the bottom of page N and the rest continue at the top of page N+1,
+ * and only the page-N part is transcribed. Geometry alone would fire on every
+ * complete last-question-on-a-page; a low option count alone would fire on
+ * every genuinely short question. Both together are the signal.
+ */
+describe('underTranscribedRowIds at a page boundary', () => {
+  function stacked(id: string, page: number, top: number, bottom: number): PlannedRow {
+    return makePlannedRow(id, {
+      regions: {
+        case_stem: null,
+        question_prompt: { page, box_2d: [top, 51, top + 40, 935] },
+        options: { page, box_2d: [top + 41, 51, bottom, 935] },
+        answer_evidence: null,
+      },
+    })
+  }
+
+  /** Four rows down page 1 of a two-page exam; row '4' ends the page. */
+  function page1Exam(): { blueprint: Blueprint; rows: PlannedRow[] } {
+    const rows = [
+      stacked('1', 1, 60, 200),
+      stacked('2', 1, 260, 400),
+      stacked('3', 1, 460, 600),
+      stacked('4', 1, 660, 940),
+    ]
+    const blueprint = makeBlueprint({ planned_rows: rows })
+    blueprint.document_profile.page_count = 2
+    return { blueprint, rows }
+  }
+
+  const four = ['Alpha', 'Beta', 'Gamma', 'Delta']
+
+  it('flags the last row on a page that came back short of the document norm', () => {
+    const { blueprint, rows } = page1Exam()
+    const worker = [
+      makeWorkerRow(rows[0], { options: four }),
+      makeWorkerRow(rows[1], { options: four }),
+      makeWorkerRow(rows[2], { options: four }),
+      // Options a–c transcribed; d was printed at the top of page 2.
+      makeWorkerRow(rows[3], { options: ['Alpha', 'Beta', 'Gamma'] }),
+    ]
+    expect(underTranscribedRowIds(blueprint, worker)).toEqual(['4'])
+  })
+
+  it('leaves the same row alone when it came back complete', () => {
+    const { blueprint, rows } = page1Exam()
+    const worker = rows.map((row) => makeWorkerRow(row, { options: four }))
+    expect(underTranscribedRowIds(blueprint, worker)).toEqual([])
+  })
+
+  it('leaves a short row alone when it is NOT at a page boundary', () => {
+    // Row '2' has questions below it on the page, so its three options were
+    // printed in full — a genuinely short question, not a clipped one.
+    const { blueprint, rows } = page1Exam()
+    const worker = [
+      makeWorkerRow(rows[0], { options: four }),
+      makeWorkerRow(rows[1], { options: ['Alpha', 'Beta', 'Gamma'] }),
+      makeWorkerRow(rows[2], { options: four }),
+      makeWorkerRow(rows[3], { options: four }),
+    ]
+    expect(underTranscribedRowIds(blueprint, worker)).toEqual([])
+  })
+
+  it('spends nothing on a document with no dominant option count', () => {
+    // A mixed paper gives no norm to be short of, so only the <2 rule runs.
+    const { blueprint, rows } = page1Exam()
+    const worker = [
+      makeWorkerRow(rows[0], { options: ['A', 'B'] }),
+      makeWorkerRow(rows[1], { options: ['A', 'B', 'C'] }),
+      makeWorkerRow(rows[2], { options: four }),
+      makeWorkerRow(rows[3], { options: ['A', 'B', 'C'] }),
+    ]
+    expect(underTranscribedRowIds(blueprint, worker)).toEqual([])
+  })
+})
+
+describe('modalOptionCount', () => {
+  const row = (n: number) =>
+    makeWorkerRow(makePlannedRow('x'), {
+      options: Array.from({ length: n }, (_, i) => `opt${i}`),
+    })
+
+  it('reads the norm of a uniform paper', () => {
+    expect(modalOptionCount([row(4), row(4), row(4), row(4), row(3)])).toBe(4)
+  })
+
+  it('is null when too few rows have options to mean anything', () => {
+    expect(modalOptionCount([row(4), row(4), row(4)])).toBeNull()
+  })
+
+  it('is null when no count holds a majority', () => {
+    expect(modalOptionCount([row(2), row(3), row(4), row(5), row(6)])).toBeNull()
+  })
+
+  it('ignores the very rows under suspicion, so they cannot lower the norm', () => {
+    // Four one-option rows would otherwise be the mode.
+    expect(
+      modalOptionCount([row(1), row(1), row(1), row(1), row(5), row(5), row(5), row(5)]),
+    ).toBe(5)
+  })
+})
+
+/**
+ * The 2026-07-30 mixed-evidence defect: EVIDENCE only ever reads the attached
+ * KEY pages, but its type became the document policy — and `forceAnswer` blanks
+ * every row on `uncertain`/`no_answer_key` before any per-row logic runs.
+ */
+describe('keepIndexObservedMarks', () => {
+  const evidence = (type: EvidenceMap['type']): EvidenceMap => ({
+    type,
+    markingStyle: 'circle',
+    evidence: [{ ref: 'w0q0', region: null, state: 'illegible' }],
+  })
+
+  it('keeps the answers INDEX saw when the attached key is unreadable', () => {
+    expect(keepIndexObservedMarks(evidence('uncertain'), true).type).toBe('mixed')
+  })
+
+  it('does the same when the key pages turn out to hold no key at all', () => {
+    expect(keepIndexObservedMarks(evidence('no_answer_key'), true).type).toBe('mixed')
+  })
+
+  it('carries the per-ref key evidence through untouched', () => {
+    const result = keepIndexObservedMarks(evidence('uncertain'), true)
+    expect(result.evidence).toEqual(evidence('uncertain').evidence)
+    expect(result.markingStyle).toBe('circle')
+  })
+
+  it('leaves the policy alone when INDEX saw no marks on the exam pages', () => {
+    expect(keepIndexObservedMarks(evidence('uncertain'), false).type).toBe('uncertain')
+    expect(keepIndexObservedMarks(evidence('no_answer_key'), false).type).toBe(
+      'no_answer_key',
+    )
+  })
+
+  it('never downgrades a key the EVIDENCE stage could read', () => {
+    expect(keepIndexObservedMarks(evidence('separate_key'), true).type).toBe('separate_key')
+    expect(keepIndexObservedMarks(evidence('inline_marks'), true).type).toBe('inline_marks')
+    expect(keepIndexObservedMarks(evidence('mixed'), true).type).toBe('mixed')
   })
 })
 

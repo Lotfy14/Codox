@@ -26,6 +26,14 @@ answer is on other pages. It keeps the richer `EvidenceState` vocabulary in
 the EVIDENCE stage, which can still report a key mark as `ambiguous` or
 `illegible`. On-page = binary; separate key = its own path.
 
+**A document can be BOTH** — an attached key PDF *and* answers marked on the
+exam pages. EVIDENCE only ever reads the key pages, so it cannot see the
+on-page marks; when it reports `uncertain` or `no_answer_key`,
+`keepIndexObservedMarks` (executor) reconciles that with INDEX's on-page
+observation and the document policy becomes `mixed`, not the key's verdict.
+Without it, an unreadable key blanked every row in the document, including the
+ones INDEX had read correctly (fixed 2026-07-30).
+
 ## Known layouts
 
 | Source | Capture | How the answer is shown | answer_present |

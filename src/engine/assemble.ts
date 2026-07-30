@@ -33,6 +33,57 @@ function evidencePolicy(state: string, region: Region | null) {
 const OPTIONS_FOOTER_LIMIT = 975
 
 /**
+ * The top edge of the nearest question that starts below this row's options in
+ * the same column on the same page, or null when nothing follows it there —
+ * i.e. these options are the last thing on their page. Column membership is
+ * x-overlap, so a neighboring column's question is never the bound.
+ */
+function nextQuestionTopBelowOptions(
+  row: PlannedRow,
+  rows: readonly PlannedRow[],
+): number | null {
+  const opts = row.regions.options
+  if (opts === null) return null
+  const [oy0, ox0, , ox1] = opts.box_2d
+  let nextTop: number | null = null
+  for (const other of rows) {
+    if (other === row) continue
+    for (const region of [other.regions.case_stem, other.regions.question_prompt]) {
+      if (region === null || region.page !== opts.page) continue
+      const [ry0, rx0, , rx1] = region.box_2d
+      const sameColumn = rx1 > ox0 && rx0 < ox1
+      if (ry0 > oy0 && (nextTop === null || ry0 < nextTop) && sameColumn) nextTop = ry0
+    }
+  }
+  return nextTop
+}
+
+/**
+ * Rows whose printed options may CONTINUE onto the next page. A question's
+ * options run from its own prompt to the next question on the page; when
+ * nothing follows on that page, the list may simply have been cut by the page
+ * break and resume at the top of page N+1 (confirmed 2026-07-30 on two
+ * documents — "safest drug for hypertension in pregnancy" lost option d, "iron
+ * regulatory hormone" lost c and d, both at a page boundary).
+ *
+ * `regions.options` is ONE Region on ONE page and cannot express a spanning
+ * list, so this geometry is the only handle code has on it. It is a suspicion,
+ * not a defect: the last question on a page usually is complete. The executor
+ * pairs it with an option-count anomaly before spending a re-ask.
+ */
+export function pageBoundaryOptionRowIds(blueprint: Blueprint): string[] {
+  const rows = blueprint.planned_rows
+  const lastPage = blueprint.document_profile.page_count
+  return rows.flatMap((row) => {
+    const opts = row.regions.options
+    // `page_count` counts exam pages only, so page+1 within it is a real
+    // page the options could have continued onto.
+    if (opts === null || opts.page >= lastPage) return []
+    return nextQuestionTopBelowOptions(row, rows) === null ? [row.id] : []
+  })
+}
+
+/**
  * Deterministic options-box repair. The BOX role is the weakest model and,
  * on single-page BOX with gemini-3.1-flash-lite, sometimes draws a row's
  * options box around only the FIRST option — a sentence-completion stem whose
@@ -44,27 +95,23 @@ const OPTIONS_FOOTER_LIMIT = 975
  * next question on the same page, so code — not the model — bounds them here:
  * grow (never shrink) each row's options box down to the nearest following
  * prompt/case-stem in the same column, or a footer margin when it is the last
- * on the page. Column membership is enforced by x-overlap so a neighboring
- * column's question cannot cap a box early. The box is also widened to the
- * question's own prompt column so right-shifted or wrapped options are not
- * clipped horizontally. Never crosses into another question's text: the bound
- * is that question's top, and a following case stem stops the box before it.
+ * on the page. The box is also widened to the question's own prompt column so
+ * right-shifted or wrapped options are not clipped horizontally. Never crosses
+ * into another question's text: the bound is that question's top, and a
+ * following case stem stops the box before it.
+ *
+ * This repair is bounded WITHIN one page by construction. Options that continue
+ * onto the next page are a different defect — see `pageBoundaryOptionRowIds`.
  */
 function extendClippedOptionBoxes(rows: PlannedRow[]): void {
   for (const row of rows) {
     const opts = row.regions.options
     if (opts === null) continue
     const [oy0, ox0, oy1, ox1] = opts.box_2d
-    let nextTop = OPTIONS_FOOTER_LIMIT
-    for (const other of rows) {
-      if (other === row) continue
-      for (const region of [other.regions.case_stem, other.regions.question_prompt]) {
-        if (region === null || region.page !== opts.page) continue
-        const [ry0, rx0, , rx1] = region.box_2d
-        const sameColumn = rx1 > ox0 && rx0 < ox1
-        if (ry0 > oy0 && ry0 < nextTop && sameColumn) nextTop = ry0
-      }
-    }
+    const below = nextQuestionTopBelowOptions(row, rows)
+    // A following question inside the footer zone must not drag the box down
+    // into it; the footer limit is always the floor.
+    const nextTop = Math.min(below ?? OPTIONS_FOOTER_LIMIT, OPTIONS_FOOTER_LIMIT)
     const prompt = row.regions.question_prompt
     const inColumn = prompt !== null && prompt.page === opts.page
     const newX0 = inColumn ? Math.min(ox0, prompt.box_2d[1]) : ox0

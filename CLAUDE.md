@@ -41,6 +41,10 @@ freely — this is a map, not a rulebook.
   accepted only as a number in range for that row's options. Blanked rows
   carry a `needs_review` reason (`no_visible_answer`, `key_unclear`,
   `index_out_of_range`, `not_mcq`, …) that Review shows the tutor.
+  `forceAnswer` also has a **document-level** veto: policy `no_answer_key` or
+  `uncertain` blanks every row before any per-row logic. That veto is kept, but
+  the policy feeding it is now honest about documents that carry both an
+  attached key and on-page marks — see `keepIndexObservedMarks` below.
 - **Ask AI** (`src/engine/solver.ts`, Review only) answers from model
   knowledge. It writes to the `ai-answers` artifact, never to `merged-rows`;
   the answer reaches the row when the tutor approves it, as an ordinary
@@ -262,6 +266,78 @@ non-numeric or out-of-range index, and still discards the worker's
 
 **Open:** unmeasured whether the instruction raises answer recall without
 raising wrong answers. Judge it on real documents.
+
+*Mixed evidence: an unreadable key no longer blanks the whole document
+(2026-07-30):* the EVIDENCE stage only ever reads the **attached key pages**,
+yet its parsed `type` became the whole document's `answer_policy`, and
+`forceAnswer`'s document-level veto blanks EVERY row on `uncertain` /
+`no_answer_key` before any per-row logic runs. So a PDF carrying both a key
+file *and* answers marked on its own pages lost every answer INDEX had
+correctly read whenever the key itself came back unreadable — reported on a
+folder mixing keyed and inline-marked exams. (Per-PDF key pairing,
+`putAnswerKeyPdf`/`answerKeyFor`, was verified sound and is not the cause.)
+`keepIndexObservedMarks` (`executor.ts`, pure, called only in `runEvidence`)
+now reconciles the two observations: when the key reads `uncertain` or
+`no_answer_key` **and** INDEX saw marks on the exam pages, the document type
+becomes `mixed`. That is the honest label for "some answers here, a key over
+there", it permits extraction, and it hands the decision back to each row's own
+policy — a row with no observed evidence still blanks `no_visible_answer`, an
+illegible per-ref key state still blanks `key_unclear`, and every worker value
+is still range-checked. The veto itself is kept; only the label it acts on got
+honest. Fixing the label also fixes the worker, which is told the document
+policy and would otherwise read `uncertain` and leave answers blank. Per-ref key
+evidence passes through untouched, and a run where this fires logs
+`engine.evidence.mixed`. **Measured 2026-07-30** on `IM Final MCQ 6th 2025.pdf`
+with a deliberately unreadable one-page key attached: the log recorded
+`{keyPolicy: "no_answer_key", documentPolicy: "mixed"}`, the blueprint carried
+`mixed`, and 11 of 47 rows kept an answer that the pre-fix path would have
+blanked — all 47 of them. **Still open:** the separate-key path has no
+end-to-end verification on a REAL key document (`ANSWER_LAYOUTS.md`, *Still
+uncovered*) — treat a keyed run's output as unproven, not as a regression.
+
+*Options split across a page break (2026-07-30):* a question's prompt and first
+options print at the bottom of page N and the rest continue at the top of page
+N+1; only the page-N part was transcribed (confirmed on three questions across
+two documents — one lost option d, one lost c and d). Nothing caught it:
+`extendClippedOptionBoxes` is bounded within one page by
+`OPTIONS_FOOTER_LIMIT`, `regions.options` is ONE `Region` on ONE page and
+cannot express a spanning list, and `underTranscribedRowIds` only re-asked rows
+with **fewer than 2** options — a row that came back with 2 of 4 looked like a
+legitimate True/False. The fix is deterministic, no prompt change:
+`pageBoundaryOptionRowIds` (`assemble.ts`) names the rows whose options are the
+last thing on their page with a page after it, and `underTranscribedRowIds`
+re-asks such a row only when it ALSO came back with fewer options than the
+document's own `modalOptionCount`. Both signals are required — geometry alone
+fires on every complete last-question-on-a-page, a low count alone fires on
+every genuinely short question. A row the re-ask does NOT recover is flagged
+`options_cut_at_page_break`, which is the real guarantee: a truncated question
+never ships as if it were whole. A document with no dominant option count
+(`modalOptionCount` returns null) keeps only the old <2 rule.
+
+**Measured 2026-07-30** across three live runs of `IM Final MCQ 6th 2025.pdf`
+(every page of it ends with a question that continues overleaf). Detection was
+exact — 7 suspects, one per page, zero false positives, correctly skipping the
+last page and correctly leaving the genuinely-3-option rows 15 and 45 alone.
+Recovery is real but not reliable: rows 11 (3→4) and 41 (2→4) were recovered,
+row 23 failed three times and was flagged. The flag earned itself immediately —
+row 23 came back with 2 of 4 options AND a filled `correct_index`, i.e. a
+question that would have exported looking complete while missing the right
+answer.
+
+*The `source_pages` widening is NOT the operative fix* — measured, do not
+re-derive. Chunks already contained the continuation page every time (chunk 2 =
+rows 21–30, pages [4,5]), and row 41 was transcribed correctly from those same
+images while row 23 was not. The worker follows the single-page
+`regions.options` and stops; the image was never missing. The widening is kept
+only because a boundary row that is last in its chunk can genuinely lack the
+next page, and it is confined to the re-ask because widening every chunk would
+add a page image to every worker request of every run, out of the tutor's own
+free-tier quota. **Open:** the AUDIT checks options against the same
+single-page regions, so an option correctly recovered from page N+1 reads to it
+as an invention (observed: *"Option 'Rigidity' was added by worker"* — it is
+printed at the top of page 3) and contributes to `notSafeToImport`. Not worked
+around: the AUDIT prompt is pinned, and suppressing "options added" failures in
+code would also suppress genuine invention reports. Owner call.
 
 *Matching-question policy (owner-approved 2026-07-18):* a true matching
 question — one row whose answer is a set of pairings — cannot be carried by a

@@ -138,6 +138,32 @@ describe('answer-policy forcing', () => {
     })
   }
 
+  it('a "mixed" document decides per row, not all-or-nothing', () => {
+    // What a folder-mixing run now produces (2026-07-30): the attached key was
+    // unreadable, but INDEX saw marks on the exam pages. Row 1 has an observed
+    // answer and keeps it; row 2 has none and still blanks — the document-level
+    // policy no longer overrides either.
+    const blueprint = makeEvidenceBlueprint()
+    blueprint.document_profile.answer_policy.type = 'mixed'
+    blueprint.planned_rows[1].correct_index_policy = {
+      type: 'blank_no_visible_answer',
+      value: '',
+      needs_review: 'no_visible_answer',
+    }
+    const workerRows = blueprint.planned_rows.map((planned) =>
+      makeWorkerRow(planned, { correct_index: '2' }),
+    )
+    const result = mergeRows(blueprint, workerRows)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.rows.map((row) => row.correct_index)).toEqual(['2', ''])
+      expect(result.rows.map((row) => row.needs_review)).toEqual([
+        '',
+        'no_visible_answer',
+      ])
+    }
+  })
+
   it('an evidence policy accepts a valid worker index', () => {
     const blueprint = makeEvidenceBlueprint()
     const workerRows = blueprint.planned_rows.map((planned) =>

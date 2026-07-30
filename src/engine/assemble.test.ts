@@ -1,8 +1,9 @@
 ﻿import { describe, expect, it } from 'vitest'
-import { assembleBlueprint, type AssembleInput } from './assemble'
+import { assembleBlueprint, pageBoundaryOptionRowIds, type AssembleInput } from './assemble'
 import type { ReconciledQuestion } from './enumerate'
 import type { BoxedQuestion } from './index-pass'
-import type { Box2d, Region } from './types'
+import { makeBlueprint, makePlannedRow } from './fixtures'
+import type { Blueprint, Box2d, PlannedRow, Region } from './types'
 
 function question(ref: string, label: string, over: Partial<ReconciledQuestion> = {}): ReconciledQuestion {
   return {
@@ -172,6 +173,99 @@ describe('assembleBlueprint', () => {
     }
     const [row] = assembleBlueprint(input).planned_rows
     expect(row.regions.answer_evidence).toEqual({ page: 1, box_2d: [0, 0, 1000, 1000] })
+  })
+})
+
+describe('pageBoundaryOptionRowIds', () => {
+  /** A row whose prompt and options sit at the given vertical band on `page`. */
+  function stacked(id: string, page: number, top: number, bottom: number): PlannedRow {
+    return makePlannedRow(id, {
+      regions: {
+        case_stem: null,
+        question_prompt: { page, box_2d: [top, 51, top + 40, 935] },
+        options: { page, box_2d: [top + 41, 51, bottom, 935] },
+        answer_evidence: null,
+      },
+    })
+  }
+
+  function blueprintOf(rows: PlannedRow[], pageCount: number): Blueprint {
+    const blueprint = makeBlueprint({ planned_rows: rows })
+    blueprint.document_profile.page_count = pageCount
+    return blueprint
+  }
+
+  it('flags the last question on a page that has a page after it', () => {
+    // q3 is the bottom of page 1; its printed options may run onto page 2.
+    const rows = [
+      stacked('1', 1, 100, 240),
+      stacked('2', 1, 300, 440),
+      stacked('3', 1, 500, 900),
+    ]
+    expect(pageBoundaryOptionRowIds(blueprintOf(rows, 2))).toEqual(['3'])
+  })
+
+  it('never flags a row on the final page — there is nothing to continue onto', () => {
+    const rows = [stacked('1', 2, 100, 240), stacked('2', 2, 500, 900)]
+    expect(pageBoundaryOptionRowIds(blueprintOf(rows, 2))).toEqual([])
+  })
+
+  it('flags the last row of every page independently', () => {
+    const rows = [
+      stacked('1', 1, 100, 240),
+      stacked('2', 1, 500, 900),
+      stacked('3', 2, 100, 240),
+      stacked('4', 2, 500, 900),
+    ]
+    // Page 3 exists, so page 2's last row is a suspect too.
+    expect(pageBoundaryOptionRowIds(blueprintOf(rows, 3))).toEqual(['2', '4'])
+  })
+
+  it('ignores a row with no options region', () => {
+    const rows = [
+      makePlannedRow('1', {
+        regions: {
+          case_stem: null,
+          question_prompt: { page: 1, box_2d: [100, 51, 140, 935] },
+          options: null,
+          answer_evidence: null,
+        },
+      }),
+    ]
+    expect(pageBoundaryOptionRowIds(blueprintOf(rows, 2))).toEqual([])
+  })
+
+  it('does not treat a row capped by a NEIGHBOURING column as last on the page', () => {
+    // Left column q1 is followed by q2; the right column's q3 sits lower but
+    // belongs to another column, so it must not decide q1 either way.
+    const rows: PlannedRow[] = [
+      makePlannedRow('1', {
+        regions: {
+          case_stem: null,
+          question_prompt: { page: 1, box_2d: [100, 20, 140, 480] },
+          options: { page: 1, box_2d: [141, 20, 300, 480] },
+          answer_evidence: null,
+        },
+      }),
+      makePlannedRow('2', {
+        regions: {
+          case_stem: null,
+          question_prompt: { page: 1, box_2d: [400, 20, 440, 480] },
+          options: { page: 1, box_2d: [441, 20, 900, 480] },
+          answer_evidence: null,
+        },
+      }),
+      makePlannedRow('3', {
+        regions: {
+          case_stem: null,
+          question_prompt: { page: 1, box_2d: [200, 520, 240, 980] },
+          options: { page: 1, box_2d: [241, 520, 900, 980] },
+          answer_evidence: null,
+        },
+      }),
+    ]
+    // q1 is capped by q2 (same column). q2 and q3 each end their own column.
+    expect(pageBoundaryOptionRowIds(blueprintOf(rows, 2))).toEqual(['2', '3'])
   })
 })
 
