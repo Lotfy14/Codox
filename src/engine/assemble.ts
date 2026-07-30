@@ -155,14 +155,36 @@ export function assembleBlueprint(input: AssembleInput): Blueprint {
     refToId.set(question.ref, id)
     const keyEvidence = evidence.get(question.ref)
     // The answer is read off the page, never from a BOX region. A separate
-    // answer key keeps its own key-page region (and richer state); an on-page
-    // answer_present true just needs SOME non-null region to permit extraction
-    // and to satisfy blueprint validation, so it uses the whole page — the
-    // worker already sees the whole page. BOX's inline_evidence is deliberately
-    // ignored: the box path is display-only now. answer_present false -> no
-    // region -> blank, never guessed.
-    const answerRegion = keyEvidence?.region ?? (question.answerPresent ? wholePage : null)
-    const answerState = keyEvidence?.state ?? (question.answerPresent ? 'inline' : 'none')
+    // answer key keeps its own key-page region and its richer state, and still
+    // decides those rows. BOX's inline_evidence is deliberately ignored: the
+    // box path is display-only now.
+    //
+    // For an ON-PAGE answer the region is the whole page — a permission and
+    // validation placeholder, not a located mark, because the worker already
+    // sees the whole page. INDEX's `answer_present` no longer decides whether
+    // that permission is granted (measured 2026-07-30, below); the row always
+    // permits extraction and the WORKER's own reading is the authority.
+    //
+    // Why: `answer_present` was a SECOND perceptual judgement, made by the
+    // stage least able to make it. INDEX emits ten fields for every question in
+    // one enumeration and never needs to look at the margins; the worker reads
+    // the page and, since the 2026-07-30 prompt edit, is told to find the mark
+    // and to leave `correct_index` empty only when it genuinely cannot read
+    // one. On a document with a large handwritten answer letter beside every
+    // question, INDEX returned `answer_present: false` for 49 of 50 questions —
+    // yet the same model, same prompt, same page image, asked about ONE page at
+    // a time, returned true for every question on it. The gate was throwing
+    // away answers that were plainly on the page and forbidding the worker from
+    // even looking.
+    //
+    // Nothing is guessed by removing it: `forceAnswer` still forces blanks per
+    // the document policy, still rejects a non-numeric or out-of-range index,
+    // still discards the worker's `needs_review`, and a worker that reads no
+    // mark yields exactly the same `no_visible_answer` flag this gate produced.
+    // The NEVER-GUESS doctrine this gate predates was retired 2026-07-30.
+    // `answer_present` is still parsed and checkpointed as a diagnostic.
+    const answerRegion = keyEvidence === undefined ? wholePage : keyEvidence.region
+    const answerState = keyEvidence === undefined ? 'inline' : keyEvidence.state
     const hasCase = question.caseStemKey !== null && geometry.caseStem !== null
     rows.push({
       id,

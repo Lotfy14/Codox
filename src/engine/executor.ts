@@ -809,9 +809,21 @@ async function stepPlanAndValidate(
     return stepLegacyPlanAndValidate(runId, controller, signal, models.index)
   }
 
+  // Kept as an observation, no longer a gate — see the `answer_present` note in
+  // `assemble.ts`. It still tells `keepIndexObservedMarks` whether the exam
+  // pages looked marked, which is a positive signal only: it can turn an
+  // unreadable key into `mixed`, never the reverse.
+  const indexSawMarks = reconciled.questions.some((row) => row.answerPresent)
+  // The no-separate-key default now always PERMITS extraction. Whether an
+  // answer is really on the page is decided by the worker reading it, not by
+  // INDEX's upstream guess — the same reasoning as the per-row change, applied
+  // at document level, because `forceAnswer`'s document veto would otherwise
+  // re-impose exactly the gate that was just removed. An exam with no answers
+  // anywhere still ends up all-blank and all-flagged: every worker row comes
+  // back empty and `forceAnswer` stamps `no_visible_answer`, which is the same
+  // outcome `no_answer_key` produced, reached by looking instead of guessing.
   const defaultEvidence: EvidenceMap = {
-    type: reconciled.questions.some((row) => row.answerPresent) ? 'inline_marks' : 'no_answer_key',
-    markingStyle: '', evidence: [],
+    type: 'inline_marks', markingStyle: '', evidence: [],
   }
   const runEvidence = async (): Promise<EvidenceMap> => {
     if (answerKeyPageCount <= 0 || examPageCount === undefined) return defaultEvidence
@@ -823,10 +835,7 @@ async function stepPlanAndValidate(
     ), signal))
     const parsed = wasTruncated(response.finishReason) ? undefined : parseEvidenceMap(response.text)
     const observed = parsed?.ok ? parsed.value : defaultEvidence
-    const reconciledEvidence = keepIndexObservedMarks(
-      observed,
-      defaultEvidence.type === 'inline_marks',
-    )
+    const reconciledEvidence = keepIndexObservedMarks(observed, indexSawMarks)
     if (reconciledEvidence.type !== observed.type) {
       await logEvent({
         scope: 'engine', level: 'warn', event: 'engine.evidence.mixed', runId,

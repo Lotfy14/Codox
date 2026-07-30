@@ -34,11 +34,14 @@ for why each stack piece was chosen.
 Where `correct_index` comes from, as the code actually works today. Change it
 freely — this is a map, not a rulebook.
 
-- **Engine path.** INDEX reports `answer_present` per question; `assemble.ts`
-  turns that into the row's `correct_index_policy`; the worker reads the mark
-  off the page and `forceAnswer` (`merge.ts`) applies the policy at merge —
-  a policy that says no answer exists blanks the row, and a filled value is
-  accepted only as a number in range for that row's options. Blanked rows
+- **Engine path.** For an on-page answer the **worker's reading is the only
+  perceptual authority**: every row permits extraction, the worker reads the
+  mark off the page, and `forceAnswer` (`merge.ts`) applies the policy at
+  merge — a filled value is accepted only as a number in range for that row's
+  options, and a worker that reads no mark yields `no_visible_answer`. A
+  **separate answer key** still decides its own rows through EVIDENCE's per-ref
+  state. INDEX's `answer_present` is now an observation only, NOT a gate (see
+  the 2026-07-30 note under "Engine semantics"). Blanked rows
   carry a `needs_review` reason (`no_visible_answer`, `key_unclear`,
   `index_out_of_range`, `not_mcq`, …) that Review shows the tutor.
   `forceAnswer` also has a **document-level** veto: policy `no_answer_key` or
@@ -266,6 +269,61 @@ non-numeric or out-of-range index, and still discards the worker's
 
 **Open:** unmeasured whether the instruction raises answer recall without
 raising wrong answers. Judge it on real documents.
+
+*`answer_present` demoted from gate to observation (2026-07-30):* INDEX's
+per-question `answer_present` no longer decides whether a row may carry an
+answer. `assemble.ts` gives every on-page row the whole-page permission region
+and `extract_visible_evidence`; `defaultEvidence` is `inline_marks`
+unconditionally (otherwise `forceAnswer`'s document veto re-imposes the gate one
+level up). A **separate answer key is untouched** — EVIDENCE's per-ref state
+still governs those rows, `illegible` still blanks as `key_unclear`.
+
+*Why.* It was a SECOND perceptual judgement made by the stage least able to make
+it. INDEX emits ten fields for every question in one long enumeration and never
+needs to look at the margins; the worker reads the page and, since the
+2026-07-30 prompt edit, is told to find the mark and to leave `correct_index`
+empty only when it genuinely cannot read one. Measured on
+`EOR IM MCQ 2025-194-2nd (2) 1.pdf` — a large handwritten answer letter in the
+margin beside every question, correct and legible — INDEX returned
+`answer_present: false` for **49 of 50**, so 49 rows were blanked before the
+worker was allowed to look. The same model, same prompt, same page image, asked
+about ONE page at a time returned true for every question on it (page 3: 7/7
+three times; page 1: 0/6 with the shipped wording, 5/6 with a relaxed one —
+exactly the five questions that have a letter). Multi-page requests collapse to
+one verdict for the whole response at any window size tested (3 pages: 0/19
+twice; 8 pages: bimodal). So the number was never a per-question observation,
+and gating on it discarded readable answers.
+
+*Nothing is guessed by removing it.* `forceAnswer` still forces blanks per the
+document policy, still rejects a non-numeric or out-of-range index, and still
+discards the worker's `needs_review`; a worker that reads no mark produces the
+identical `no_visible_answer` flag the gate produced, so Review is unchanged. An
+exam with no answers anywhere still ends all-blank and all-flagged — reached by
+looking rather than by guessing. The NEVER-GUESS doctrine this gate predates was
+retired the same day (`9675f54`). `answer_present` is still parsed, checkpointed,
+and still feeds `keepIndexObservedMarks` as a **positive** signal only (it can
+turn an unreadable key into `mixed`, never the reverse). No prompt was edited and
+no call was added — this removes a gate, it does not add a pass.
+
+*The model is not the variable.* Both selectable models behave identically on
+the shape axis: `gemini-3.1-flash-lite` also returns 1/50 on the 8-page window,
+7/7 on page 3 alone and 0/6 on page 1 alone. So this is not fixable by the
+per-step `index` model choice in Customize — it is the task shape, and removing
+the gate is the fix.
+
+*The shipping gate — whether the worker invents answers on a genuinely
+UNANSWERED exam once nothing upstream stops it — was measured and cleared*
+(`scripts/probe-worker-answer.mjs`, the pinned WORKER prompt with post-change
+row policy, on unanswered vs red-margin-answered scans of the SAME exam):
+answered 5/6 and 7/7 filled, unanswered **0/6 and 0/7**. The worker reads marks
+when they exist and abstains completely when they do not. Six of the seven
+page-3 picks are exactly the printed letters; the seventh is Q19, whose fourth
+option is on the next page — the page-boundary defect, which
+`options_cut_at_page_break` catches. Without that guard `forceAnswer` would have
+accepted the in-range index and shipped a wrong answer, so the two 2026-07-30
+fixes depend on each other. Details in `ANSWER_LAYOUTS.md`. **Still open:** a
+full conversion of an unanswered exam at production chunk size (10 rows, several
+page images per worker call) — the probe isolates one page at a time.
 
 *Mixed evidence: an unreadable key no longer blanks the whole document
 (2026-07-30):* the EVIDENCE stage only ever reads the **attached key pages**,

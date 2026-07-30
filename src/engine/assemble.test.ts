@@ -138,7 +138,13 @@ describe('assembleBlueprint', () => {
     expect(rows[1].regions.options?.box_2d).toEqual([351, 51, 975, 935])
   })
 
-  it('answer_present true is extractable; false is blank; both never guessed', () => {
+  it('an on-page row always permits extraction — answer_present no longer gates it', () => {
+    // Changed 2026-07-30: INDEX's answer_present was a second perceptual
+    // judgement made by the stage least able to make it, and its `false` threw
+    // away answers that were plainly on the page (49 of 50 on a document with a
+    // handwritten letter beside every question). Both rows now carry the
+    // whole-page permission region; the WORKER's reading decides, and a worker
+    // that finds no mark still yields `no_visible_answer` at merge.
     const input: AssembleInput = {
       index: {
         questions: [
@@ -151,12 +157,38 @@ describe('assembleBlueprint', () => {
       pageCount: 1,
     }
     const [present, absent] = assembleBlueprint(input).planned_rows
-    // Present: a whole-page evidence region and a policy that permits extraction.
-    expect(present.regions.answer_evidence).toEqual({ page: 1, box_2d: [0, 0, 1000, 1000] })
-    expect(present.correct_index_policy.type).toBe('extract_visible_evidence')
-    // Absent: no region, blank policy, never guessed.
-    expect(absent.regions.answer_evidence).toBeNull()
-    expect(absent.correct_index_policy.type).toBe('blank_no_visible_answer')
+    for (const row of [present, absent]) {
+      expect(row.regions.answer_evidence).toEqual({ page: 1, box_2d: [0, 0, 1000, 1000] })
+      expect(row.correct_index_policy.type).toBe('extract_visible_evidence')
+      expect(row.correct_index_policy.needs_review).toBe('')
+    }
+  })
+
+  it('a separate answer key still decides its own rows', () => {
+    // The key path is untouched: per-ref evidence still governs, and an
+    // illegible key mark still blanks that row.
+    const input: AssembleInput = {
+      index: {
+        questions: [
+          question('q1', '1', { answerPresent: false }),
+          question('q2', '2', { answerPresent: true }),
+        ],
+      },
+      boxes: { questions: [], figures: [] },
+      evidence: {
+        type: 'separate_key',
+        markingStyle: 'letters',
+        evidence: [
+          { ref: 'q1', region: { page: 2, box_2d: [10, 10, 40, 40] }, state: 'separate' },
+          { ref: 'q2', region: null, state: 'illegible' },
+        ],
+      },
+      pageCount: 2,
+    }
+    const [keyed, unreadable] = assembleBlueprint(input).planned_rows
+    expect(keyed.regions.answer_evidence).toEqual({ page: 2, box_2d: [10, 10, 40, 40] })
+    expect(keyed.correct_index_policy.type).toBe('extract_visible_evidence')
+    expect(unreadable.correct_index_policy.type).toBe('blank_key_unclear')
   })
 
   it('the answer never depends on BOX: a BOX inline_evidence region is ignored', () => {
