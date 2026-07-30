@@ -103,13 +103,51 @@ export function buildPlannerRepairRequest(
  * then the referenced page images and crops. `previousError` carries the
  * validation error on the single permitted retry.
  */
+/**
+ * The answer directive (owner-approved 2026-07-30) — code-owned scaffolding
+ * appended AFTER the pinned WORKER_PROMPT, never an edit to it.
+ *
+ * The pinned prompt only ever *forbids* answering; nothing in it tells the
+ * worker that an answer exists to look for, or where such answers live. The
+ * measured result was whole requests coming back with every `correct_index`
+ * blank while the answers sat plainly on the page (CLAUDE.md, worker answer
+ * repair). This names the rows INDEX actually observed an answer for and makes
+ * looking mandatory.
+ *
+ * NEVER-GUESS is the point of the last two lines, not an afterthought.
+ * "Always look" is not "always fill": a mark that cannot be read must come
+ * back empty, because `answer_present` is one boolean from the weakest model
+ * and a row where it is wrong must degrade to blank, never to an invented
+ * index. Subject knowledge stays banned — that is the pinned prompt's rule and
+ * this must not soften it.
+ */
+export function answerDirective(rowIds: readonly string[]): string {
+  return [
+    'ANSWER EXTRACTION (these rows only): ' + rowIds.join(', '),
+    'For each row listed above, an answer was observed on that question\'s own',
+    'page. Look for it before you return the row: a mark on one option (tick,',
+    'check, circle, strike, underline, highlight, bold), or the answer letter',
+    'printed or handwritten beside the question — in an answer column, an',
+    'answer cell, or the margin next to it. Return its 0-based index into that',
+    "row's own options.",
+    'If you cannot actually read the mark for a row, return "" for that row.',
+    'An empty correct_index is the correct answer when the mark is unreadable,',
+    'absent, or points at more than one option. Never infer an answer from',
+    'subject knowledge, and never fill a row to avoid leaving it empty.',
+  ].join('\n')
+}
+
 export function buildWorkerRequest(
   reduced: ReducedBlueprint,
   images: readonly CallImage[],
   workerModel: string,
   previousError?: string,
+  answerRowIds: readonly string[] = [],
 ): VisionRequest {
   const parts = [WORKER_PROMPT, '', 'CHUNK PACKAGE:', JSON.stringify(reduced)]
+  if (answerRowIds.length > 0) {
+    parts.push('', answerDirective(answerRowIds))
+  }
   if (previousError !== undefined) {
     parts.push(
       '',

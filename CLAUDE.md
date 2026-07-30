@@ -287,6 +287,28 @@ and the output contract are untouched. Open: the recovery RATE is unmeasured —
 the deterministic gates are unit-tested, but how often a single-row re-ask
 actually recovers the answer needs a real run.
 
+*Answer directive (owner-approved 2026-07-30):* the repair above retries past
+the defect; this addresses its cause. The pinned WORKER prompt only ever
+**forbids** answering — nothing in it tells the worker an answer exists to look
+for or where such answers live — so whether a request fills answers at all was
+decided once per response. `answerDirective` (`calls.ts`) is code-owned
+scaffolding appended **after** `WORKER_PROMPT`, exactly like the existing
+`previousError` retry feedback: it names the rows INDEX observed an answer for
+(`rowPermitsAnswer`, so the set is the blueprint's own, never a new judgement),
+describes where such answers appear, and makes looking mandatory. **The three
+prompt constants, their SHAs, and `Docs/CODOX_MIGRATION.md` are untouched** —
+`prompts.test.ts` still passes unchanged, so the external gold gate is not
+disturbed. Threaded into all three worker call sites (chunk, text repair,
+answer repair). NEVER-GUESS is the directive's last two lines and is
+unit-tested: **"always look" is never "always fill"** — an unreadable, absent,
+or conflicting mark must return `""`, and subject knowledge stays banned. That
+boundary is load-bearing: `answer_present` is one boolean from the weakest
+model, so a row where INDEX is wrong must degrade to blank, never to an
+invented index. A request whose rows permit no answers carries no directive at
+all, so an unanswered document's calls stay byte-identical. Measured before
+this change: the answer repair alone took the 2nd surgery exam from 23 blanks
+to 3.
+
 *Diagnosability gap found 2026-07-30 (not yet fixed):* `controller.ts` never
 logs which model answered a request, so a primary→fallback swap leaves no
 trace and had to be ruled out from wall-clock timings. Worth fixing before the

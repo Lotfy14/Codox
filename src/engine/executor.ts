@@ -1099,7 +1099,15 @@ async function repairUnderTranscribedRows(
       ...(await cropImages(runId, reduced.assets.map((asset) => asset.output_path))),
     ]
     const response = await timed(runId, `worker repair ${id}`, () =>
-      call(controller, runId, buildWorkerRequest(reduced, images, workerModel), signal),
+      call(
+        controller,
+        runId,
+        buildWorkerRequest(
+          reduced, images, workerModel, undefined,
+          answerRowIdsFor(blueprint, [planned]),
+        ),
+        signal,
+      ),
     )
     if (wasTruncated(response.finishReason)) return
     const validation = validateWorkerChunk(response.text, [planned])
@@ -1120,6 +1128,22 @@ async function repairUnderTranscribedRows(
  * document with no marks produces none of these; nor do non-MCQ rows, which
  * ship flagged `not_mcq` regardless of any answer.
  */
+/**
+ * The rows in a request the worker is directed to answer: exactly those the
+ * blueprint permits an answer for, which is exactly those INDEX observed an
+ * answer on. A request with none of these carries no directive at all, so an
+ * unanswered document's calls stay byte-identical to before the directive
+ * existed.
+ */
+function answerRowIdsFor(
+  blueprint: Blueprint,
+  rows: readonly PlannedRow[],
+): string[] {
+  return rows
+    .filter((planned) => rowPermitsAnswer(blueprint, planned))
+    .map((planned) => planned.id)
+}
+
 export function unansweredRowIds(
   blueprint: Blueprint,
   rows: readonly WorkerRow[],
@@ -1213,7 +1237,14 @@ async function repairUnansweredRows(
       ...(await cropImages(runId, reduced.assets.map((asset) => asset.output_path))),
     ]
     const response = await timed(runId, `worker answer repair ${id}`, () =>
-      call(controller, runId, buildWorkerRequest(reduced, images, workerModel), signal),
+      call(
+        controller,
+        runId,
+        // The row is a repair candidate precisely because it permits an
+        // answer, so the directive always names it.
+        buildWorkerRequest(reduced, images, workerModel, undefined, [id]),
+        signal,
+      ),
     )
     if (wasTruncated(response.finishReason)) return
     const validation = validateWorkerChunk(response.text, [planned])
@@ -1288,7 +1319,10 @@ async function stepWorker(
         call(
           controller,
           runId,
-          buildWorkerRequest(reduced, images, workerModel, previousError),
+          buildWorkerRequest(
+            reduced, images, workerModel, previousError,
+            answerRowIdsFor(blueprint, rows),
+          ),
           signal,
         ),
       )
