@@ -2,7 +2,7 @@
  * Review edit layer (edit mode). Like resolutions, edits are the tutor's
  * own explicit corrections stored in a separate `review-edits` artifact —
  * the engine's `merged-rows` stays read-only history and edits are applied
- * deterministically at export. NEVER-GUESS is untouched: an edit only ever
+ * deterministically at export. An edit only ever
  * carries what the tutor typed or picked; when an option removal orphans
  * an answer, deterministic remapping blanks it rather than guessing.
  *
@@ -256,7 +256,7 @@ export function planEditSave(
     form.options.some((option, index) => option.originalIndex !== index)
 
   // Extracted answer follows its option: same pick, new position; a
-  // removed option's pick becomes '' — blank beats stale (NEVER-GUESS).
+  // removed option's pick becomes '' — blank beats stale.
   let extracted = current.correct_index
   if (structural && extracted !== '') {
     const moved = remapIndex(Number(extracted), form.options)

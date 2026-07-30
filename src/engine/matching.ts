@@ -10,7 +10,7 @@
  *             options are the right column copied verbatim.
  *   'skip'  — drop those rows entirely.
  *
- * NEVER-GUESS holds throughout. The model's only job is to say which rows
+ * The model's only job is to say which rows
  * are matching rows and to separate text the worker already transcribed into
  * its two columns; every span it returns must appear verbatim in the source
  * row or the row is left untouched (`verbatimIn` below — enforced in code,
@@ -58,7 +58,7 @@ function normalize(text: string): string {
 }
 
 /**
- * The NEVER-GUESS gate: a span counts only when it really is in the source
+ * The verbatim gate: a span counts only when it really is in the source
  * row. Anything the model wrote itself fails here and the row is kept as-is.
  */
 function verbatimIn(haystack: string, span: string): boolean {

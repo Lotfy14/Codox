@@ -7,7 +7,7 @@
  * document (PDF/image) that `extractTopicsFromDocument` reads, exactly like
  * the setup screen. Outside the pinned engine path: it edits only the run's
  * `topics-list` snapshot and its `topic-matches`, never `merged-rows`.
- * NEVER-GUESS holds — re-matching still blanks any row the model can't
+ * Re-matching still blanks any row the model can't
  * confidently place.
  */
 import { useState } from 'react'

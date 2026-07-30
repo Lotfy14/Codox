@@ -135,7 +135,7 @@ describe('importAgentBundle', () => {
       ?.json as MergedRow[]
 
     expect(rows[0]).toMatchObject({ id: 'q001', correct_index: '1', needs_review: '' })
-    // The reasoned answer never reaches the row — NEVER-GUESS holds.
+    // The reasoned answer never reaches the row without tutor approval.
     expect(rows[1]).toMatchObject({
       id: 'q002',
       correct_index: '',

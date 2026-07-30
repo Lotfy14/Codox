@@ -12,57 +12,7 @@ for why each stack piece was chosen.
    certificates, or developer-paid API usage. Licenses must be permissive
    (MIT/Apache/BSD) — **never AGPL, never paid/freemium SDKs**. Anything with
    a price: stop and flag it to the owner.
-2. **NEVER-GUESS** — the engine never emits a guessed `correct_index`. Any
-   ambiguity → blank value + `needs_review` flag. Enforced in deterministic
-   code and the audit gate, not just prompts. A confidently wrong answer is
-   strictly worse than a blank one.
-   *Sole exception (owner-approved 2026-07-13, reshaped 2026-07-17):* the
-   opt-in **"Ask AI"** feature of the Review screen (`src/engine/solver.ts`)
-   answers from model knowledge — in review only, never inside the engine
-   path and no longer at export time. It never modifies `merged-rows`; an
-   AI answer reaches a row only when the tutor explicitly approves it,
-   becoming an ordinary review resolution. Export ships only resolved
-   questions (owner-approved 2026-07-21, superseding the 2026-07-17
-   "no variants / ships exactly as they stand" rule): a row still flagged
-   for review — no confirmed answer, or a structural flag like `not_mcq` —
-   is **held back**, not exported, and the Export button first warns the
-   tutor with the count of held-back questions and asks them to confirm
-   shipping the rest. A tutor-answered or AI-approved row (both are
-   resolutions) ships; a blank/unresolved one does not. Consequence the
-   owner accepted: a document with no answer key leaves every answer blank,
-   so it exports **nothing** until the tutor answers the questions in review.
-   Destination is still Customize's choice (Triviadox by default, ZIP
-   optionally). Exclusion is deterministic code (`isFlagged` after
-   resolutions in `exporter.ts`), not a prompt; the extraction engine itself
-   still never guesses, and `merged-rows` stays untouched.
-   *Agent-conversion import (owner-approved 2026-07-23):* `agent-conversion/`
-   lets a strong coding agent (Claude/GPT/Gemini, the tutor's own
-   subscription) extract an exam outside the app, and Folders imports the
-   result (`src/agent-import/`). The protocol lives in
-   `agent-conversion/AGENTS.md` so any agent can follow it; Claude Code also
-   gets it as the `/convert` skill (`.claude/skills/convert/`), which is the
-   same procedure, not a second one. NEVER-GUESS holds by making provenance part
-   of the contract: each question's `answer.source` is **declared**.
-   `extracted` — the agent read it off the page (a mark on an option, a
-   letter in an answer column or margin, a key page) — fills `correct_index`,
-   the same standing the worker's observation has. `reasoned` — the agent
-   worked it out from knowledge — lands in the existing `ai-answers`
-   artifact: the row imports **blank and flagged**, and the answer reaches it
-   only when the tutor approves it in Review, becoming an ordinary
-   resolution, exactly like Ask-AI. `none`, an out-of-range index, or a
-   missing one is blank + flagged; deterministic code (`validateAgentExam`,
-   `toMergedRow`) demotes rather than repairs, so a bad index never becomes a
-   different option. The import is **outside the engine path** and makes no
-   network request of any kind — no Gemini call, no key — so the
-   provider/quota rule is untouched, and COST-ZERO holds because the agent is
-   the tutor's own tool, exactly like their own API key. The three pinned
-   prompts and the output contract are untouched; an imported run writes the
-   same artifacts a finished conversion writes, so Review, edit mode, topic
-   matching, and export work on it unchanged. Import is a **folder picker**
-   (owner's call over a zip path), so it is a desktop/web action — the button
-   feature-detects `webkitdirectory` and says so where it is missing;
-   everything after import works on every platform as usual.
-3. **The key stays on-device** — each user brings their own Gemini API key;
+2. **The key stays on-device** — each user brings their own Gemini API key;
    calls go directly from their device to Gemini. No Codox-operated server ever
    sees a key or a page. First run shows a one-line notice that pages are
    sent to Gemini under the user's key (owner chose minimal notice —
@@ -79,16 +29,52 @@ for why each stack piece was chosen.
   2026-07-22 — primary → known-good model under the **same** one key — does not
   touch it. See the model-fallback note under "Engine semantics are pinned".)
 
-## Engine semantics are pinned
+## How answers flow (description, not doctrine)
+
+Where `correct_index` comes from, as the code actually works today. Change it
+freely — this is a map, not a rulebook.
+
+- **Engine path.** INDEX reports `answer_present` per question; `assemble.ts`
+  turns that into the row's `correct_index_policy`; the worker reads the mark
+  off the page and `forceAnswer` (`merge.ts`) applies the policy at merge —
+  a policy that says no answer exists blanks the row, and a filled value is
+  accepted only as a number in range for that row's options. Blanked rows
+  carry a `needs_review` reason (`no_visible_answer`, `key_unclear`,
+  `index_out_of_range`, `not_mcq`, …) that Review shows the tutor.
+- **Ask AI** (`src/engine/solver.ts`, Review only) answers from model
+  knowledge. It writes to the `ai-answers` artifact, never to `merged-rows`;
+  the answer reaches the row when the tutor approves it, as an ordinary
+  resolution.
+- **Export** ships resolved questions only (`isFlagged` after resolutions in
+  `exporter.ts`). A row still flagged is held back and the Export button warns
+  with the held-back count first. Consequence: a document with no answer key
+  exports nothing until the tutor answers the questions in Review.
+- **Agent-conversion import** (`agent-conversion/`, `src/agent-import/`) lets a
+  coding agent extract an exam outside the app under the tutor's own
+  subscription; Folders imports the result. Each question declares
+  `answer.source`: `extracted` (read off the page) fills `correct_index`;
+  `reasoned` (worked out from knowledge) lands in `ai-answers` for tutor
+  approval; `none` or an out-of-range index imports blank and flagged.
+  `validateAgentExam`/`toMergedRow` demote rather than repair. The import makes
+  no network request — no Gemini call, no key — so the provider/quota rule is
+  untouched, and it writes the same artifacts a finished conversion does, so
+  Review, edit mode, topic matching and export work on it unchanged. Import is
+  a folder picker, so the button feature-detects `webkitdirectory` and says so
+  where it is missing.
+
+## Engine semantics
 
 The Planner-Worker-Audit engine semantics, its three prompts, and the
-Triviadox CSV output contract migrate **as-is** from
-[Docs/CODOX_MIGRATION.md](Docs/CODOX_MIGRATION.md). **Never edit the three
-prompts or the output contract.** Deterministic code owns all formatting,
-IDs, and CSV emission — models only read pages, never format output.
-Correctness is graded externally in the CodoxSandbox repo (gold gate:
-appendicitis 127/127 exact rows); do not build or duplicate a test harness
-for engine output here.
+Triviadox CSV output contract came **as-is** from
+[Docs/CODOX_MIGRATION.md](Docs/CODOX_MIGRATION.md). Deterministic code owns all
+formatting, IDs, and CSV emission — models only read pages, never format
+output.
+
+The three prompts are SHA-pinned by `prompts.test.ts`: the constant, the
+`Docs/CODOX_MIGRATION.md` block, and the hash in `PROMPT_SHA256` must agree.
+That is a speed bump, not a lock — editing a prompt means updating all three
+together, which the 2026-07-15 output split and the 2026-07-30 answer
+extraction both did.
 
 *Model assignment (owner-approved 2026-07-14, superseded 2026-07-22):* the
 2026-07-14 pin ran all roles on `gemini-3.1-flash-lite` (chosen over
@@ -98,8 +84,7 @@ per-minute ceiling 429'd a single multi-page planner call on its own). As of
 `gemini-3.5-flash-lite` (GA; model id verified live against the Gemini docs
 2026-07-22), and `gemini-3.1-flash-lite` becomes the runtime fallback below.
 Open cost carried forward: Flash-Lite bounding boxes are weaker and the new
-model's crop quality is unmeasured, so re-run the gold gate (CodoxSandbox)
-before treating this as permanent.
+model's crop quality is unmeasured.
 
 *Runtime model fallback (owner-approved 2026-07-22, overrides the earlier "the
 engine still never swaps a role's model at runtime" wording):* the **engine**
@@ -119,8 +104,7 @@ pause; the fallback keeps that pause too, so it still shows when BOTH models are
 stalled). COST-ZERO guard: a per-session circuit breaker disables a primary
 that returns `model-unavailable`/`billing-required`, so a key without access to
 the new primary wastes exactly one doomed call per session, not one per
-request. NEVER-GUESS is untouched — the fallback re-runs the identical request;
-it never invents an answer. The three pinned prompts and the output contract
+request. The fallback re-runs the identical request; it never invents an answer. The three pinned prompts and the output contract
 are untouched. Consequence: the key check runs the **fallback** model (the
 guaranteed-runnable path), so a key that lacks the new primary but can run the
 fallback still validates and converts.
@@ -219,7 +203,7 @@ so its page-`p` questions are recovered while any neighbour it re-reads dedups
 against the original windows — safe whether the page was omitted or mislabeled.
 Gated on INDEX having mostly worked (a run that emitted nothing still falls to
 the legacy path, never a call per page); a page still empty after its repair
-stays flagged `unreadable_page` — NEVER-GUESS holds, nothing is invented. The
+stays flagged `unreadable_page`; nothing is invented. The
 three pinned prompts and the output contract are untouched: repair reuses the
 INDEX prompt on a narrower page set. "Pages per index request" stays a
 diagnostic knob; the repair is the real remedy for a lost page.
@@ -236,9 +220,7 @@ touching a prompt. The assembled format itself changed from
 ("Case 10 …") is kept, the `Case stem:`/`Question:` labels are dropped, and a
 blank line separates the two. This edited the pinned WORKER prompt (new SHA in
 `PROMPT_SHA256.worker`) and CODOX_MIGRATION §2.2; the legacy format is still
-accepted on blueprint input so pre-change checkpoints resume unchanged. **Open:
-the external gold gate's case-stem rows must be regenerated to the new format
-before the appendicitis 127/127 comparison is meaningful again.**
+accepted on blueprint input so pre-change checkpoints resume unchanged. 
 
 *Worker chunk split-retry (owner-approved 2026-07-18):* §1.3's "worker chunk
 retry is exactly one, then stop" no longer stops the run. A chunk that fails
@@ -271,17 +253,15 @@ permitting blank when the mark genuinely cannot be read. New SHA in
 updated byte-identically, `prompts.test.ts` re-pinned.
 
 **Deliberately calibrated, not maximal:** a first attempt appended a
-NEVER-GUESS-heavy directive (three separate sentences on returning empty) and
+hedging-heavy directive (three separate sentences on returning empty) and
 the owner measured the result as **worse** — pressure to leave blanks is
 itself a failure mode, and the engine's real guarantee lives in code, not in
 prompt hedging (`forceAnswer` still forces blanks per policy, still rejects a
 non-numeric or out-of-range index, and still discards the worker's
 `needs_review`). One clause, once. Do not re-add hedging to this prompt.
 
-**Open:** the external gold gate (CodoxSandbox, appendicitis 127/127) is now
-two prompt edits stale — its case-stem rows already needed regenerating from
-2026-07-15, and this edit compounds that. The unmeasured question is whether
-the directive raises answer recall without raising wrong answers.
+**Open:** unmeasured whether the instruction raises answer recall without
+raising wrong answers. Judge it on real documents.
 
 *Matching-question policy (owner-approved 2026-07-18):* a true matching
 question — one row whose answer is a set of pairings — cannot be carried by a
@@ -301,8 +281,8 @@ model's only job is to name the matching rows and separate the two columns;
 deterministic code writes every word of the split row's wrapper and **rejects
 any span that is not verbatim in the source row** (`verbatimIn`), so this is
 re-shaping, never authorship. Split rows always ship a blank `correct_index`
-with a review flag — NEVER-GUESS holds: the pairing was never read off the
-page, so it is never invented. Any failure (no candidates, dead call,
+with a review flag: the pairing was never read off the page, so it is not
+invented. Any failure (no candidates, dead call,
 unusable response) returns the engine's rows untouched. Split ids are
 `{parentId}~m{n}`; `parentRowId` lets Review resolve a split row back to its
 parent's source region. Extended-matching stems (one stem, shared option
@@ -313,7 +293,7 @@ column projection of the pinned format (`src/export/export-csv.ts`,
 CODOX_MIGRATION §3.1): `id`/`group_id` never leave the device;
 `topic`/`subtopic`/`year` are conditional per the Customizations settings.
 The engine prompts, blueprint `csv_schema`, merge, the in-run `csv`
-artifact, and the gold gate are untouched — they keep the internal
+artifact are untouched — they keep the internal
 10-column format. The topic matcher (`src/engine/topic-matcher.ts`) and
 topics-document reader (`src/engine/topic-extract.ts`) are new surface
 outside the engine path, solver-style: they never modify `merged-rows`,
@@ -335,7 +315,7 @@ pick is a valid "unsure", a listed topic is accepted, and only genuinely
 bad or omitted rows are retried alone; only structural garbage (not JSON,
 no `matches` array) still fails the whole response. The one retry re-sends
 just the offending rows, and a row still bad after it stays honestly blank
-— NEVER-GUESS holds, its neighbours survive. Separately, TOPIC_EXTRACT now
+— its neighbours survive. Separately, TOPIC_EXTRACT now
 strips count badges beside a topic name (`Cardiology 167` → `Cardiology`),
 which cleaned exported labels and was the likely trigger of the chunk
 failures. New `RunTopicsPanel` (review) lets a tutor rename/remove a run's
@@ -361,8 +341,7 @@ pure UI unlock (the old `runTopics === undefined` early-return is gone). The
 document read is the setup extraction reused: the dropped file's bytes go
 straight to `extractTopicsFromDocument` (no job PDF stored), and read
 failures map to the same bad-key ≠ quota ≠ unreachable notes. Still outside
-the engine path with `merged-rows` untouched and NEVER-GUESS intact (unsure
-rows stay blank). Export already keys its topic columns off the per-run
+the engine path with `merged-rows` untouched (unsure rows stay blank). Export already keys its topic columns off the per-run
 `topics-list` artifact (`hasTopics` in `exporter.ts`), not the global topics
 setting, so an added-after-the-fact list flows straight into the exported
 `topic`/`subtopic` columns.

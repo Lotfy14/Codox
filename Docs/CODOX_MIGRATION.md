@@ -19,13 +19,13 @@ prior decisions. That file describes; this file prescribes._
 - **§2 (prompts) migrate byte-for-byte.** Do not tune them per document, per
   provider, or "for clarity." They were deliberately written to run
   identically across every document with zero per-document hints; any edit
-  invalidates comparability with the archived CodoxSandbox results.
+  invalidates comparability with the archived research results.
 - Model *names* in §1.2 are the intended assignments at time of writing, not
   contract — quota, availability, and provider choice may change them. The
   **role split** (strong planner / weak worker / deterministic code / read-only
   audit) is the contract.
-- Nothing here includes the test harness. Scoring, gold CSVs, and the
-  execution protocol stay in CodoxSandbox (see §5).
+- Nothing here includes a test harness; correctness is judged on real
+  documents (see §5).
 
 ---
 
@@ -54,9 +54,9 @@ The engine separates thinking, transcribing, enforcing, and checking:
   the source pages, blueprint, and crops, and emits a binary
   safe/not-safe-to-import verdict. It never edits data.
 
-Core principle enforced at every layer: **wrong answers are worse than blank
-answers.** No model may answer from subject knowledge. If answer evidence is
-absent or uncertain, answers stay blank and flagged.
+Design note: no model answers from subject knowledge — the engine reads the
+answer off the page. Where the evidence is absent, `forceAnswer` leaves the
+row blank and flagged for Review.
 
 ### 1.2 Intended model assignments (as of 2026-07-08)
 
@@ -268,7 +268,7 @@ labels to plain rows.
 | Worker chunk retries | exactly 1 |
 
 Note: temperature 0 does **not** guarantee identical behavior across runs —
-repeatability is something you measure (CodoxSandbox does, across 3 runs per
+repeatability is something you measure (the old research repo did, across 3 runs per
 document), never assume.
 
 ### 1.12 Engine-wide safety rules
@@ -618,7 +618,7 @@ form — §1.6.)
 
 **Exported projection (owner-approved 2026-07-14).** The 10-column list above
 remains the engine's internal working format — the blueprint `csv_schema`,
-merged rows, the in-run `csv` artifact, and the CodoxSandbox gold gate are
+merged rows and the in-run `csv` artifact are
 unchanged. The CSV that leaves the device in an export bundle is a
 *projection* of it (`src/export/export-csv.ts`):
 
@@ -685,10 +685,10 @@ bundle must survive being moved (hence relative paths). Delivery: zip
 
 ### 3.5 Definition of "perfectly compatible"
 
-A CSV that passes the CodoxSandbox gold grader imports into Triviadox with
+A CSV that satisfies this contract imports into Triviadox with
 every question, option, answer, group, and image preserved, and every blank
 `correct_index` surfaced for review — no row dropped, no answer defaulted, no
-JSON cell mangled. The gold suite *is* the integration contract: keep it green
+JSON cell mangled. This column contract *is* the integration contract: keep it
 and compatibility holds by construction.
 
 ---
@@ -697,12 +697,12 @@ and compatibility holds by construction.
 
 **Status as of 2026-07-08:** the Planner-Worker-Audit pipeline is a designed
 and hardened specification, **not yet executed** as a full protocol run (the
-4-PDF × 3-run matrix in CodoxSandbox has no results yet). What *is* measured,
-from its direct precursor (two-model planner/worker runs on the hardest gold
+4-PDF × 3-run matrix was never completed). What *is* measured,
+from its direct precursor (two-model planner/worker runs on the hardest
 input, a photo-of-screen dermatology exam, 2026-07-05):
 
 - **Proven:** row-slot planning (20/20 rows), case grouping (10/10 groups
-  matched the gold pairing), and vision-bbox → deterministic crops (10/10
+  matched the expected pairing), and vision-bbox → deterministic crops (10/10
   valid crops) all work on the worst input in the corpus.
 - **Not yet solved, and the reason this design exists:** option-text
   transcription drift (dropped/substituted option strings) and one observed
@@ -728,9 +728,9 @@ Blind spots recorded with the design (watch these when reimplementing):
 - **True/False questions are an untested gap** — none of the four control
   PDFs contain T/F rows, though the contract (§3.3) defines their shape.
 
-## 5. Deliberately NOT migrated (stays in CodoxSandbox)
+## 5. Deliberately NOT migrated
 
-- The gold suite (4 PDF↔gold pairs + manifest), degraded-input corpus, and
+- The old research corpus (4 PDF pairs + manifest), degraded-input corpus, and
   all graders/eval tooling — the new repo's candidate CSVs are scored there.
 - The execution protocol around the engine (run-directory layout, 3-runs-per-
   PDF matrix, repeatability fingerprints, safety/audit-accuracy tables,
@@ -743,4 +743,4 @@ Blind spots recorded with the design (watch these when reimplementing):
 - Every earlier prompt generation (Phase 0 raw prompt, the Phase 0b staged
   9-stage single-call "Gemini-First Pipeline Prompt", the universal extraction
   prompt, the derm testing prompt) — superseded by §2 for the product; kept in
-  CodoxSandbox as experiment records.
+  the old research repo as experiment records.

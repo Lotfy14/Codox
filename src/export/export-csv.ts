@@ -1,7 +1,7 @@
 /**
  * Export-time CSV projection (owner-approved 2026-07-14). The engine's
  * internal 10-column format (`CSV_SCHEMA`, the in-run `csv` artifact, the
- * gold gate) is untouched — this module only decides which columns leave
+ * output contract) is untouched — this module only decides which columns leave
  * the device in an exported bundle:
  *
  * - `id` and `group_id` are never exported (internal keying only).

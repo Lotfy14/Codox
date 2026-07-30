@@ -9,7 +9,7 @@ Convert screen (below the finished-summary panel), with a total count,
 number-jump + text search, a needs-review filter, and a detail view where any
 row (flagged or not) can be inspected and its answer set by an explicit human
 pick. History runs get the same experience. The old one-flag-at-a-time
-ReviewStage is replaced. NEVER-GUESS stays intact: all writes go through the
+ReviewStage is replaced. The answer path is unchanged: all writes go through the
 existing `review-resolutions` mechanism.
 
 Owner-approved decisions:
@@ -102,4 +102,4 @@ New classes (tokens.css values only): `.review-list`, `__header`, `__tools`, `__
 
 - Virtualized a11y: `aria-setsize`/`aria-posinset` required (only ~10 rows in DOM); focus after Back must wait for the virtualizer to render the target row.
 - Vanishing-row-under-filter handled by pinned current row.
-- NEVER-GUESS: display via `effectiveAnswer`; writes only via explicit Confirm → `saveResolution`; export path untouched.
+- Answer path: display via `effectiveAnswer`; writes only via explicit Confirm → `saveResolution`; export path untouched.

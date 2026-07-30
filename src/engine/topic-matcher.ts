@@ -5,7 +5,7 @@
  * runs after extraction on a finished run, reads the pristine
  * `merged-rows` artifact plus the run's `topics-list` snapshot, and stores
  * matches in a separate `topic-matches` artifact. Engine output is never
- * modified. NEVER-GUESS in spirit: deterministic code rejects any pick
+ * modified. Deterministic code rejects any pick
  * that is not literally in the user's list, and unsure rows stay blank —
  * a wrong topic is worse than a blank one.
  */

@@ -2,7 +2,7 @@
  * The SOLVER prompt — the opt-in "Export with AI answers" feature's own
  * prompt, deliberately separate from the three pinned engine prompts in
  * `prompts.ts` (CODOX_MIGRATION §2 migrates those byte-for-byte; this file
- * is new surface, owner-approved as the sole NEVER-GUESS exception).
+ * is new surface: it answers from model knowledge, in Review only).
  *
  * Unlike every engine prompt, the solver is EXPLICITLY asked to answer
  * from subject knowledge. It runs only when the user picks "Export with

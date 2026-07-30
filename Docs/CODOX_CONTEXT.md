@@ -2,7 +2,7 @@
 
 _Audience: AI agents working in the new Codox repository. This file is the
 context payload for re-deciding the tech stack, UI/UX, and other additions.
-Written 2026-07-08 from the CodoxSandbox repository (the product's design/
+Written 2026-07-08 from the original research repository (the product's design/
 research repo, formerly named Triviadox-Conv). Codox is the product formerly
 named Lucy — older documents and results use that name interchangeably._
 
@@ -26,10 +26,9 @@ prescribes._
 - **Section 10 is measured evidence.** Numbers from real experiment runs.
   Never contradict them from intuition; if a decision needs a number that
   isn't here, say the number is unmeasured.
-- **Testing does not migrate.** The gold suite, the eval/scoring harness, the
-  degraded-input corpus, and the v1 Python reference engine all stay in
-  CodoxSandbox. The new repo's output CSVs are graded *there*. Do not rebuild
-  or duplicate the test harness in the new repo.
+- **Testing does not migrate.** The eval/scoring harness, the degraded-input
+  corpus, and the v1 Python reference engine stayed in the old repo and are no
+  longer used as a gate.
 - The implementation language and libraries in the new repo **may differ**
   from anything named here. Nothing in the engine semantics
   (CODOX_MIGRATION.md) depends on a language.
@@ -66,7 +65,6 @@ published to app stores.
 | Rule | Meaning |
 |---|---|
 | **COST-ZERO** | $0 recurring cost to the developer. Free hosting, no stores, no signing certificates, no paid dependencies, no developer-paid API usage. Anything with a price must be flagged to the human and worked around by default. |
-| **NEVER-GUESS** | Never emit a guessed `correct_index`. Any ambiguity → blank value + `needs_review` flag. A confidently wrong medical answer shown to a student is strictly worse than a blank one. This rule has teeth at every layer: prompts forbid it, deterministic code enforces it, and the audit gate checks it. *Sole exception (owner-approved 2026-07-13):* the opt-in **"Export with AI answers"** export mode answers from model knowledge at export time only — outside the engine path, never modifying `merged-rows`, with every AI-touched row provenance-flagged (`ai_answered` / `ai_unsure` / `ai_disagrees`). |
 | **PRIVACY-TOLD** | The user's PDF pages go **directly from their device to Google Gemini** using **their own Gemini API key** — never through a Codox-operated server. The consent notice states plainly that full page images are sent to Gemini and that its free tier may train on the data. The one key is stored only on that user's device, and every request consumes only that user's Gemini quota. |
 
 Derived invariants that must also survive:
@@ -122,9 +120,7 @@ are `options=["True","False"]` with a normal 0-based index. Full parsing
 rules, semantics, and the definition of "compatible" are in
 CODOX_MIGRATION.md §3 and are **not open for redesign**.
 
-Correctness bar: the clean *Acute Appendicitis* sample must reproduce
-**127/127 rows exactly** against its gold CSV (graded by the harness that
-stays in CodoxSandbox).
+Correctness is judged on real documents, by eye.
 
 ## 6. Prior UX design (open for redesign — preserve the intent stated per item)
 
@@ -150,9 +146,9 @@ change the surface but must keep the reason satisfied:
 4. **Review** — every flagged row (blank `correct_index`, low confidence,
    length mismatch, source conflict) shown with the **source crop** beside it;
    the user sets or corrects the answer; keyboard-navigable; works offline on
-   an already-converted bundle. *Intent:* the review screen is where
-   NEVER-GUESS pays off — the human resolves exactly what the engine refused
-   to guess, with the evidence in front of them.
+   an already-converted bundle. *Intent:* the review screen is where the
+   human resolves what the engine left open, with the evidence in front of
+   them.
 5. **Export** — zip download universally; write-to-folder where supported.
    *Intent:* **export early, export often** — browser storage (especially iOS)
    can evict unexported work, so the app must never be the sole holder of a
@@ -277,15 +273,14 @@ is a reasonable template but not binding on the new repo.
 
 ## 10. Empirical evidence log (measured, decision-relevant)
 
-All runs are archived in CodoxSandbox under `results/` with per-run metrics;
-scores use the strict exact-match grader against the pinned gold suite (four
-PDF↔gold pairs: clean digital appendicitis 127 rows with separate key; two
-scanned IM exams, 50 rows with conflicting tick+highlight marks and 30 rows
-with clean inline circles; dermatology photo-of-screen, 20 questions in 10
-image-sharing case pairs, answers best-effort because the key was lost).
+_History, kept for the engineering lessons only — the grading setup these
+numbers came from is retired (2026-07-30). The documents were: a clean digital
+127-row exam with a separate key; two scanned IM exams (50 rows with
+conflicting tick+highlight marks, 30 rows with clean inline circles); and a
+dermatology photo-of-screen, 20 questions in 10 image-sharing case pairs._
 
 1. **Phase 0 (2026-07-03) — raw one-shot, native PDF to `gemini-3.1-flash-lite`,
-   clean appendicitis PDF:** emitted all 127 rows but scored **119/127 with 4
+   clean 127-row PDF:** emitted all 127 rows but scored **119/127 with 4
    confidently wrong answers**. Verdict: a raw single prompt is not shippable.
 2. **Phase 0b (2026-07-03) — staged 9-stage single-call prompt, same model/PDF:**
    raw import score failed on formatting (option labels leaked into text,
@@ -295,7 +290,7 @@ image-sharing case pairs, answers best-effort because the key was lost).
    must be owned by deterministic emit code, not the model.
 3. **NVIDIA free-model bench (2026-07-04) — all 6 free NVIDIA multimodal
    models, full corpus, fixed prompt:** no model produced a usable result on
-   the 15-page appendicitis (context windows, 8–12-image caps, timeouts, one
+   the 15-page clean exam (context windows, 8–12-image caps, timeouts, one
    full provider outage); best (kimi-k2.6) got 30/30 on one scanned exam and
    40/50 on another but was slow and produced 1 confidently wrong answer.
    Notably **no model ever hit an HTTP 429** — free-tier throughput limits,
@@ -314,7 +309,7 @@ image-sharing case pairs, answers best-effort because the key was lost).
 5. **LLM-only Planner-Worker-Audit protocol (2026-07-08):** designed and
    hardened (see CODOX_MIGRATION.md), **not yet executed** as of this file's
    writing. Its 4-PDF × 3-run execution matrix, safety classification, and
-   audit-accuracy measurement run in CodoxSandbox.
+   audit-accuracy measurement run.
 6. **v1 OCR measurements (for the record):** OS-native OCR 91–97% word
    accuracy; RapidOCR-class portable OCR ~53%. This is the measured basis for
    "no local OCR in a browser" and for the quota-burn concern if the LLM
@@ -359,15 +354,7 @@ in around them":
 
 ## 13. Division of labor between the two repos
 
-**Stays in CodoxSandbox (this repo):** the gold suite and its manifest, the
-deterministic graders and eval protocol, the degraded-input corpus, all
-experiment scripts and archived results, and the v1 Python engine as the
-reference implementation / eval oracle. The new repo's candidate CSVs come
-here to be scored; a candidate passes when it matches gold exactly
-(appendicitis 127/127 is the non-negotiable gate; the IM golds gate
-mark-reading; dermatology gates extraction/attribution/grouping — its answers
-are best-effort, so never read its answer mismatches as safety failures).
+_Retired 2026-07-30. The old repo is no longer a grading gate; Codox is
+judged on real documents. Its archived experiment results remain there as
+history only._
 
-**Migrates with this file:** everything in
-[CODOX_MIGRATION.md](CODOX_MIGRATION.md) — the Planner-Worker-Audit engine
-semantics, the three prompts verbatim, and the Triviadox output contract.

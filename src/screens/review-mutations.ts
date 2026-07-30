@@ -13,7 +13,7 @@
  *    year flow through `review-edits`/`review-resolutions` by id exactly like
  *    any engine row, so nothing special-cases it downstream.
  *
- * NEVER-GUESS is untouched: an added row's answer is only ever the tutor's own
+ * An added row's answer is only ever the tutor's own
  * explicit pick; a blank added row stays flagged until they fill it.
  */
 import { useLiveQuery } from 'dexie-react-hooks'

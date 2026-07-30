@@ -1,7 +1,7 @@
 /**
  * Post-merge option-label stripping (pure). The worker transcribes labels
  * verbatim (§2.2) precisely so this code — not the weakest model — decides
- * what is a label. NEVER-GUESS shapes the rules:
+ * what is a label. The rules are shaped by:
  *
  * - Strip only when EVERY option in the row carries the SAME label style
  *   and the labels run sequentially from the style's conventional start
@@ -72,7 +72,7 @@ function isTableRow(line: string): boolean {
  * asset (the caller's guard): the table has been captured as a figure crop
  * that ships to Triviadox, so the linearized pipe-text in the stem is
  * redundant noise on the card. When the row has NO image the caller keeps the
- * text, because it is then the only copy of the table — NEVER-GUESS applies to
+ * text, because it is then the only copy of the table — the same care applies to
  * deletion too, a lost table is worse than an ugly one.
  *
  * A block is a pipe-bearing header line, a separator row directly below it,

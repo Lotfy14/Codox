@@ -1,6 +1,6 @@
 /**
  * Worker-chunk validation and the deterministic merge (§1.4/§1.5/§1.7) —
- * pure functions, and the place NEVER-GUESS is code:
+ * pure functions, and the place answer policy is enforced:
  *
  * - The worker's `needs_review` is ALWAYS discarded.
  * - Blank `correct_index` is never defaulted; a policy that forbids
@@ -234,7 +234,7 @@ export function mergeRows(
     )
     // Codox ships MCQs only: a row with fewer than two options can never be
     // a valid Triviadox question, so code flags it for the tutor instead of
-    // shipping a blank-option "question". NEVER-GUESS holds — the answer is
+    // shipping a blank-option "question". The answer is
     // forced blank, nothing is invented; the tutor decides in review whether
     // to edit it into an MCQ or delete it. This takes precedence over the
     // policy reason: "not a multiple-choice question" is the actionable one.

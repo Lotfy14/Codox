@@ -92,7 +92,7 @@ describe('composeReviewRows', () => {
   })
 })
 
-describe('applyResolutions (NEVER-GUESS stays intact)', () => {
+describe('applyResolutions', () => {
   it('fills only explicitly confirmed answers and clears their flag', () => {
     const rows = [makeRow({ id: '1' }), makeRow({ id: '2' })]
     const applied = applyResolutions(rows, { '1': 2 })

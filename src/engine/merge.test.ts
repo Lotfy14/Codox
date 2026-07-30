@@ -115,7 +115,7 @@ describe('validateWorkerChunk', () => {
   })
 })
 
-describe('answer-policy forcing (NEVER-GUESS)', () => {
+describe('answer-policy forcing', () => {
   const policyForcesBlank: AnswerPolicyType[] = ['no_answer_key', 'uncertain']
 
   for (const policyType of policyForcesBlank) {

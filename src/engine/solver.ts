@@ -1,6 +1,6 @@
 /**
  * The AI answer solver — the opt-in "Ask AI" feature of the Review screen
- * (owner-approved sole exception to NEVER-GUESS). Deliberately OUTSIDE the
+ * (answers from model knowledge). Deliberately OUTSIDE the
  * pinned engine path: it runs on a finished run, reads the pristine
  * `merged-rows` artifact, and stores its own answers in a separate
  * `ai-answers` artifact. Engine output is never modified; an AI answer

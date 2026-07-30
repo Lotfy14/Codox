@@ -63,7 +63,7 @@ describe('validateMatchingResponse', () => {
     ])
   })
 
-  it('drops a row whose option the model invented (NEVER-GUESS)', () => {
+  it('drops a row whose option the model invented', () => {
     // "Incretin degradation blockade" is nowhere in the source row — the
     // model authored it. The row must survive untouched instead.
     const authored = JSON.stringify({

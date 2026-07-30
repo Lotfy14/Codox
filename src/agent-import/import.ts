@@ -5,7 +5,7 @@
  *
  * This is new surface OUTSIDE the engine path, solver-style. It makes no
  * network request of any kind (no Gemini call, no key), never touches the
- * three pinned prompts or the output contract, and honours NEVER-GUESS
+ * three pinned prompts or the output contract, and keeps answer provenance
  * through the manifest's declared answer source: an `extracted` answer (one
  * the agent SAW on the page) fills `correct_index` like the worker's does; a
  * `reasoned` one lands in `ai-answers`, leaving the row blank and flagged

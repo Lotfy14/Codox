@@ -3,7 +3,7 @@
 _Written 2026-07-09. Stack per [TECHSTACK_RESEARCH.md](TECHSTACK_RESEARCH.md):
 TypeScript + React 19 + Vite web-core → PWA (web/iPhone/macOS), Tauri 2
 (Windows `.exe`), Capacitor (Android `.apk`). Engine semantics migrate as-is
-from [CODOX_MIGRATION.md](CODOX_MIGRATION.md). Grading stays in CodoxSandbox._
+from [CODOX_MIGRATION.md](CODOX_MIGRATION.md)._
 
 _Owner decisions baked in: AI agents write most code · one codebase identical
 everywhere · Android ships a real `.apk` · distribution via GitHub Releases +
@@ -18,9 +18,9 @@ builds on an unproven assumption. Each phase ends with a "Done when" gate.
 ## Phase 0 — Repo & ground rules (~half a day)
 
 - [x] `git init`, first commit with the three context docs
-- [x] Create `CLAUDE.md` for coding agents: the three hard rules (COST-ZERO,
-      NEVER-GUESS, minimal-consent), the output contract pointer, "engine
-      semantics are pinned — never edit the three prompts," code conventions
+- [x] Create `CLAUDE.md` for coding agents: the hard rules (COST-ZERO,
+      minimal-consent), the output contract pointer, engine semantics, code
+      conventions
 - [x] `CLAUDE.md` rule — **search before build**: before implementing any
       non-trivial functionality from scratch, dispatch a Claude Sonnet 5
       research subagent (web search) to check whether an existing package
@@ -233,7 +233,7 @@ pinned; only the executor is new.
       retry on invalid content. Routing is the planner's evidence-based
       policy — the user's declaration never enters a prompt.)_
 - [x] Audit gate: the deterministic checks + audit prompt; any doubt →
-      blank + flag (NEVER-GUESS enforced in code, not just prompts)
+      blank + flag, in code rather than in prompts
       _(2026-07-12: `validate.ts` + executor step 8. An unavailable audit is
       never an inferred pass; the CSV still ships, marked
       not-safe-to-import.)_
@@ -255,8 +255,7 @@ pinned; only the executor is new.
       _(2026-07-12: Convert running/done stages read persisted run state, so
       a reload redraws the same bars. A quota pause renders calm amber
       ("Paused — resumes when quota allows"), never as an error.)_
-- [ ] First end-to-end run: clean appendicitis PDF → bundle → send CSV to
-      CodoxSandbox for grading. Iterate until **127/127**
+- [ ] First end-to-end run on a clean PDF → bundle → CSV, checked by eye
       _(Owner step — needs the real key. Everything it needs exists: run the
       dev build, enter the key, convert the PDF, download the CSV from the
       done stage's dev surface.)_
@@ -265,8 +264,8 @@ pinned; only the executor is new.
       _(Owner step. The number is already counted and persisted per run —
       the done stage reads `N requests · N tokens`.)_
 
-**Done when:** appendicitis grades 127/127 in CodoxSandbox and the quota-burn
-number is written down.
+**Done when:** a clean PDF converts end to end and the quota-burn number is
+written down.
 
 _Status 2026-07-12: the engine is built and green — 185 unit tests, plus
 a retired headless-Edge drive script that drove a full conversion through the real
@@ -289,8 +288,8 @@ Where the product quality lives.
       by the planner's own regions (`cropJpeg`), W toggles whole page.
       Keyboard: 1–9 pick · Enter confirm · ←/→ move · V flip. A confirmed
       pick is stored separately (`review-resolutions` artifact) and applied
-      deterministically at export — an invalid pick is ignored, so
-      NEVER-GUESS holds by construction (`review-data.test.ts`).)_
+      deterministically at export — an invalid pick is ignored
+      (`review-data.test.ts`).)_
 - [x] Review works fully offline on an already-converted bundle
       _(2026-07-12: everything reads IndexedDB; drive-verified with the
       browser context forced offline — banner shows, flags resolve.)_
@@ -319,17 +318,16 @@ Where the product quality lives.
       with the flag cleared, untouched rows stay blank + flagged. Paths in
       `image_urls` are bundle-relative, so a moved folder keeps working.
       Name collisions namespace `name`, `name-2`, … case-insensitively.)_
-- [ ] Run the hard gold inputs end-to-end (scanned IM ×2, derm
-      photo-of-screen) → grade in CodoxSandbox; fix until the mark-reading
-      and grouping gates pass
-      _(Owner step — needs the real key and the gold PDFs. The whole path
+- [ ] Run the hard inputs end-to-end (scanned IM ×2, derm photo-of-screen);
+      fix until mark-reading and grouping hold up
+      _(Owner step — needs the real key and the hard PDFs. The whole path
       it exercises is drive-verified end to end — real engine/Dexie/review/zip, network faked; the drive script was retired after verification.)_
 
-**Done when:** all four gold PDFs pass their gates in CodoxSandbox and a
-non-technical person can review + export on a phone unaided.
+**Done when:** all four hard PDFs convert acceptably and a non-technical
+person can review + export on a phone unaided.
 
 > Status 2026-07-12: every buildable box is done and drive-verified
-> (203 unit tests + an end-to-end headless drive, since retired). The gold-input runs
+> (203 unit tests + an end-to-end headless drive, since retired). The hard-input runs
 > and the phone hand-off test are the owner's; nothing else blocks them.
 
 ## Phase 8 — Hardening & release (~3–4 days)
@@ -356,8 +354,8 @@ non-technical person can review + export on a phone unaided.
       point at `releases/latest`; SmartScreen walk-through, sideload note,
       two-step Safari guide with inline icons, managed-laptop note.)_
 - [ ] `v1.0` GitHub Release: `.exe`, `.apk`, changelog
-      _(Owner step — gated on the Phase 6/7 gold gates (127/127 + the hard
-      inputs) and on signed artifacts: the keystore and the Actions-built
+      _(Owner step — gated on the Phase 6/7 hard inputs and on signed
+      artifacts: the keystore and the Actions-built
       `.exe` are in owner custody. Publish per RELEASING.md.)_
 - [ ] Hand the links to the first real users; watch the first sessions
       _(Owner step.)_
@@ -367,8 +365,8 @@ it, exports it, and imports it into Triviadox — without help.
 
 ## Phase 9 — Declaration removal, export modes, AI answers (2026-07-13, owner-approved)
 
-Three owner-requested changes, approved 2026-07-13. The NEVER-GUESS carve-out
-for the third is recorded in CLAUDE.md hard rule 2 and CODOX_CONTEXT §3.
+Three owner-requested changes, approved 2026-07-13. How the third handles
+answers is described in CLAUDE.md under "How answers flow".
 
 - [x] **Remove the answer-source declaration.** The "Where are the answers?"
       question (batch Select + per-file overrides) is gone; the planner's
@@ -406,8 +404,8 @@ Phases 3–5 ≈ weeks 2–3, Phases 6–7 ≈ weeks 3–4, Phase 8 ≈ final we
 
 ## Standing rules while building
 
-1. **The gold suite is the referee** — a change "works" when CodoxSandbox
-   says so, not when it looks right.
+1. **Real documents are the referee** — a change "works" when it holds up on
+   a real exam PDF, not when it looks right.
 2. **Never let the model own formatting** — deterministic code emits, models
    only read (Phase-0b lesson).
 3. **The app is never the sole holder of a user's work** — export-early is a

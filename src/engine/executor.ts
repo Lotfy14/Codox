@@ -702,7 +702,7 @@ async function stepPlanAndValidate(
   // questions are new, and any neighbour it re-reads dedups against the
   // original windows. Gated on INDEX having mostly worked — a run that emitted
   // nothing falls to the legacy path below rather than spending a call per
-  // page. NEVER-GUESS holds: a page still empty after its repair stays flagged.
+  // page. A page still empty after its repair stays flagged.
   if (reconciled.questions.length > 0) {
     const examPageSet = new Set(examPages)
     const repairPages = repairTargetPages(
@@ -888,7 +888,7 @@ async function stepPlanAndValidate(
       // Figures cover the whole batch, not just the requested refs; capture
       // them once so a retry pass cannot duplicate an asset. A figure whose
       // page falls outside the batch is dropped — its rows keep their text
-      // (NEVER-GUESS covers invented pages too).
+      // (invented pages are dropped too).
       if (!figuresCaptured) {
         figures.push(...parsed.value.figures.flatMap((row) => {
           const page = absoluteFigurePage(row.page)
@@ -1002,7 +1002,7 @@ async function stepCrops(
 
 /**
  * What a row degrades to when the worker could not answer for it at any
- * granularity: everything blank. NEVER-GUESS — the merge-step gates flag
+ * granularity: everything blank. The merge-step gates flag
  * the emptiness (`empty_question`/`incomplete_options`) so the row reaches
  * Review pointing at its page instead of killing the other rows' run.
  */
@@ -1417,12 +1417,12 @@ export async function executeRun(
       // Triviadox card. Guarded on a *produced* crop — a planned-but-failed crop
       // (path present, bytes missing) must NOT trigger deletion, or the card
       // loses the table entirely. With no working image the text is the table's
-      // only copy and is kept (NEVER-GUESS covers deletion too).
+      // only copy and is kept.
       const hasCrop = row.image_urls.some((path) => producedCrops.has(path))
       const question = hasCrop ? stripTableBlock(row.question) : row.question
       // A row whose prompt read back empty is flagged, never a silent blank
       // card: BOX failed on that page and the whole-page fallback yielded no
-      // text. NEVER-GUESS — a flag pointing at the page beats an empty row.
+      // text. A flag pointing at the page beats an empty row.
       const emptyQuestion = question.trim() === ''
       return {
         ...row,

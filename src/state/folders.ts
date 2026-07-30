@@ -135,7 +135,7 @@ export interface FolderMatchOutcome {
  * Applies the folder's one shared topic list to every finished member PDF,
  * skipping those the tutor excluded (their topics are cleared so they ship
  * blank topic columns). Reuses the post-run `rematchRunTopics` path, so it
- * stays outside the engine and NEVER-GUESS holds — an unsure row stays blank.
+ * stays outside the engine — an unsure row stays blank.
  */
 export async function matchFolderTopics(
   folderId: string,

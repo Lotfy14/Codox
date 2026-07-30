@@ -121,7 +121,7 @@ export function ReviewDetail({
   const subtopicListId = useId()
 
   // The AI's stored answer for this question — display-only until the
-  // tutor approves it (NEVER-GUESS: approval is the human decision).
+  // tutor approves it (approval is the human decision).
   const ai = reviewRow === undefined ? undefined : aiAnswers?.[reviewRow.row.id]
   const aiIndex =
     reviewRow !== undefined &&

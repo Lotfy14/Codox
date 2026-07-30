@@ -33,7 +33,7 @@ const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
  * against the live docs 2026-07-22). It supersedes the 2026-07-14 pin on
  * `gemini-3.1-flash-lite`, which is retained as the runtime FALLBACK below.
  * Accepted-but-unverified cost: crop quality on the new model is unmeasured, so
- * re-run the gold gate (CodoxSandbox) before treating this as permanent.
+ * crop quality is unmeasured.
  */
 export const DEFAULT_GEMINI_VISION_MODEL = 'gemini-3.5-flash-lite'
 

@@ -19,8 +19,7 @@ Required coverage:
   rows; provider failures still use normal pause/stop behavior.
 - Worker retry, merge forcing, audit safety, cancellation, resume, and
   Flash-Lite model pinning under the staged request count.
-- One real 30-page multi-exam regression plus the external CodoxSandbox gold
-  gate (appendicitis 127/127).
+- One real 30-page multi-exam regression.
 
 The old single-call planner tests are intentionally not a migration template:
 their scripted prompt order, count shortfall gate, and repair behavior no

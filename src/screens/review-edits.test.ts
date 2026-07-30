@@ -122,7 +122,7 @@ describe('planEditSave', () => {
     expect(plan.resolution).toEqual({ kind: 'keep' })
   })
 
-  it('removing the correct option blanks the answer (NEVER-GUESS)', () => {
+  it('removing the correct option blanks the answer', () => {
     const row = makeRow({ correct_index: '2', needs_review: '' })
     const form = formFrom(row, null)
     form.options = form.options.filter((option) => option.originalIndex !== 2)

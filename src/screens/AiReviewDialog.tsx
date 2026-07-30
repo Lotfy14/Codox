@@ -4,7 +4,7 @@
  * then explicitly approve switching answers: the summary states exactly
  * how many blanks get filled and how many existing answers change before
  * anything is written. Approved switches become ordinary review
- * resolutions; engine output is never modified (NEVER-GUESS intact — the
+ * resolutions; engine output is never modified (the
  * approval click is the human decision).
  */
 import { useEffect, useRef, useState } from 'react'

@@ -28,7 +28,7 @@ export const EXAM_MANIFEST_NAME = 'exam.json'
 export const NOTES_NAME = 'NOTES.md'
 
 /**
- * Where an answer came from. This is the whole NEVER-GUESS hinge: only an
+ * Where an answer came from. This is the whole provenance hinge: only an
  * answer the agent SAW is allowed to fill `correct_index`.
  * - `extracted` — read off the document (printed key, mark on an option, a
  *   right-hand answer column, a margin letter). Ships like the engine's.
@@ -394,7 +394,7 @@ export function validateAgentExam(
 /**
  * An answer is only `extracted` when it names a real option. An out-of-range
  * or missing index degrades to `none` — blank + flagged — rather than being
- * repaired into some other option: NEVER-GUESS holds on the import path too.
+ * repaired into some other option.
  */
 function narrowAnswer(
   raw: unknown,

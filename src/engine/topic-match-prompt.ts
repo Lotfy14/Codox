@@ -1,7 +1,7 @@
 /**
  * The TOPIC MATCH prompt — labels extracted questions with the user's own
  * topic list, deliberately separate from the three pinned engine prompts
- * in `prompts.ts` (new surface, like the solver's). NEVER-GUESS applies in
+ * in `prompts.ts` (new surface, like the solver's). The same care applies in
  * spirit: the model may only pick from the provided list and must return
  * blanks when unsure; deterministic code re-validates every pick.
  */

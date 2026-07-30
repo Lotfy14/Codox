@@ -3,7 +3,7 @@
  * review resolution is the user's own answer, stored separately
  * (`review-resolutions` artifact) and applied deterministically at export.
  * Row edits (edit mode) follow the same pattern in their own
- * `review-edits` artifact — see `review-edits.ts`. NEVER-GUESS stays
+ * `review-edits` artifact — see `review-edits.ts`. The answer path stays
  * intact: only an explicit human pick ever fills a blank `correct_index`.
  */
 import { useLiveQuery } from 'dexie-react-hooks'
