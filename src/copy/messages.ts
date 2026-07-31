@@ -93,8 +93,8 @@ export const appMessages = {
   quotaLabel: 'Gemini free requests today',
   // "Gemini" is already in the strip heading — repeating it on both bars only
   // crowds each label against its own number.
-  quotaModelNewer: '3.5 Flash-Lite (newer)',
-  quotaModelOlder: '3.1 Flash-Lite (older)',
+  quotaModelNewer: '3.5 Flash-Lite',
+  quotaModelOlder: '3.1 Flash-Lite',
   apiDialogTitle: 'Gemini API key',
   helpDialogTitle: 'Help',
   privacyDialogTitle: 'Privacy',
