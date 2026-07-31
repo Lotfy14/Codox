@@ -252,6 +252,7 @@ export function mergeRows(
       // this value is policy/code-owned only.
       needs_review: isMcq ? forced.needs_review : 'not_mcq',
       image_urls: [...planned.image_urls],
+      continuation: worker.needs_review === 'options_recovered_from_page_break',
     })
   }
 

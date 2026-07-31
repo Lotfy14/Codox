@@ -480,6 +480,7 @@ export function ReviewDetail({
             : `Source, page ${reviewRow.pageIndex + 1}`}
           className="review__source"
         >
+          {continuationCrop}
           {imageUrl === null ? (
             <p className="ds-muted">{reviewMessages.sourceUnavailable}</p>
           ) : (
@@ -499,7 +500,6 @@ export function ReviewDetail({
               {wholePage ? reviewMessages.questionArea : reviewMessages.wholePage}
             </Button>
           ) : null}
-          {continuationCrop}
           {figureCrops}
         </section>
 
@@ -637,7 +637,7 @@ export function ReviewDetail({
             </div>
           ) : null}
 
-          {continuationPage !== null ? (
+          {continuationPage !== null && reviewRow.row.needs_review.includes('options_cut_at_page_break') ? (
             <p
               className="ds-inline-note ds-inline-note--info"
               role="status"

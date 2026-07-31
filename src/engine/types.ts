@@ -178,6 +178,7 @@ export interface MergedRow {
   correct_index: string
   image_urls: string[]
   needs_review: string
+  continuation?: boolean
 }
 
 /** Audit response (§2.3 output shape), post-narrowing. */

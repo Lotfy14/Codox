@@ -249,7 +249,7 @@ export async function loadReviewData(runId: string): Promise<ReviewData> {
       pageIndex,
       box: box,
       figures: figuresByRow.get(row.id) ?? [],
-      continuation: optionsCutAtPageBreak(row)
+      continuation: optionsCutAtPageBreak(row) || row.continuation === true
         ? continuationRegion(allPlanned, row.id, pageCount)
         : null,
     }

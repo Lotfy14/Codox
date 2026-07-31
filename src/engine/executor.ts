@@ -306,6 +306,27 @@ async function answerFocusImage(runId: string, planned: PlannedRow): Promise<Cal
   }
 }
 
+/** The top strip of the next page where a page-break option list resumes. */
+async function continuationFocusImage(runId: string, blueprint: Blueprint, planned: PlannedRow): Promise<CallImage | undefined> {
+  const optionsPage = planned.regions.options?.page
+  if (optionsPage === undefined || optionsPage >= blueprint.document_profile.page_count) return undefined
+  const nextPage = optionsPage + 1
+  const page = await getPageArtifact(runId, nextPage - 1)
+  if (page?.bytes === undefined || page.width === undefined || page.height === undefined) return undefined
+  const starts = blueprint.planned_rows.flatMap((row) =>
+    [row.regions.case_stem, row.regions.question_prompt]
+      .filter((region): region is NonNullable<typeof region> => region !== null && region.page === nextPage)
+      .map((region) => region.box_2d[0]),
+  )
+  const firstQuestion = starts.length === 0 ? 1000 : Math.min(...starts)
+  const bottom = Math.min(1000, Math.max(250, firstQuestion + 30))
+  try {
+    const jpeg = await cropJpeg(new Blob([page.bytes as BlobPart], { type: JPEG }), boxToCropBox([0, 0, bottom, 1000], page.width, page.height))
+    return { mimeType: JPEG, base64Data: bytesToBase64(await blobToBytes(jpeg)) }
+  } catch {
+    return undefined
+  }
+}
 /** All successfully rendered pages, in order. */
 async function renderedPages(runId: string): Promise<RunArtifact[]> {
   const pages = await getArtifacts(runId, 'page-jpeg')
@@ -1368,17 +1389,22 @@ async function repairUnderTranscribedRows(
           }
         : planned
     const reduced = buildReducedBlueprint(blueprint, [forWorker])
-    const focus = missedAnswerSet.has(id) ? await answerFocusImage(runId, forWorker) : undefined
+    const answerFocus = missedAnswerSet.has(id) ? await answerFocusImage(runId, forWorker) : undefined
+    const continuationFocus = atPageBreak.has(id)
+      ? await continuationFocusImage(runId, blueprint, planned)
+      : undefined
     const images = [
       ...(await pageImages(runId, chunkPages(reduced).map((page) => page - 1))),
       ...(await cropImages(runId, reduced.assets.map((asset) => asset.output_path))),
-      ...(focus === undefined ? [] : [focus]),
+      ...(answerFocus === undefined ? [] : [answerFocus]),
+      ...(continuationFocus === undefined ? [] : [continuationFocus]),
     ]
+    const instructions = [
+      answerFocus === undefined ? '' : 'The final image is a focused crop of this row, including its full right margin. Re-read the visible answer mark there. If it is a handwritten option letter, map that letter to this row\'s 0-based option index; do not use subject knowledge.',
+      continuationFocus === undefined ? '' : 'The final image is the top of the next page, where this row\'s options continue. Include every visible continuation option in its original order; do not stop at the first page.',
+    ].filter(Boolean).join(' ')
     const response = await timed(runId, `worker repair ${id}`, () =>
-      call(controller, runId, buildWorkerRequest(
-        reduced, images, workerModel, undefined,
-        focus === undefined ? undefined : 'The final image is a focused crop of this row, including its full right margin. Re-read the visible answer mark there. If it is a handwritten option letter, map that letter to this row\'s 0-based option index; do not use subject knowledge.',
-      ), signal),
+      call(controller, runId, buildWorkerRequest(reduced, images, workerModel, undefined, instructions === '' ? undefined : instructions), signal),
     )
     if (wasTruncated(response.finishReason)) return
     const validation = validateWorkerChunk(response.text, [forWorker])
@@ -1387,12 +1413,76 @@ async function repairUnderTranscribedRows(
       const betterOptions = candidate.options.length > current.options.length
       const filledMissedAnswer = missedAnswerSet.has(id) &&
         current.correct_index.trim() === '' && candidate.correct_index.trim() !== ''
-      if (betterOptions || filledMissedAnswer) byId.set(id, candidate)
+      if (betterOptions || filledMissedAnswer) byId.set(id, {
+        ...candidate,
+        needs_review: betterOptions && atPageBreak.has(id) ? 'options_recovered_from_page_break' : candidate.needs_review,
+      })
     }
   })
   return rows.map((row) => byId.get(row.id) ?? row)
 }
 
+/** A focused read may only confirm the original answer; disagreement is unsafe. */
+export function confirmedInlineAnswer(original: string, focused: string): string {
+  return original !== '' && focused === original ? original : ''
+}
+
+/**
+ * The broad worker can mistake a nearby margin letter (or subject knowledge)
+ * for this row's answer. Re-read every extracted inline answer with a crop of
+ * only its question and right margin; anything not independently confirmed is
+ * blanked and therefore surfaced as `no_visible_answer` at merge.
+ */
+async function verifyInlineAnswers(
+  runId: string,
+  blueprint: Blueprint,
+  rows: WorkerRow[],
+  controller: GeminiController,
+  workerModel: string,
+  signal: AbortSignal | undefined,
+): Promise<WorkerRow[]> {
+  const policy = blueprint.document_profile.answer_policy.type
+  if (policy !== 'inline_marks' && policy !== 'mixed') return rows
+  const plannedById = new Map(blueprint.planned_rows.map((row) => [row.id, row]))
+  const ids = rows.flatMap((row) => {
+    const planned = plannedById.get(row.id)
+    return row.correct_index.trim() !== '' && planned !== undefined &&
+      planned.correct_index_policy.needs_review === '' &&
+      !planned.correct_index_policy.type.startsWith('blank') ? [row.id] : []
+  })
+  if (ids.length === 0) return rows
+  await logEvent({
+    scope: 'engine', level: 'info', event: 'engine.worker.answer_verify', runId,
+    detail: { count: ids.length, ids },
+  })
+  const byId = new Map(rows.map((row) => [row.id, row]))
+  await mapConcurrent(ids, CALL_CONCURRENCY, async (id) => {
+    const planned = plannedById.get(id)
+    const current = byId.get(id)
+    if (planned === undefined || current === undefined) return
+    const focus = await answerFocusImage(runId, planned)
+    // No focused crop means no independent evidence; retain the original
+    // rather than turning an image-loading failure into a review flood.
+    if (focus === undefined) return
+    const reduced = buildReducedBlueprint(blueprint, [planned])
+    const images = [
+      ...(await pageImages(runId, chunkPages(reduced).map((page) => page - 1))),
+      focus,
+    ]
+    const response = await timed(runId, `worker answer verify ${id}`, () =>
+      call(controller, runId, buildWorkerRequest(
+        reduced, images, workerModel, undefined,
+        'The final image is the only evidence crop for this row. Confirm the existing answer only when a visible mark belongs to this question. Return correct_index blank if there is no mark in this crop, if it belongs to another question, or if it cannot be read. Never answer from subject knowledge.',
+      ), signal),
+    )
+    if (wasTruncated(response.finishReason)) return
+    const validation = validateWorkerChunk(response.text, [planned])
+    if (!validation.ok || validation.rows[0] === undefined) return
+    const confirmed = confirmedInlineAnswer(current.correct_index, validation.rows[0].correct_index)
+    if (confirmed !== current.correct_index) byId.set(id, { ...current, correct_index: confirmed })
+  })
+  return rows.map((row) => byId.get(row.id) ?? row)
+}
 async function stepWorker(
   runId: string,
   blueprint: Blueprint,
@@ -1597,8 +1687,11 @@ async function stepWorker(
     return { ok: false }
   }
 
-  const rows = await repairUnderTranscribedRows(
+  const repaired = await repairUnderTranscribedRows(
     runId, blueprint, flatRows, controller, workerModel, signal, failedIds,
+  )
+  const rows = await verifyInlineAnswers(
+    runId, blueprint, repaired, controller, workerModel, signal,
   )
   return { ok: true, rows }
 }
