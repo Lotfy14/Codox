@@ -136,7 +136,6 @@ export function ReviewDetail({
 
   useEffect(() => {
     setSelected(seededAnswer)
-    setWholePage(false)
   }, [currentRowId, seededAnswer])
 
   useEffect(() => {
