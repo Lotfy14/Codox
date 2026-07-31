@@ -35,8 +35,8 @@ export type EngineModels = Record<EngineStep, string>
 export const DEFAULT_ENGINE_MODELS: Record<EngineStep, EngineModel> = {
   index: DEFAULT_GEMINI_VISION_MODEL,
   evidence: DEFAULT_GEMINI_VISION_MODEL,
-  figure: DEFAULT_GEMINI_VISION_MODEL,
-  box: DEFAULT_GEMINI_VISION_MODEL,
+  figure: 'gemini-3.1-flash-lite',
+  box: 'gemini-3.1-flash-lite',
   worker: DEFAULT_GEMINI_VISION_MODEL,
   audit: DEFAULT_GEMINI_VISION_MODEL,
 }
