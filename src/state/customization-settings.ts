@@ -43,6 +43,8 @@ export interface CustomizationSettings {
   exportTarget: ExportTarget
   /** Shows the Convert screen's step-timing debug console. Off by default. */
   debugConsole: boolean
+  /** Draw question/figure crops for Review; extraction itself does not need them. */
+  boxCrops: boolean
   /**
    * Pages per INDEX window core. 10 is the default and the safe value.
    * LOWERING THIS LOSES QUESTIONS: more windows means more boundaries, and
@@ -103,6 +105,7 @@ export const DEFAULT_CUSTOMIZATION_SETTINGS: CustomizationSettings = {
   topicsMode: 'on',
   exportTarget: 'triviadox',
   debugConsole: false,
+  boxCrops: true,
   indexPagesPerCall: INDEX_PAGES_MAX,
   boxPagesPerCall: BOX_PAGES_MIN,
   workerChunkSize: 6,
@@ -185,6 +188,10 @@ function narrow(value: string | undefined): CustomizationSettings {
         typeof parsed.debugConsole === 'boolean'
           ? parsed.debugConsole
           : DEFAULT_CUSTOMIZATION_SETTINGS.debugConsole,
+      boxCrops:
+        typeof parsed.boxCrops === 'boolean'
+          ? parsed.boxCrops
+          : DEFAULT_CUSTOMIZATION_SETTINGS.boxCrops,
       indexPagesPerCall: counted(
         parsed.indexPagesPerCall,
         INDEX_PAGES_MIN,

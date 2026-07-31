@@ -163,6 +163,7 @@ export function useConversion(jobId: string): ConversionState {
               answerKeyMimeType: item.answerKey?.mimeType,
               indexPagesPerCall: settings.indexPagesPerCall,
               boxPagesPerCall: settings.boxPagesPerCall,
+              boxCrops: settings.boxCrops,
               chunkSize: settings.workerChunkSize,
               matchingMode: settings.matchingMode,
               models: settings.engineModels,

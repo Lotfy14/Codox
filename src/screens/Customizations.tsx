@@ -102,17 +102,11 @@ const MODEL_SELECT_OPTIONS: readonly SelectOption<EngineModel>[] = [
 ]
 
 /** The request-making steps, in pipeline order, with their tutor-facing copy. */
-const MODEL_STEPS: readonly {
-  step: EngineStep
-  label: string
-  hint: string
-}[] = [
-  { step: 'index', label: customizeMessages.modelIndexLabel, hint: customizeMessages.modelIndexHint },
-  { step: 'evidence', label: customizeMessages.modelEvidenceLabel, hint: customizeMessages.modelEvidenceHint },
-  { step: 'figure', label: customizeMessages.modelFigureLabel, hint: customizeMessages.modelFigureHint },
-  { step: 'box', label: customizeMessages.modelBoxLabel, hint: customizeMessages.modelBoxHint },
-  { step: 'worker', label: customizeMessages.modelWorkerLabel, hint: customizeMessages.modelWorkerHint },
-  { step: 'audit', label: customizeMessages.modelAuditLabel, hint: customizeMessages.modelAuditHint },
+const MODEL_STEPS: readonly { steps: readonly EngineStep[]; label: string; hint: string }[] = [
+  { steps: ['index', 'evidence', 'audit'], label: 'Planner', hint: 'Finding questions, reading answer keys, and final validation.' },
+  { steps: ['worker'], label: 'Worker', hint: 'Transcribes questions and choices.' },
+  { steps: ['figure'], label: 'Figure', hint: 'Finds essential question-linked figures.' },
+  { steps: ['box'], label: 'Crop', hint: 'Draws optional Review question crops.' },
 ]
 
 const TOPICS_OPTIONS: readonly ChoiceOption<TopicsMode>[] = [
@@ -220,6 +214,17 @@ export function Customizations() {
           as="section"
           padding="compact"
         >
+          <Toggle
+            description={customizeMessages.boxCropsHint}
+            isSelected={settings.boxCrops}
+            label={customizeMessages.boxCropsLabel}
+            onChange={(boxCrops) => void saveCustomizationSettings({ ...settings, boxCrops })}
+          />
+        </GlassPanel>        <GlassPanel
+          aria-label={customizeMessages.boxPanelLabel}
+          as="section"
+          padding="compact"
+        >
           <Select<number>
             description={customizeMessages.boxHint}
             label={customizeMessages.boxLabel}
@@ -260,20 +265,20 @@ export function Customizations() {
         >
           <div className="ds-stack">
             <p className="ds-muted">{customizeMessages.modelsIntro}</p>
-            {MODEL_STEPS.map(({ step, label, hint }) => (
+            {MODEL_STEPS.map(({ steps, label, hint }) => (
               <Select<EngineModel>
-                key={step}
+                key={label}
                 description={hint}
                 label={label}
                 onChange={(model) => {
                   if (model === null) return
                   void saveCustomizationSettings({
                     ...settings,
-                    engineModels: { ...settings.engineModels, [step]: model },
+                    engineModels: { ...settings.engineModels, ...Object.fromEntries(steps.map((step) => [step, model])) },
                   })
                 }}
                 options={MODEL_SELECT_OPTIONS}
-                value={settings.engineModels[step]}
+                value={settings.engineModels[steps[0]]}
               />
             ))}
           </div>

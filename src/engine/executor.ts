@@ -125,6 +125,8 @@ export interface ExecutorOptions {
    * 1 (default) keeps the per-page pass; higher spends fewer requests.
    */
   boxPagesPerCall?: number
+  /** Skip BOX/figure crop requests; worker extraction remains full-page. */
+  boxCrops?: boolean
   /**
    * Customize's "Matching questions", default 'split'. Spends a request only
    * when a row's text actually mentions matching or pairing.
@@ -708,7 +710,7 @@ export function keepIndexObservedMarks(
  * checkpoint compatibility fallback, never as a new request format. */
 async function stepPlanAndValidate(
   runId: string, controller: GeminiController, signal: AbortSignal | undefined,
-  examPageCount?: number, answerKeyPageCount = 0, boxPagesPerCall = 1,
+  examPageCount?: number, answerKeyPageCount = 0, boxPagesPerCall = 1, boxCrops = true,
   indexPagesPerCall = DEFAULT_WINDOW_PAGES, models: EngineModels = DEFAULT_ENGINE_MODELS,
 ): Promise<{ ok: true; blueprint: Blueprint } | { ok: false; reason: PlannerStop }> {
   const cached = await getArtifact(runId, 'blueprint-valid')
@@ -1111,6 +1113,37 @@ async function stepPlanAndValidate(
     return { found, figures, pageIssues }
   })
 
+  /** Figure geometry without question/option boxes. Called only for pages the
+   * detector says actually contain a required figure, so text-only pages spend
+   * no crop request when Review question crops are disabled. */
+  const runFigureGeometry = (detectedFigures: readonly FigureCandidate[]) => {
+    const byFigurePage = new Map<number, FigureCandidate[]>()
+    for (const figure of detectedFigures) {
+      const list = byFigurePage.get(figure.page) ?? []
+      list.push(figure)
+      byFigurePage.set(figure.page, list)
+    }
+    return mapConcurrent([...byFigurePage.entries()], CALL_CONCURRENCY, async ([page, figures]) => {
+      const hints = figures.map((figure) => ({
+        page: 1, anchor: figure.anchor, linked_refs: [...figure.linkedRefs],
+      }))
+      const response = await timed(runId, `figure crop p${page}`, async () =>
+        call(controller, runId, buildBoxRequest(
+          await pageImages(runId, [page - 1]), [], models.box, hints,
+        ), signal),
+      )
+      const parsed = wasTruncated(response.finishReason) ? undefined : parseBoxResult(response.text)
+      if (parsed === undefined || !parsed.ok) {
+        await logEvent({ scope: 'engine', level: 'warn', event: 'engine.figure.crop.fail', runId, page, reason: 'figure geometry response invalid' })
+        return { found: [] as BoxResult['questions'], figures: [] as BoxResult['figures'], pageIssues: [] as PlanningIssue[] }
+      }
+      return {
+        found: [] as BoxResult['questions'],
+        figures: parsed.value.figures.map((figure) => ({ ...figure, page })),
+        pageIssues: [] as PlanningIssue[],
+      }
+    })
+  }
   // Evidence is independent and still overlaps. BOX now consumes FIGURE
   // DETECT's findings, so those two are ordered rather than parallel: the cost
   // is one call's latency (figure detection is a call per window, BOX a call
@@ -1122,17 +1155,19 @@ async function stepPlanAndValidate(
     runEvidence(),
     runFigureDetect(),
   ])
-  const boxOutcomes = await runBoxBatches(detectedFigures)
+  const boxOutcomes = boxCrops
+    ? await runBoxBatches(detectedFigures)
+    : await runFigureGeometry(detectedFigures)
   const allBoxes: BoxResult = { questions: [], figures: [] }
   for (const outcome of boxOutcomes) {
-    allBoxes.questions.push(...outcome.found)
+    if (boxCrops) allBoxes.questions.push(...outcome.found)
     allBoxes.figures.push(...outcome.figures)
     issues.push(...outcome.pageIssues)
   }
   const boxedRefs = new Set(allBoxes.questions.map((q) => q.ref))
   const flaggedRefs = new Set(issues.flatMap((issue) => (issue.rowRef !== undefined ? [issue.rowRef] : [])))
   for (const question of reconciled.questions) {
-    if (!boxedRefs.has(question.ref) && !flaggedRefs.has(question.ref)) {
+    if (boxCrops && !boxedRefs.has(question.ref) && !flaggedRefs.has(question.ref)) {
       issues.push({ kind: 'unreadable_page', page: question.ownerPage, rowRef: question.ref, reason: 'no box region — row recovered from the full page; verify' })
     }
   }
@@ -1743,7 +1778,7 @@ export async function executeRun(
     await updateRun(runId, { step: 'planner', stepStartedAt: Date.now() })
     const planned = await stepPlanAndValidate(
       runId, controller, signal, render.examPageCount, render.answerKeyPageCount,
-      options.boxPagesPerCall, options.indexPagesPerCall, models,
+      options.boxPagesPerCall, options.boxCrops, options.indexPagesPerCall, models,
     )
     if (!planned.ok) return stop(runId, 'planner', planned.reason)
     const blueprint = planned.blueprint

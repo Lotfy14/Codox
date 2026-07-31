@@ -299,6 +299,8 @@ export const customizeMessages = {
   boxLabel: 'Pages per box request',
   boxHint:
     'How many pages each box-drawing request covers during conversion. 1 is the default and most accurate. Higher values spend fewer requests on big exams — useful against the daily free limit — but box accuracy can drop, so raise this only if you keep running out of quota.',
+  boxCropsLabel: 'Question crops',
+  boxCropsHint: 'Draws focused question and figure crops for Review. Turn this off to save requests; extraction still reads the full pages, but Review shows whole pages only.',
   boxOption: (count: number) =>
     count === 1 ? '1 page (default)' : `${count} pages`,
   workerPanelLabel: 'Worker requests',

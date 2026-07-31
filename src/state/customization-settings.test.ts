@@ -24,6 +24,7 @@ describe('customization settings', () => {
       topicsMode: 'off',
       exportTarget: 'zip',
       debugConsole: true,
+      boxCrops: true,
       indexPagesPerCall: 3,
       boxPagesPerCall: 4,
       workerChunkSize: 5,
@@ -42,6 +43,7 @@ describe('customization settings', () => {
       topicsMode: 'off',
       exportTarget: 'zip',
       debugConsole: true,
+      boxCrops: true,
       indexPagesPerCall: 3,
       boxPagesPerCall: 4,
       workerChunkSize: 5,
@@ -100,6 +102,7 @@ describe('customization settings', () => {
       topicsMode: 'off',
       exportTarget: DEFAULT_CUSTOMIZATION_SETTINGS.exportTarget,
       debugConsole: DEFAULT_CUSTOMIZATION_SETTINGS.debugConsole,
+      boxCrops: DEFAULT_CUSTOMIZATION_SETTINGS.boxCrops,
       // Out of range below the floor — a 0-page window would emit no windows
       // at all, so it must never survive narrowing.
       indexPagesPerCall: DEFAULT_CUSTOMIZATION_SETTINGS.indexPagesPerCall,
