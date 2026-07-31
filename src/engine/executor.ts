@@ -57,7 +57,7 @@ import {
   type LocalizedIndexWindow,
   type ReconciledQuestion,
 } from './enumerate'
-import { parseBoxResult, parseEvidenceMap, parseFigureDetection, parseIndexWindow, type BoxResult, type EvidenceMap } from './index-pass'
+import { parseBoxResult, parseEvidenceMap, parseFigureDetection, parseIndexWindow, type BoxResult, type EvidenceMap, type FigureCandidate } from './index-pass'
 import type { PlanningIssue } from '../state/types'
 import {
   buildReducedBlueprint,
@@ -847,16 +847,41 @@ async function stepPlanAndValidate(
   }
 
   // Detection is independent of INDEX's observation, so a false index flag
-  // cannot suppress a visual. Its result is checkpointed for diagnostics.
-  const runFigureDetect = () => mapConcurrent(windows, CALL_CONCURRENCY, async (window, index) => {
-    const response = await timed(runId, `figure w${index + 1}`, async () => call(controller, runId, buildFigureDetectRequest(
-      await pageImages(runId, window.context.map((page) => page - 1)),
-      reconciled.questions.filter((row) => window.core.includes(row.ownerPage)).map((row) => ({ ref: row.ref, ownerPage: row.ownerPage })),
-      models.figure,
-    ), signal))
-    await putArtifact({ runId, kind: 'figure-window', chunkIndex: index, text: response.text })
-    if (!wasTruncated(response.finishReason)) parseFigureDetection(response.text)
-  })
+  // cannot suppress a visual. Its findings are handed to BOX below: FIGURE
+  // DETECT's prompt tells it to be "extremely aggressive", while BOX only
+  // volunteers figures alongside its real job of boxing question text, so BOX
+  // alone silently loses plain clinical images (measured 2026-07-31: on a
+  // 22-page cardiology exam FIGURE DETECT found the ECG strip and echo still
+  // on pages 4 and 5 that BOX never emitted, and those questions — "which is
+  // the first recommended intervention?" — shipped with no picture at all).
+  const runFigureDetect = async (): Promise<FigureCandidate[]> => {
+    const perWindow = await mapConcurrent(windows, CALL_CONCURRENCY, async (window, index) => {
+      const response = await timed(runId, `figure w${index + 1}`, async () => call(controller, runId, buildFigureDetectRequest(
+        await pageImages(runId, window.context.map((page) => page - 1)),
+        reconciled.questions.filter((row) => window.core.includes(row.ownerPage)).map((row) => ({ ref: row.ref, ownerPage: row.ownerPage })),
+        models.figure,
+      ), signal))
+      await putArtifact({ runId, kind: 'figure-window', chunkIndex: index, text: response.text })
+      if (wasTruncated(response.finishReason)) return []
+      const parsed = parseFigureDetection(response.text)
+      if (!parsed.ok) return []
+      // The prompt asks for the IMAGE number, which is this window's position
+      // in `window.context` — not the document page. A figure naming an image
+      // the window never received is dropped rather than guessed at.
+      return parsed.value.figures.flatMap((figure) => {
+        const page = window.context[figure.page - 1]
+        return page === undefined ? [] : [{ ...figure, page }]
+      })
+    })
+    // Windows overlap by design, so the same figure can be reported twice.
+    const seen = new Set<string>()
+    return perWindow.flat().filter((figure) => {
+      const key = `${figure.page}|${figure.linkedRefs.join(',')}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  }
 
   const byPage = new Map<number, typeof reconciled.questions>()
   for (const question of reconciled.questions) {
@@ -877,7 +902,20 @@ async function stepPlanAndValidate(
   for (let start = 0; start < pageEntries.length; start += batchSize) {
     batches.push(pageEntries.slice(start, start + batchSize))
   }
-  const boxAttempt = async (batchPages: readonly number[], refs: readonly ReconciledQuestion[], attempt: number) => {
+  const boxAttempt = async (
+    batchPages: readonly number[],
+    refs: readonly ReconciledQuestion[],
+    attempt: number,
+    detectedFigures: readonly FigureCandidate[],
+  ) => {
+    // Only the figures on this request's own pages, renumbered to the image
+    // positions this request will use.
+    const hints = detectedFigures.flatMap((figure) => {
+      const imageNumber = batchPages.indexOf(figure.page) + 1
+      return imageNumber === 0
+        ? []
+        : [{ page: imageNumber, anchor: figure.anchor, linked_refs: [...figure.linkedRefs] }]
+    })
     const span = batchPages.length > 1 ? `-${batchPages[batchPages.length - 1]}` : ''
     const response = await timed(runId, `box p${batchPages[0]}${span}${attempt > 0 ? ` retry${attempt}` : ''}`, async () => {
       const images = await pageImages(runId, batchPages.map((page) => page - 1))
@@ -893,10 +931,10 @@ async function stepPlanAndValidate(
         hasInlineEvidence: false
       }))
       const request = batchPages.length === 1
-        ? buildBoxRequest(images, tasks, models.box)
+        ? buildBoxRequest(images, tasks, models.box, hints)
         : buildBoxBatchRequest(images, tasks.map((task, index) => ({
             ...task, page: batchPages.indexOf(refs[index].ownerPage) + 1,
-          })), models.box)
+          })), models.box, hints)
       return call(controller, runId, request, signal)
     })
     const parsed = wasTruncated(response.finishReason) ? undefined : parseBoxResult(response.text)
@@ -905,7 +943,7 @@ async function stepPlanAndValidate(
   // Each batch task returns its own findings; they are folded back in page
   // order below, so asset numbering and issue order never depend on which
   // call happened to finish first.
-  const runBoxBatches = () => mapConcurrent(batches, CALL_CONCURRENCY, async (batch) => {
+  const runBoxBatches = (detectedFigures: readonly FigureCandidate[]) => mapConcurrent(batches, CALL_CONCURRENCY, async (batch) => {
     const batchPages = batch.map(([page]) => page)
     const found: BoxResult['questions'] = []
     const figures: BoxResult['figures'] = []
@@ -918,7 +956,7 @@ async function stepPlanAndValidate(
     let figuresCaptured = false
     let lastReason = 'no box region after retry'
     for (let attempt = 0; attempt < BOX_ATTEMPTS && remaining.length > 0; attempt += 1) {
-      const { response, parsed } = await boxAttempt(batchPages, remaining, attempt)
+      const { response, parsed } = await boxAttempt(batchPages, remaining, attempt, detectedFigures)
       if (parsed === undefined || !parsed.ok) {
         lastReason = parsed === undefined ? 'BOX response was truncated' : parsed.errors.join('; ')
         await logEvent({ scope: 'engine', level: 'warn', event: 'engine.box.page.fail', runId, page: batchPages[0], reason: lastReason, detail: { attempt, pages: batchPages, rawResponse: response.text } })
@@ -956,14 +994,18 @@ async function stepPlanAndValidate(
     return { found, figures, pageIssues }
   })
 
-  // Evidence, figure detection, and BOX share no inputs beyond the
-  // reconciled index and never read each other's outputs (they only meet in
-  // assembleBlueprint), so the three passes overlap.
-  const [evidence, , boxOutcomes] = await Promise.all([
+  // Evidence is independent and still overlaps. BOX now consumes FIGURE
+  // DETECT's findings, so those two are ordered rather than parallel: the cost
+  // is one call's latency (figure detection is a call per window, BOX a call
+  // per page), and it adds NO calls at all — which matters because every call
+  // is the tutor's own free-tier quota. The alternative, a repair pass that
+  // re-boxes pages whose figure BOX missed, would have cost one extra call per
+  // such page.
+  const [evidence, detectedFigures] = await Promise.all([
     runEvidence(),
     runFigureDetect(),
-    runBoxBatches(),
   ])
+  const boxOutcomes = await runBoxBatches(detectedFigures)
   const allBoxes: BoxResult = { questions: [], figures: [] }
   for (const outcome of boxOutcomes) {
     allBoxes.questions.push(...outcome.found)

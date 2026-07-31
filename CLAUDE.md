@@ -446,6 +446,43 @@ printed at the top of page 3) and contributes to `notSafeToImport`. Not worked
 around: the AUDIT prompt is pinned, and suppressing "options added" failures in
 code would also suppress genuine invention reports. Owner call.
 
+*FIGURE DETECT's findings now reach BOX (2026-07-31):* the FIGURE DETECT stage
+ran a Gemini call per index window, parsed the response, and **discarded the
+result** — `parseFigureDetection(response.text)` was a bare expression whose
+value went nowhere. Blueprint assets were built only from figures BOX
+volunteers (`assemble.ts` reads `input.boxes.figures` and nothing else), and a
+`FigureCandidate` carries no `box_2d`, so the stage could not have produced a
+crop whatever it found. It was a per-window call for zero effect on output —
+while being a model-selectable step in Customize.
+
+That silently lost pictures. FIGURE DETECT's prompt tells it to be "extremely
+aggressive"; BOX only volunteers figures alongside its real job of boxing
+question text, and under-reports plain clinical images. Measured on
+`Example-of-MCQ-questions.pdf` (22 pages, one ECG/echo per case): FIGURE DETECT
+found the rhythm strip on page 4 and the echo still on page 5 — both confirmed
+by rendering the pages — and BOX emitted neither, so "Which of the following
+will be the first recommended intervention?" shipped with no image and no way
+to answer it.
+
+`runFigureDetect` now returns its candidates and BOX consumes them, passed as a
+**code-owned hint block** appended alongside the existing `PAGE TASKS:` payload
+(`withFigureHints`, `BoxFigureHint` in `calls.ts`). The pinned `BOX_PROMPT` /
+`BOX_BATCH_PROMPT` text is untouched and `prompts.test.ts` still passes. Page
+numbers had to be converted: FIGURE DETECT returns the **image** number, so the
+same figure window 0 called "page 10" window 1 called "p1"; a figure naming an
+image its window never received is dropped, never guessed at.
+
+The two stages are now **ordered rather than parallel** — the cost is one call's
+latency and **no extra calls at all**, which is why chaining beat the obvious
+alternative (a repair pass re-boxing pages whose figure BOX missed would have
+cost one extra call per such page, ~15 on that document, out of the tutor's own
+free-tier quota). Measured before → after on the same document: rows carrying an
+image **6 → 11**, asset pages `2,7,10,15,16,17` → `2,4,5,7,10,12,13,14,15,16,17`,
+identical call count, no slower. **Still open:** the remaining gap is FIGURE
+DETECT's own recall — it never reported pages 3, 8 or 9, whose questions ("What
+is the likely diagnosis?") almost certainly depend on an image. Closing that
+means editing a pinned prompt; not done.
+
 *Matching-question policy (owner-approved 2026-07-18):* a true matching
 question — one row whose answer is a set of pairings — cannot be carried by a
 single-`correct_index` Triviadox row. Customize's **"Matching questions"**

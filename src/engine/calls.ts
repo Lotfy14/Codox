@@ -276,6 +276,38 @@ export interface BoxTaskRef {
   hasInlineEvidence: boolean;
 }
 
+/**
+ * A figure the FIGURE DETECT stage already found on one of this request's
+ * pages, passed to BOX so its job is "box this known figure" rather than
+ * "notice a figure". `page` is the 1-based IMAGE number within this request,
+ * matching how BoxTaskRef.page and the response's figure pages are numbered.
+ *
+ * This is code-owned payload appended alongside PAGE TASKS — the pinned
+ * BOX_PROMPT/BOX_BATCH_PROMPT text is untouched.
+ */
+export interface BoxFigureHint {
+  page: number
+  anchor: string
+  linked_refs: string[]
+}
+
+/**
+ * FIGURE DETECT is deliberately far more aggressive about spotting figures
+ * than BOX is (its prompt says "be extremely aggressive"), and its findings
+ * were previously discarded. Handing them to BOX recovers plain clinical
+ * images — ECG strips, echo stills — that BOX alone routinely fails to emit,
+ * leaving their questions to ship with no picture at all.
+ */
+function withFigureHints(prompt: string, hints: readonly BoxFigureHint[]): string {
+  if (hints.length === 0) return prompt
+  return (
+    prompt +
+    '\n\nFIGURES ALREADY DETECTED ON THESE PAGES — each one MUST appear in your' +
+    ' "figures" output with a tight box_2d:\n' +
+    JSON.stringify(hints)
+  )
+}
+
 const BOX_RESPONSE_SCHEMA = {
   type: 'OBJECT', properties: {
     questions: { type: 'ARRAY', items: { type: 'OBJECT', properties: {
@@ -293,9 +325,10 @@ export function buildBoxRequest(
   pages: readonly CallImage[],
   refs: readonly BoxTaskRef[],
   plannerModel = PLANNER_MODEL,
+  figureHints: readonly BoxFigureHint[] = [],
 ): VisionRequest {
   return structuredPlannerRequest(
-    BOX_PROMPT + '\n\nPAGE TASKS:\n' + JSON.stringify(refs),
+    withFigureHints(BOX_PROMPT, figureHints) + '\n\nPAGE TASKS:\n' + JSON.stringify(refs),
     pages, BOX_RESPONSE_SCHEMA, plannerModel,
   )
 }
@@ -310,9 +343,10 @@ export function buildBoxBatchRequest(
   pages: readonly CallImage[],
   refs: readonly (BoxTaskRef & { page: number })[],
   plannerModel = PLANNER_MODEL,
+  figureHints: readonly BoxFigureHint[] = [],
 ): VisionRequest {
   return structuredPlannerRequest(
-    BOX_BATCH_PROMPT + '\n\nPAGE TASKS:\n' + JSON.stringify(refs),
+    withFigureHints(BOX_BATCH_PROMPT, figureHints) + '\n\nPAGE TASKS:\n' + JSON.stringify(refs),
     pages, BOX_RESPONSE_SCHEMA, plannerModel,
   )
 }

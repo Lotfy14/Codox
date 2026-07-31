@@ -62,10 +62,42 @@ page regardless of how it is shown.
 ## Still uncovered (do not claim the prompt generalises until these exist)
 
 - A real separate answer-key document, verified end-to-end.
-- A full **conversion** of an unanswered exam at production chunk size (10
-  rows, several page images per worker call). The isolated worker probe below
-  covers the perceptual question; what it does not cover is whether a larger
-  chunk changes the worker's restraint.
+
+## The unanswered exam at production chunk size — covered 2026-07-31
+
+The second item that stood here is now measured. A full headless conversion of
+`EOR IM MCQ 2025-194-2nd.pdf` (the unanswered scan, 8 pages) through the real
+app at production chunk size — 50 rows, 5 worker chunks of 10 rows with several
+page images each — ended **1 of 50 answered, 49 flagged `no_visible_answer`**.
+A larger chunk does NOT erode the worker's restraint.
+
+The single filled row is not a false positive: row 28's option **b** carries a
+hand-drawn circle (verified against the render), and the worker returned exactly
+that index. So on a document whose marks are almost entirely absent it found the
+one that exists and abstained everywhere else.
+
+## Answer accuracy on a marked exam — measured 2026-07-31
+
+The other half of the same question ("does the 2026-07-30 WORKER prompt edit
+raise answer recall without raising WRONG answers", left open in CLAUDE.md).
+`EOR SUR MCQ 2026-195-1st [Answers].pdf` — 10 photographed pages, 80 MCQs, the
+correct option highlighted — converted twice. Ground truth read off the renders
+for 22 questions lives in `scripts/truth/`.
+
+- **43 of 44 graded answers correct** (run 1: 21/22, run 2: 22/22).
+- It follows the **highlighter** over a competing pen circle on a different
+  option (Q3, Q9, Q14, Q51, Q53, Q55 all carry both marks), and reads a pink
+  highlight as readily as yellow.
+- Q58 is struck through and hand-annotated "Cancelled". It came back **blank and
+  flagged** — the only flagged row in either 80-row run.
+- 80 of 80 questions extracted both times, zero truncation, audit
+  `safe_to_import`.
+
+**The instability is in reading, not extraction.** Diffing the two runs: option
+counts identical on all 80 rows, question text near-identical, but **4 answers
+disagreed (5%)**. Neither run is systematically better — run 1 is right on rows
+22 and 37, run 2 on rows 11 and 71. Treat ~5% answer flakiness as the current
+floor on a clean marked scan; it is why Review exists.
 
 ## The unanswered exam — covered 2026-07-30
 
