@@ -136,7 +136,14 @@ export interface RunState {
 }
 
 export interface PlanningIssue {
-  kind: 'missing_question' | 'unreadable_page' | 'figure_unreadable'
+  /**
+   * `uncertain_page` — two INDEX passes placed the same question on different
+   * pages and the page text layer could not settle it (a scan, or an anchor too
+   * formulaic to be unique). The page kept is the first observed, so it is a
+   * coin flip; the tutor is told rather than left with a silently misplaced
+   * question. See `verifyOwnerPages` in engine/enumerate.ts.
+   */
+  kind: 'missing_question' | 'unreadable_page' | 'figure_unreadable' | 'uncertain_page'
   page?: number
   section?: string
   printedLabel?: string

@@ -494,6 +494,52 @@ DETECT's own recall — it never reported pages 3, 8 or 9, whose questions ("Wha
 is the likely diagnosis?") almost certainly depend on an image. Closing that
 means editing a pinned prompt; not done.
 
+*INDEX owner pages are verified against the page text layer (owner-approved
+2026-07-31):* INDEX numbers its response against the images it is handed, and on
+a window with a leading context page it sometimes numbers from the first **core**
+page instead — shifting every page reference in that response by one. Nothing
+checked. Worse, reconciliation's `twin` rule tolerates a ±1 page difference (so a
+straddling question's misread label still dedups), which meant the two
+observations were correctly recognised as the same question, one was dropped, and
+**whichever window was seen first won the page** — a coin flip, silently.
+
+*Measured 2026-07-31* over four stored runs: **22 of 30 twinned questions
+disagreed about their page by exactly 1**, and rendering the pages settled it
+both ways — EMLE questions 70-72 kept p24 (correct, while the *manifest* claimed
+p25), Family Medicine questions 19-21 kept p22 but are printed on p21. Single-
+window documents had zero disagreements, as expected: no leading context page, no
+ambiguity.
+
+The cost is not lost questions — the worker sees several page images per chunk
+and still transcribed them (that EMLE run ended 108/109 clean). It is that the
+owner page decides **which image BOX is asked to draw on**: the three
+`no box region after retry` flags on EMLE "page 14" are exactly the three
+questions printed on page 13. Plus false `unreadable_page` issues, which set
+`notSafeToImport` for the whole run, and `repairTargetPages` spending a Gemini
+call re-indexing a page that was never empty.
+
+The fix needs no call and no prompt change: the `anchor` INDEX returns is
+verbatim visible text, and every page's text layer is already extracted at render
+(`page-text`). `verifyOwnerPages` (`enumerate.ts`, pure) searches it and corrects
+the page. Deliberately narrow so it can only repair the observed defect — only
+pages `ownerPage ± 1` are candidates, the anchor must hit **exactly one** of them
+(a formulaic stem matching several is left alone, never resolved arbitrarily),
+and `source_pages` shifts with the owner so a straddling question keeps its span.
+Replayed against the real EMLE run it corrected **30 of 109 rows** — pages 12
+through 21, every one by −1, the signature of one shifted window — and positively
+confirmed 107 of 109.
+
+A **scan has no text layer** (Family Medicine: 0 characters across 30 pages), so
+verification is a strict no-op there — never a downgrade. Those documents get the
+other half: reconciliation now records a `PageDisagreement` instead of absorbing
+it, and any disagreement the text layer could not settle becomes an
+`uncertain_page` planning issue naming both candidate pages, so a coin-flip page
+is shown to the tutor rather than shipped silently. Manifest-derived
+`unreadable_page` issues are recomputed after verification, so a page that was
+only "empty" because its questions sat one page over stops being flagged and
+stops drawing a repair call. **Open:** on a scan the disagreement is still
+resolved by first-observed-wins; only the flag is new.
+
 *Matching-question policy (owner-approved 2026-07-18):* a true matching
 question — one row whose answer is a set of pairings — cannot be carried by a
 single-`correct_index` Triviadox row. Customize's **"Matching questions"**

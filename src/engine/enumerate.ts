@@ -21,11 +21,40 @@ export interface DroppedQuestion {
   rule: 'duplicate_label' | 'duplicate_anchor' | 'page_not_owned' | 'covered_reread'
   twinRef?: string
 }
+/**
+ * One question whose two observing windows disagreed about which page it is on.
+ *
+ * INDEX numbers its response against the images it was handed, and on a window
+ * with a leading context page it sometimes numbers from the first CORE page
+ * instead — shifting every page reference in that response by one. The ±1
+ * tolerance in `twin` was absorbing this silently: the two observations were
+ * correctly recognised as the same question, one was dropped, and whichever was
+ * seen first won the page. Measured 2026-07-31 over four stored runs: 22 of 30
+ * twinned questions disagreed by exactly 1, and rendering the pages confirmed
+ * the winner is arbitrary (EMLE questions 70-72 kept p24, correct; Family
+ * Medicine questions 19-21 kept p22, actually printed on p21).
+ *
+ * A wrong owner page is handed to BOX as the image to draw on, so the anchor is
+ * not on it and the region fails — the three `no box region after retry` flags
+ * on EMLE page 14 are exactly the three questions printed on page 13.
+ *
+ * Recorded here, resolved by `verifyOwnerPages` where a text layer can prove
+ * the page, and flagged by the executor only when it cannot.
+ */
+export interface PageDisagreement {
+  ref: string
+  printedLabel: string
+  /** The page the kept observation claims. */
+  keptPage: number
+  /** The page the dropped twin claimed instead. */
+  otherPage: number
+}
 export interface ReconciledIndex {
   questions: ReconciledQuestion[]
   pages: PageManifest[]
   issues: PlanningIssue[]
   drops: DroppedQuestion[]
+  disagreements: PageDisagreement[]
 }
 /** A localized window keeps the observations it does not own: a page whose
  *  owning window saw nothing is otherwise lost even though a neighbour read
@@ -115,7 +144,21 @@ export function reconcileIndexWindows(
 ): ReconciledIndex {
   const kept: { question: ReconciledQuestion; windowIndex: number }[] = []
   const drops: DroppedQuestion[] = []
+  const disagreements: PageDisagreement[] = []
   const pagesByNumber = new Map<number, PageManifest>()
+  /** The two windows recognised the same question but not the same page. */
+  const noteDisagreement = (
+    question: IndexedQuestion & { ownerPage: number },
+    duplicate: { ref: string; ownerPage: number },
+  ) => {
+    if (duplicate.ownerPage === question.ownerPage) return
+    disagreements.push({
+      ref: duplicate.ref,
+      printedLabel: question.printedLabel,
+      keptPage: duplicate.ownerPage,
+      otherPage: question.ownerPage,
+    })
+  }
 
   /**
    * The duplicate a window boundary creates, and nothing else.
@@ -137,7 +180,7 @@ export function reconcileIndexWindows(
   const twin = (
     question: IndexedQuestion & { ownerPage: number },
     windowIndex: number,
-  ): { ref: string; rule: DroppedQuestion['rule'] } | undefined => {
+  ): { ref: string; ownerPage: number; rule: DroppedQuestion['rule'] } | undefined => {
     const labelKey = question.printedLabel.trim()
     const normAnchor = normalHint(question.anchor)
     for (const entry of kept) {
@@ -145,14 +188,14 @@ export function reconcileIndexWindows(
       const other = entry.question
       if (Math.abs(other.ownerPage - question.ownerPage) > 1) continue
       if (labelKey !== '' && other.printedLabel.trim() === labelKey) {
-        return { ref: other.ref, rule: 'duplicate_label' }
+        return { ref: other.ref, ownerPage: other.ownerPage, rule: 'duplicate_label' }
       }
       if (normAnchor === '') continue
       const otherNorm = normalHint(other.anchor)
       const isPrefixMatch =
         otherNorm.startsWith(normAnchor) || normAnchor.startsWith(otherNorm)
       if (isPrefixMatch && !isGenericAnchor(other.anchor) && !isGenericAnchor(question.anchor)) {
-        return { ref: other.ref, rule: 'duplicate_anchor' }
+        return { ref: other.ref, ownerPage: other.ownerPage, rule: 'duplicate_anchor' }
       }
     }
     return undefined
@@ -163,6 +206,7 @@ export function reconcileIndexWindows(
     for (const question of window.questions) {
       const duplicate = twin(question, windowIndex)
       if (duplicate !== undefined) {
+        noteDisagreement(question, duplicate)
         drops.push({
           ref: question.ref,
           printedLabel: question.printedLabel,
@@ -246,6 +290,7 @@ export function reconcileIndexWindows(
         kept.push({ question: { ...question, sectionKey: sectionKey(question) }, windowIndex })
         continue
       }
+      if (duplicate !== undefined) noteDisagreement(question, duplicate)
       drops.push({
         ref: question.ref,
         printedLabel: question.printedLabel,
@@ -270,5 +315,94 @@ export function reconcileIndexWindows(
       issues.push({ kind: 'unreadable_page', page: manifest.page, section: manifest.sectionHint })
     }
   }
-  return { questions, pages: [...pagesByNumber.values()].sort((a, b) => a.page - b.page), issues, drops }
+  return {
+    questions,
+    pages: [...pagesByNumber.values()].sort((a, b) => a.page - b.page),
+    issues,
+    drops,
+    disagreements,
+  }
+}
+
+/**
+ * Prove each question's owner page against the page's own text layer, and
+ * correct it when the two disagree by one.
+ *
+ * The anchor INDEX returns is verbatim visible text, and every page's text
+ * layer is already extracted at render (`page-text` artifacts) — so for a
+ * born-digital PDF the true page is a string search, with no model call, no
+ * prompt change, and no new data. Verified 2026-07-31 on the EMLE run: the
+ * anchors for questions 37-39 appear on page 13 and nowhere else, while the
+ * planner had assigned them to page 14.
+ *
+ * Deliberately narrow, so this can only ever repair the observed defect:
+ *
+ * - Only pages `ownerPage ± 1` are candidates. The failure is a one-page window
+ *   shift; a match further away is far more likely a repeated formulaic stem,
+ *   and relocating a question across a document on a text match would be a new
+ *   and worse guess.
+ * - The anchor must hit EXACTLY ONE candidate page. A short or formulaic anchor
+ *   ("which of the following…") matches all three and is left alone rather than
+ *   resolved arbitrarily.
+ * - A scan has no text layer, so nothing matches and every page is left exactly
+ *   as the planner had it. This is a no-op on those documents, never a downgrade.
+ *
+ * `sourcePages` shifts with the owner page: the defect is a uniform shift of one
+ * response, so a question whose stem straddles a break keeps its span.
+ */
+export interface PageVerification {
+  questions: ReconciledQuestion[]
+  /** Questions whose page the text layer moved. */
+  corrected: { ref: string; from: number; to: number }[]
+  /** Questions whose page the text layer positively confirmed. */
+  confirmedRefs: Set<string>
+}
+
+/** Below this an anchor is too short to identify a page. */
+const MIN_ANCHOR_CHARS = 12
+
+export function verifyOwnerPages(
+  questions: readonly ReconciledQuestion[],
+  pageText: ReadonlyMap<number, string>,
+): PageVerification {
+  if (pageText.size === 0) {
+    return { questions: [...questions], corrected: [], confirmedRefs: new Set() }
+  }
+  const normalized = new Map<number, string>()
+  for (const [page, text] of pageText) normalized.set(page, normalHint(text))
+
+  const corrected: { ref: string; from: number; to: number }[] = []
+  const confirmedRefs = new Set<string>()
+  const verified = questions.map((question) => {
+    const anchor = normalHint(question.anchor)
+    if (anchor.length < MIN_ANCHOR_CHARS) return question
+    const hits = [question.ownerPage - 1, question.ownerPage, question.ownerPage + 1].filter(
+      (page) => (normalized.get(page) ?? '').includes(anchor),
+    )
+    if (hits.length !== 1) return question
+    const [page] = hits
+    if (page === question.ownerPage) {
+      confirmedRefs.add(question.ref)
+      return question
+    }
+    const delta = page - question.ownerPage
+    corrected.push({ ref: question.ref, from: question.ownerPage, to: page })
+    confirmedRefs.add(question.ref)
+    const shifted = question.sourcePages
+      .map((source) => source + delta)
+      .filter((source) => source > 0)
+    return {
+      ...question,
+      ownerPage: page,
+      sourcePages: [...new Set(shifted.length === 0 ? [page] : shifted)].sort((a, b) => a - b),
+    }
+  })
+  // A corrected page changes reading order, so restore the same page-then-
+  // emission-order sort reconciliation guarantees its callers.
+  verified.sort(
+    (a, b) =>
+      a.ownerPage - b.ownerPage ||
+      a.ref.localeCompare(b.ref, undefined, { numeric: true }),
+  )
+  return { questions: verified, corrected, confirmedRefs }
 }

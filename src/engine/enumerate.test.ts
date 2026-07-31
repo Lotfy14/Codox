@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { reconcileIndexWindows, type ReconciledQuestion } from './enumerate'
+import {
+  reconcileIndexWindows,
+  verifyOwnerPages,
+  type ReconciledQuestion,
+} from './enumerate'
 import type { IndexedQuestion, IndexWindow } from './index-pass'
 
 function q(ref: string, printedLabel: string, ownerPage: number, anchor: string): IndexedQuestion {
@@ -304,5 +308,116 @@ describe('reconcileIndexWindows', () => {
     const result = reconcileIndexWindows(windows)
     expect(result.questions.length).toBe(1)
     expect(result.questions[0].ownerPage).toBe(20)
+  })
+
+  it('records when two windows disagree about a question page', () => {
+    // The ±1 tolerance recognises these as the same question; the page
+    // disagreement underneath it must be reported, not absorbed.
+    const windows: IndexWindow[] = [
+      { questions: [q('w0q0', '19', 22, 'a 29-year-old man with red eye')], pages: [] },
+      { questions: [q('w1q0', '19', 21, 'a 29-year-old man with red eye')], pages: [] },
+    ]
+    const result = reconcileIndexWindows(windows)
+    expect(result.disagreements).toEqual([
+      { ref: 'w0q0', printedLabel: '19', keptPage: 22, otherPage: 21 },
+    ])
+  })
+
+  it('does not report a disagreement when both windows agree on the page', () => {
+    const windows: IndexWindow[] = [
+      { questions: [q('w0q0', '19', 21, 'a 29-year-old man with red eye')], pages: [] },
+      { questions: [q('w1q0', '19', 21, 'a 29-year-old man with red eye')], pages: [] },
+    ]
+    expect(reconcileIndexWindows(windows).disagreements).toEqual([])
+  })
+})
+
+describe('verifyOwnerPages', () => {
+  const rq = (
+    ref: string,
+    ownerPage: number,
+    anchor: string,
+    sourcePages: number[] = [ownerPage],
+  ): ReconciledQuestion => ({
+    ...q(ref, ref, ownerPage, anchor),
+    sourcePages,
+    ref,
+    sectionKey: '',
+  })
+
+  it('moves a question onto the page whose text actually carries its anchor', () => {
+    // The measured defect: one INDEX response numbered a page too high, so
+    // every question in it was attributed one page later than it is printed.
+    const questions = [rq('a', 14, 'a 28-year-old woman presents to the emergency department')]
+    const text = new Map([
+      [13, 'A 28-year-old woman presents to the emergency department with...'],
+      [14, 'A 30-year-old man is brought to the Emergency Department...'],
+    ])
+    const result = verifyOwnerPages(questions, text)
+    expect(result.questions[0].ownerPage).toBe(13)
+    expect(result.corrected).toEqual([{ ref: 'a', from: 14, to: 13 }])
+  })
+
+  it('carries source_pages along with the corrected page', () => {
+    const questions = [rq('a', 14, 'a 28-year-old woman presents to the emergency', [14, 15])]
+    const text = new Map([[13, 'a 28-year-old woman presents to the emergency department']])
+    expect(verifyOwnerPages(questions, text).questions[0].sourcePages).toEqual([13, 14])
+  })
+
+  it('confirms a page that is already right and changes nothing', () => {
+    const questions = [rq('a', 13, 'a 28-year-old woman presents to the emergency')]
+    const text = new Map([[13, 'a 28-year-old woman presents to the emergency department']])
+    const result = verifyOwnerPages(questions, text)
+    expect(result.corrected).toEqual([])
+    expect(result.confirmedRefs.has('a')).toBe(true)
+  })
+
+  it('is a no-op on a scan, which has no text layer at all', () => {
+    const questions = [rq('a', 14, 'a 28-year-old woman presents to the emergency')]
+    const result = verifyOwnerPages(questions, new Map())
+    expect(result.questions[0].ownerPage).toBe(14)
+    expect(result.corrected).toEqual([])
+    expect(result.confirmedRefs.size).toBe(0)
+  })
+
+  it('leaves a formulaic anchor alone when it matches more than one candidate', () => {
+    // Exam stems repeat; resolving an ambiguous match would be a new guess.
+    const questions = [rq('a', 14, 'which of the following is most likely')]
+    const text = new Map([
+      [13, 'which of the following is most likely correct'],
+      [14, 'which of the following is most likely true'],
+    ])
+    const result = verifyOwnerPages(questions, text)
+    expect(result.corrected).toEqual([])
+    expect(result.confirmedRefs.has('a')).toBe(false)
+  })
+
+  it('never relocates a question further than one page', () => {
+    // A match two pages away is far likelier a repeated stem than a shift.
+    const questions = [rq('a', 14, 'a 28-year-old woman presents to the emergency')]
+    const text = new Map([[11, 'a 28-year-old woman presents to the emergency department']])
+    expect(verifyOwnerPages(questions, text).corrected).toEqual([])
+  })
+
+  it('ignores an anchor too short to identify a page', () => {
+    const questions = [rq('a', 14, 'which')]
+    const text = new Map([[13, 'which of the following']])
+    expect(verifyOwnerPages(questions, text).corrected).toEqual([])
+  })
+
+  it('restores page order after a correction changes it', () => {
+    // `a` is emitted first but corrected onto a later page than `b`, so the
+    // page-then-reading-order sort callers rely on must be re-established.
+    const questions = [
+      rq('a', 15, 'a 28-year-old woman presents to the emergency'),
+      rq('b', 13, 'a 27-year-old man complains of perianal itching'),
+    ]
+    const text = new Map([
+      [13, 'a 27-year-old man complains of perianal itching today'],
+      [14, 'a 28-year-old woman presents to the emergency department'],
+    ])
+    const result = verifyOwnerPages(questions, text)
+    expect(result.questions.map((question) => question.ref)).toEqual(['b', 'a'])
+    expect(result.questions.map((question) => question.ownerPage)).toEqual([13, 14])
   })
 })

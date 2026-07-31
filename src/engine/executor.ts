@@ -54,6 +54,7 @@ import { mapConcurrent } from './concurrency'
 import {
   localizeIndexWindow,
   reconcileIndexWindows,
+  verifyOwnerPages,
   type LocalizedIndexWindow,
   type ReconciledQuestion,
 } from './enumerate'
@@ -724,6 +725,30 @@ async function stepPlanAndValidate(
   // windows below re-observe a page's neighbours and would inflate it.
   const emitted = indexed.reduce((total, window) => total + window.questions.length + window.disowned.length, 0)
 
+  // Prove each question's page against that page's own text layer, and correct
+  // it where the two disagree by one — see `verifyOwnerPages`. The owner page
+  // decides which image BOX is asked to draw on and which pages repair thinks
+  // are empty, so this runs BEFORE either: a page wrong by one otherwise costs
+  // a failed region, a wrong crop, and a repair call aimed at a page that is
+  // fine. Costs nothing — the text was already extracted at render — and a scan
+  // has no text layer, so those documents are left exactly as they were.
+  const pageText = new Map<number, string>()
+  for (const artifact of await getArtifacts(runId, 'page-text')) {
+    if (artifact.pageIndex !== undefined && artifact.text !== undefined) {
+      pageText.set(artifact.pageIndex + 1, artifact.text)
+    }
+  }
+  const pageCorrections: Array<{ ref: string; from: number; to: number }> = []
+  const verifiedRefs = new Set<string>()
+  /** Re-verify after every reconcile, so repair's own questions are checked too. */
+  const verifyPages = () => {
+    const result = verifyOwnerPages(reconciled.questions, pageText)
+    reconciled = { ...reconciled, questions: result.questions }
+    pageCorrections.push(...result.corrected)
+    for (const ref of result.confirmedRefs) verifiedRefs.add(ref)
+  }
+  verifyPages()
+
   // Per-page INDEX repair. A page the manifest says holds questions but that
   // no window ended up owning — INDEX gave up at a window's tail, or the whole
   // window failed to parse — is re-indexed on its own. A single-page request
@@ -759,6 +784,7 @@ async function stepPlanAndValidate(
       if (recovered.length > 0) {
         indexed.push(...recovered)
         reconciled = reconcileIndexWindows(indexed)
+        verifyPages()
       }
       const nowOwned = new Set(reconciled.questions.map((question) => question.ownerPage))
       await logEvent({
@@ -768,7 +794,51 @@ async function stepPlanAndValidate(
     }
   }
 
-  issues.push(...reconciled.issues)
+  if (pageCorrections.length > 0) {
+    await logEvent({
+      scope: 'engine', level: 'warn', event: 'engine.index.page_corrected', runId,
+      reason: 'INDEX owner pages disagreed with the page text layer',
+      detail: { corrected: pageCorrections },
+    })
+  }
+  // A question two windows placed on different pages, that the text layer could
+  // not settle (a scan, or an anchor too formulaic to be unique). The page it
+  // kept is the first one observed — arbitrary — so the tutor is told rather
+  // than left with a silently misplaced question.
+  const unresolved = reconciled.disagreements.filter(
+    (item) => !verifiedRefs.has(item.ref),
+  )
+  for (const item of unresolved) {
+    issues.push({
+      kind: 'uncertain_page',
+      page: item.keptPage,
+      printedLabel: item.printedLabel,
+      rowRef: item.ref,
+      reason: `two index passes disagreed: page ${item.keptPage} or ${item.otherPage}`,
+    })
+  }
+  if (reconciled.disagreements.length > 0) {
+    await logEvent({
+      scope: 'engine', level: unresolved.length > 0 ? 'warn' : 'info',
+      event: 'engine.index.page_disagreement', runId,
+      detail: {
+        total: reconciled.disagreements.length,
+        resolvedByTextLayer: reconciled.disagreements.length - unresolved.length,
+        unresolved: unresolved.length,
+      },
+    })
+  }
+
+  // Manifest-derived "no questions on this page" issues are recomputed against
+  // the verified pages: a page that was only empty because its questions were
+  // attributed one page over is no longer an issue, and flagging it would both
+  // mislead the tutor and spend a repair call on a page that is fine.
+  const ownedAfterVerify = new Set(reconciled.questions.map((question) => question.ownerPage))
+  issues.push(
+    ...reconciled.issues.filter(
+      (issue) => issue.rowRef !== undefined || !ownedAfterVerify.has(issue.page ?? -1),
+    ),
+  )
   // A failed-window page that repair could not recover is not manifest-flagged
   // (its manifest died with the window), so reconcile never sees it — surface
   // it here to keep the original "unresolved page is always visible" guarantee.
