@@ -480,7 +480,6 @@ export function ReviewDetail({
             : `Source, page ${reviewRow.pageIndex + 1}`}
           className="review__source"
         >
-          {continuationCrop}
           {imageUrl === null ? (
             <p className="ds-muted">{reviewMessages.sourceUnavailable}</p>
           ) : (
@@ -501,6 +500,7 @@ export function ReviewDetail({
             </Button>
           ) : null}
           {figureCrops}
+          {continuationCrop}
         </section>
 
         <section

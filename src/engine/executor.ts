@@ -1389,19 +1389,29 @@ async function repairUnderTranscribedRows(
           }
         : planned
     const reduced = buildReducedBlueprint(blueprint, [forWorker])
-    const answerFocus = missedAnswerSet.has(id) ? await answerFocusImage(runId, forWorker) : undefined
-    const continuationFocus = atPageBreak.has(id)
+    const isPageBreak = atPageBreak.has(id)
+    // A page-break repair gets only two focused images: the originating row
+    // and the top strip where its missing options continue. Full pages caused
+    // the worker to confuse neighboring questions with this row's choices.
+    const rowFocus = isPageBreak || missedAnswerSet.has(id)
+      ? await answerFocusImage(runId, forWorker)
+      : undefined
+    const continuationFocus = isPageBreak
       ? await continuationFocusImage(runId, blueprint, planned)
       : undefined
-    const images = [
-      ...(await pageImages(runId, chunkPages(reduced).map((page) => page - 1))),
-      ...(await cropImages(runId, reduced.assets.map((asset) => asset.output_path))),
-      ...(answerFocus === undefined ? [] : [answerFocus]),
-      ...(continuationFocus === undefined ? [] : [continuationFocus]),
-    ]
+    const focusedPageBreak = isPageBreak && rowFocus !== undefined && continuationFocus !== undefined
+    const images = focusedPageBreak
+      ? [rowFocus, continuationFocus]
+      : [
+          ...(await pageImages(runId, chunkPages(reduced).map((page) => page - 1))),
+          ...(await cropImages(runId, reduced.assets.map((asset) => asset.output_path))),
+          ...(rowFocus === undefined ? [] : [rowFocus]),
+          ...(continuationFocus === undefined ? [] : [continuationFocus]),
+        ]
     const instructions = [
-      answerFocus === undefined ? '' : 'The final image is a focused crop of this row, including its full right margin. Re-read the visible answer mark there. If it is a handwritten option letter, map that letter to this row\'s 0-based option index; do not use subject knowledge.',
-      continuationFocus === undefined ? '' : 'The final image is the top of the next page, where this row\'s options continue. Include every visible continuation option in its original order; do not stop at the first page.',
+      missedAnswerSet.has(id) ? 'The final image is a focused crop of this row, including its full right margin. Re-read the visible answer mark there. If it is a handwritten option letter, map that letter to this row\'s 0-based option index; do not use subject knowledge.' : '',
+      focusedPageBreak ? 'The first image is this row on the bottom of its source page. The second image is the top of the next page, where its options continue. Transcribe and append every continuation option in order. Do not read choices from another question.' : '',
+      !focusedPageBreak && continuationFocus !== undefined ? 'The final image is the top of the next page, where this row\'s options continue. Include every visible continuation option in its original order; do not stop at the first page.' : '',
     ].filter(Boolean).join(' ')
     const response = await timed(runId, `worker repair ${id}`, () =>
       call(controller, runId, buildWorkerRequest(reduced, images, workerModel, undefined, instructions === '' ? undefined : instructions), signal),
