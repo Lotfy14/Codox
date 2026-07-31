@@ -1,0 +1,13 @@
+{
+  "source": "EOR SUR MCQ 2026-195-1st [Answers].pdf",
+  "readBy": "human, from the rendered pages (scripts/render-pdf-pages.mjs)",
+  "note": "Answers are the HIGHLIGHTER mark. Several questions also carry a competing pen circle on a different option (Q3 C, Q9 D, Q14 B, Q51 C, Q53 A, Q55 C) — those are the discriminating cases: the highlight is the answer. Q53's highlight is pink, not yellow. Q58 is struck through and hand-marked 'Cancelled', so it has NO correct answer and is deliberately absent here.",
+  "pagesCovered": [1, 2, 7],
+  "answers": {
+    "1": "B", "2": "A", "3": "D", "4": "B", "5": "C",
+    "6": "D", "7": "D", "8": "C", "9": "A", "10": "C",
+    "11": "D", "12": "A", "13": "D", "14": "A",
+    "51": "A", "52": "A", "53": "D", "54": "B", "55": "A",
+    "56": "B", "57": "B", "59": "C"
+  }
+}

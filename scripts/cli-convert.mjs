@@ -3,6 +3,24 @@ import path from 'node:path'
 import { createServer } from 'vite'
 import { chromium } from 'playwright-core'
 import { parseArgs } from 'node:util'
+import net from 'node:net'
+
+/**
+ * Vite normalizes `port: 0` back to its 5173 default, so asking for "any free
+ * port" collides with a dev server the user already has running. Reserve a real
+ * ephemeral port from the OS and hand Vite that number.
+ */
+function freePort() {
+  return new Promise((resolve, reject) => {
+    const probe = net.createServer()
+    probe.unref()
+    probe.on('error', reject)
+    probe.listen(0, '127.0.0.1', () => {
+      const { port } = probe.address()
+      probe.close(() => resolve(port))
+    })
+  })
+}
 
 function parseTopicsText(text) {
   const lines = text.split(/\r?\n/)
@@ -129,11 +147,22 @@ Examples:
   let browser = null
 
   try {
-    console.log('Starting Vite server programmatically...')
+    const chosenPort = await freePort()
+    console.log(`Starting Vite server programmatically on port ${chosenPort}...`)
     server = await createServer({
       server: {
-        port: 0,
+        port: chosenPort,
         strictPort: true,
+      },
+      // The pdf.js worker is only imported once a page is actually rendered, so
+      // Vite's optimizer discovers it MID-RUN and force-reloads the page —
+      // destroying the evaluate context the conversion is running inside.
+      // Pre-bundle it so that discovery happens before the run starts.
+      // `exclude` is restated because this inline config merges with
+      // vite.config.ts and @jsquash/jpeg must stay unbundled either way.
+      optimizeDeps: {
+        include: ['pdfjs-dist/build/pdf.worker.min.mjs'],
+        exclude: ['@jsquash/jpeg'],
       },
       plugins: [{
         name: 'cli-file-server',
