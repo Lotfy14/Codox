@@ -192,6 +192,57 @@ describe('answer-policy forcing', () => {
     }
   })
 
+  it('an answer with an empty answer_mark is refused — nothing was seen to read', () => {
+    const blueprint = makeEvidenceBlueprint()
+    const workerRows = blueprint.planned_rows.map((planned) =>
+      makeWorkerRow(planned, { correct_index: '1', answer_mark: '' }),
+    )
+    const result = mergeRows(blueprint, workerRows)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      for (const row of result.rows) {
+        expect(row.correct_index).toBe('')
+        expect(row.needs_review).toBe('no_visible_answer')
+      }
+    }
+  })
+
+  it('an answer whose answer_mark reports a real observation is kept', () => {
+    const blueprint = makeEvidenceBlueprint()
+    const workerRows = blueprint.planned_rows.map((planned) =>
+      makeWorkerRow(planned, {
+        correct_index: '1',
+        answer_mark: 'option b is circled',
+      }),
+    )
+    const result = mergeRows(blueprint, workerRows)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      for (const row of result.rows) {
+        expect(row.correct_index).toBe('1')
+        expect(row.needs_review).toBe('')
+      }
+    }
+  })
+
+  it('a response with no answer_mark field at all is not gated', () => {
+    // Pre-change responses made no claim either way; gating them would blank
+    // answers that were read off the page under the old contract.
+    const blueprint = makeEvidenceBlueprint()
+    const workerRows = blueprint.planned_rows.map((planned) =>
+      makeWorkerRow(planned, { correct_index: '1' }),
+    )
+    expect(workerRows.every((row) => row.answer_mark === undefined)).toBe(true)
+    const result = mergeRows(blueprint, workerRows)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      for (const row of result.rows) {
+        expect(row.correct_index).toBe('1')
+        expect(row.needs_review).toBe('')
+      }
+    }
+  })
+
   it('an out-of-range index is blanked and flagged, never clamped', () => {
     const blueprint = makeEvidenceBlueprint()
     const workerRows = blueprint.planned_rows.map((planned) =>

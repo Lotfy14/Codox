@@ -50,11 +50,13 @@ describe('prompt migration fidelity', () => {
     expect(PROMPT_SHA256.planner).toBe(
       '550503d8db2aa20626bb3f9627f053f603e52bac524abb617ba5295dd9eadb8d',
     )
-    // Re-pinned 2026-07-30 (owner-approved): the worker is told to find and
-    // read the answer mark. Previous pin
+    // Re-pinned 2026-07-31 (owner-approved): the worker must report the mark
+    // it saw in `answer_mark`, and merge refuses a correct_index without one.
+    // Previous pins, newest first:
+    // 274e800239c7f8e4f7e59d5fe5fd3457f3cbb103dfdf0d3f315d0da4980da2ac,
     // b2b42964b1431345fd0e8698046e52373836cbae3eeddfde3ed6e88aeb8dbd1e.
     expect(PROMPT_SHA256.worker).toBe(
-      '274e800239c7f8e4f7e59d5fe5fd3457f3cbb103dfdf0d3f315d0da4980da2ac',
+      'f00802cb4911eefba63a6aedc9e5e04eba1ccc19faf5f0b037304910d0e89a8e',
     )
     expect(PROMPT_SHA256.audit).toBe(
       '7bedae91c172cc5f071c31aa5839aef3e769a1c5c24c4e596079dad04ce2c6ce',

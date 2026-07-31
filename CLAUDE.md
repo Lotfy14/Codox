@@ -38,7 +38,9 @@ freely — this is a map, not a rulebook.
   perceptual authority**: every row permits extraction, the worker reads the
   mark off the page, and `forceAnswer` (`merge.ts`) applies the policy at
   merge — a filled value is accepted only as a number in range for that row's
-  options, and a worker that reads no mark yields `no_visible_answer`. A
+  options **and only when the row's `answer_mark` reports an actual
+  observation** (2026-07-30 edit + the 2026-07-31 gate below), and a worker
+  that reads no mark yields `no_visible_answer`. A
   **separate answer key** still decides its own rows through EVIDENCE's per-ref
   state. INDEX's `answer_present` is now an observation only, NOT a gate (see
   the 2026-07-30 note under "Engine semantics"). Blanked rows
@@ -318,6 +320,52 @@ non-numeric or out-of-range index, and still discards the worker's
 
 **Open:** unmeasured whether the instruction raises answer recall without
 raising wrong answers. Judge it on real documents.
+
+*WORKER prompt edit — `answer_mark`, the answer claim becomes checkable
+(owner-approved 2026-07-31):* the third edit to a pinned prompt, and the
+correction to the paragraph above. That wording ASSERTED a mark existed ("the
+answer is marked on the page for that row … each row has its own answer to
+read"); on a page carrying no mark the model resolved the contradiction from
+subject knowledge. Measured on `EOR SUR MCQ 2025-194-1st.pdf`, an exam with no
+mark anywhere (verified by zooming pages 1, 2, 3, 7, 8; its cover says "Answer
+in the MCQs answer sheet"): a full conversion filled `correct_index` on **33 of
+65** rows, every spot-check being the medically correct answer, **none
+flagged**, so all 33 would have exported as if read off the page.
+
+*The 2026-07-30 clearance was a shape artifact.* `probe-worker-answer.mjs`
+isolates ONE page and six rows; a real chunk is ~10 rows across 2 page images.
+`scripts/probe-worker-chunk.mjs` (new) reproduces the production shape in one
+call: pinned prompt on that unanswered exam gives **10/10** filled at 2 pages ×
+10 rows, 5/10 at 1 page × 10 rows, 1/6 at the probe's own 1 × 6 shape. So
+fabrication scales with chunk size, and the negative case `ANSWER_LAYOUTS.md`
+listed as uncovered is now measured and failing.
+
+*Removing the presupposition alone does nothing* (a variant that only made
+finding a mark conditional still gave 10/10) — do not re-derive it. What works
+is requiring the perceptual claim to arrive with its evidence: the worker
+reports in `answer_mark` what it SEES for the row and where, and `forceAnswer`
+(`merge.ts`) refuses a `correct_index` whose row reports `answer_mark: ""`,
+flagging the identical `no_visible_answer` the honest-blank path produces — so
+Review is unchanged and the guarantee sits in code, not in prompt hedging. A
+response omitting the field entirely made no claim and is **not** gated, so
+pre-change checkpoints resume unharmed. Measured: unanswered exam 10/10 → 1/10
+(the residual is a real ink blot on the page beside "B. Batteries"), answered
+`EOR IM MCQ 2025-194-2nd` 10/10 → 10/10 all correct. No recall lost. New SHA in
+`PROMPT_SHA256.worker` (`f00802cb…`, previously `274e8002…`), doc block §2.2
+updated byte-identically, `prompts.test.ts` re-pinned.
+
+**Known limit:** `gemini-3.1-flash-lite` confabulates the field too — it
+returned "option a is underlined" for ten unmarked rows — so this constrains
+the primary model, not the fallback. A run that falls back can still fabricate.
+
+*The AUDIT reads this backwards and was NOT fixed.* On the same run it flagged
+the 32 correctly-blank rows ("Visible answer mark is missing … for question
+21") and passed all 33 fabrications, with `answer_policy_violations: []` — it
+takes the blueprint's declared `inline_marks` as ground truth and treats a
+blank as the violation. Separately, audit `failed_rows` only sets
+`notSafeToImport`; it never writes a row's `needs_review`, so a fabricated
+answer is not surfaced per-row in Review. Both are open; the AUDIT prompt is
+pinned and this is an owner call.
 
 *`answer_present` demoted from gate to observation (2026-07-30):* INDEX's
 per-question `answer_present` no longer decides whether a row may carry an
