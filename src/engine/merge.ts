@@ -5,8 +5,6 @@
  * - The worker's `needs_review` is ALWAYS discarded.
  * - Blank `correct_index` is never defaulted; a policy that forbids
  *   answers forces blanks even over a filled worker value.
- * - A `correct_index` whose row reports no `answer_mark` is refused: the
- *   worker's perceptual claim has to arrive with the observation behind it.
  * - Every planner-owned field is taken from the blueprint, never the
  *   worker response.
  */
@@ -110,10 +108,6 @@ export function validateWorkerChunk(
       question: raw.question as string,
       options: raw.options as string[],
       correct_index: String(correctIndex ?? ''),
-      // Absent (a pre-change response) stays undefined so it is not gated;
-      // present-and-empty is the worker saying it looked and saw nothing.
-      answer_mark:
-        typeof raw.answer_mark === 'string' ? raw.answer_mark : undefined,
       image_urls: [...planned.image_urls],
       needs_review:
         typeof raw.needs_review === 'string' ? raw.needs_review : '',
@@ -165,7 +159,6 @@ function forceAnswer(
   policyType: Blueprint['document_profile']['answer_policy']['type'],
   workerValue: string,
   optionCount: number,
-  answerMark: string | undefined,
 ): ForcedAnswer {
   // Document policy forbids answers outright.
   if (policyType === 'no_answer_key' || policyType === 'uncertain') {
@@ -185,16 +178,6 @@ function forceAnswer(
   }
   // Policy permits extraction; the worker left it blank → keep it blank.
   if (workerValue.trim() === '') {
-    return { correct_index: '', needs_review: 'no_visible_answer' }
-  }
-  // An index with no observation behind it (owner-approved 2026-07-31). The
-  // worker reports in `answer_mark` what it saw and where; an empty one is it
-  // saying there is no mark on this row, so a filled correct_index beside it
-  // did not come off the page. Measured on an exam with no mark anywhere:
-  // 33 of 65 rows shipped a confident, unflagged, knowledge-derived answer.
-  // The flag matches the honest-blank path above, so Review is unchanged. A
-  // response that omitted the field entirely made no claim and is not gated.
-  if (answerMark !== undefined && answerMark.trim() === '') {
     return { correct_index: '', needs_review: 'no_visible_answer' }
   }
   // Policy permits extraction and the worker filled it: accept only a
@@ -248,7 +231,6 @@ export function mergeRows(
       policyType,
       worker.correct_index,
       worker.options.length,
-      worker.answer_mark,
     )
     // Codox ships MCQs only: a row with fewer than two options can never be
     // a valid Triviadox question, so code flags it for the tutor instead of

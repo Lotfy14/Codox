@@ -161,15 +161,6 @@ export interface WorkerRow {
   question: string
   options: string[]
   correct_index: string
-  /**
-   * What the worker says it SAW for this row and where ("handwritten letter D
-   * in the right margin"), or '' when it saw no mark (§2.2, 2026-07-31).
-   * `undefined` means the response carried no such field at all — a pre-change
-   * response, which made no claim either way and is therefore not gated.
-   * `merge.ts` refuses a `correct_index` that arrives with '' here: an answer
-   * with no observation behind it came from subject knowledge, not the page.
-   */
-  answer_mark?: string
   image_urls: string[]
   /** Always discarded at merge (§1.4) — carried only for the record. */
   needs_review: string

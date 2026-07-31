@@ -76,37 +76,6 @@ hand-drawn circle (verified against the render), and the worker returned exactly
 that index. So on a document whose marks are almost entirely absent it found the
 one that exists and abstained everywhere else.
 
-### …but the restraint does not generalise — 2026-07-31, second document
-
-The sentence above ("a larger chunk does NOT erode the worker's restraint")
-holds for that document and **not in general**. A second unanswered exam,
-`EOR SUR MCQ 2025-194-1st.pdf` — 8 photographed pages, 65 plain MCQs, no mark
-anywhere (zoomed pages 1, 2, 3, 7, 8; the cover says "Answer in the MCQs answer
-sheet") — converted at the same production chunk size and came back **33 of 65
-answered, none flagged**. Every spot-checked pick is the medically correct
-answer (Q1 Batteries, Q51 Sigmoid colon and rectum, Q59 Blood …), i.e. subject
-knowledge, not perception. The blanks are not scattered either: whole chunks
-came back all-filled or all-blank, the same once-per-response behaviour the
-2026-07-30 prompt edit was written to fix.
-
-`scripts/probe-worker-chunk.mjs` reproduces it in ONE call and shows the trigger
-is chunk shape, which is exactly what `probe-worker-answer.mjs` cannot vary:
-
-| prompt | model | shape | filled |
-|---|---|---|---|
-| pinned (2026-07-30) | 3.5-flash-lite | 1 page × 6 rows | 1/6 |
-| pinned | 3.5-flash-lite | 1 page × 10 rows | 5/10 |
-| pinned | 3.5-flash-lite | 2 pages × 10 rows | **10/10** |
-| pinned | 3.1-flash-lite | 1 page × 6 rows | **6/6** |
-| `answer_mark` (2026-07-31) | 3.5-flash-lite | 2 pages × 10 rows | **1/10** |
-| `answer_mark` | 3.5-flash-lite | answered IM, 2 × 10 | 10/10, all correct |
-| `answer_mark` | 3.1-flash-lite | 2 pages × 10 rows | 10/10 — **still fabricates** |
-
-So the one-page probe measured the safest shape available, and the 3.1 rows are
-why the `answer_mark` gate is a constraint on the primary model only. The
-lesson generalises past this bug: **probe at the shape production actually
-uses.**
-
 ## Answer accuracy on a marked exam — measured 2026-07-31
 
 The other half of the same question ("does the 2026-07-30 WORKER prompt edit

@@ -472,28 +472,6 @@ a blank line separates the two. §1.10 / §2.1's `final_format` string and the
 blueprint validation are updated to match; the legacy `Case stem:` format is
 still accepted on input so pre-change checkpoints resume unchanged.
 
-*`answer_mark` — the answer claim becomes checkable (owner-approved
-2026-07-31):* the third edit to this prompt. The 2026-07-30 wording ASSERTED a
-mark existed ("the answer is marked on the page for that row … each row has its
-own answer to read"); on a page carrying no mark the model resolved that
-contradiction from subject knowledge. Measured on
-`EOR SUR MCQ 2025-194-1st.pdf`, an exam with no mark anywhere: a full
-conversion filled 33 of 65 rows, every spot-check being the medically correct
-answer, none flagged. Reproduced in one call at production chunk shape
-(`scripts/probe-worker-chunk.mjs`): 10/10 filled at 10 rows × 2 page images,
-5/10 at 1 page, 1/6 at the 1-page × 6-row shape the 2026-07-30 probe used — so
-that clearance was a small-shape artifact, not a property of the worker.
-
-Removing the presupposition alone changed nothing (10/10 again). What works is
-requiring the perceptual claim to come with its evidence: the worker reports in
-`answer_mark` what it SEES and where, and `merge.ts` refuses a `correct_index`
-that arrives without one — the guarantee lives in code, not in prompt hedging.
-Measured: unanswered exam 10/10 → 1/10 (the residual is a real ink blot on the
-page), answered exam `EOR IM MCQ 2025-194-2nd` 10/10 → 10/10, all correct. No
-recall lost. **Known limit:** `gemini-3.1-flash-lite` confabulates the field
-too ("option a is underlined" for ten unmarked rows), so this constrains the
-primary model, not the fallback.
-
 ```text
 You are the WORKER for an exam-to-CSV pipeline.
 
@@ -512,17 +490,14 @@ when the planner's per-row policy explicitly points to visible answer evidence.
 If the policy says no_answer_key, uncertain, or blank, leave correct_index empty
 even if you think you know the answer.
 
-When the policy does point to visible answer evidence, look on the page for
-this row's own answer mark: a mark on one option -- a tick, check, circle,
-strike, underline, highlight, or bold text -- or the answer letter written
-beside the question, in an answer column, an answer cell, or the margin next to
-it. Check every row in the chunk, not only the first few; each row is marked
-independently. In answer_mark, report exactly what you SEE for this row and
-where you see it (for example "handwritten letter D in the right margin" or
-"option b is circled"), and put that mark's 0-based index into that row's own
-options in correct_index. When this row carries no such mark, set answer_mark
-to "" and leave correct_index empty. answer_mark describes ink on the page, so
-never write one you did not see and never fill correct_index without one.
+When the policy does point to visible answer evidence, the answer is marked on
+the page for that row. Find it and fill correct_index. Look for a mark on one
+option -- a tick, check, circle, strike, underline, highlight, or bold text --
+or the answer letter written beside the question, in an answer column, an
+answer cell, or the margin next to it. Read that mark and return its 0-based
+index into that row's own options. Do this for every row in the chunk, not only
+the first few; each row has its own answer to read. Leave correct_index empty
+only when the mark genuinely cannot be read.
 
 Output:
 {
@@ -537,7 +512,6 @@ Output:
       "question": "",
       "options": [],
       "correct_index": "",
-      "answer_mark": "",
       "image_urls": [],
       "needs_review": ""
     }
