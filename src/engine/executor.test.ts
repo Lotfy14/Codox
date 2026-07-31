@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
   keepIndexObservedMarks,
+  missedInlineAnswerRowIds,
   modalOptionCount,
   placeholderWorkerRow,
   repairTargetPages,
   underTranscribedRowIds,
 } from './executor'
 import { mergeRows, validateWorkerChunk } from './merge'
-import { makeBlueprint, makePlannedRow, makeWorkerRow } from './fixtures'
+import { makeBlueprint, makePlannedRow, makeRegion, makeWorkerRow } from './fixtures'
 import type { EvidenceMap } from './index-pass'
 import type { Blueprint, PlannedRow } from './types'
 
@@ -266,5 +267,29 @@ describe('placeholderWorkerRow', () => {
         correct_index: '',
       })
     }
+  })
+})
+
+describe('missedInlineAnswerRowIds', () => {
+  it('retries a blank row only when the same page has a readable inline answer', () => {
+    const answered = makePlannedRow('1', {
+      regions: { case_stem: null, question_prompt: makeRegion(1), options: makeRegion(1), answer_evidence: makeRegion(1) },
+      correct_index_policy: { type: 'extract_visible_evidence', value: '', needs_review: '' },
+    })
+    const blank = makePlannedRow('2', {
+      regions: { case_stem: null, question_prompt: makeRegion(1), options: makeRegion(1), answer_evidence: makeRegion(1) },
+      correct_index_policy: { type: 'extract_visible_evidence', value: '', needs_review: '' },
+    })
+    const blueprint = makeBlueprint({ planned_rows: [answered, blank] })
+    blueprint.document_profile.answer_policy.type = 'inline_marks'
+    expect(missedInlineAnswerRowIds(blueprint, [
+      makeWorkerRow(answered, { correct_index: '4' }),
+      makeWorkerRow(blank),
+    ])).toEqual(['2'])
+  })
+
+  it('does not retry blanks from an exam with no inline answer evidence', () => {
+    const row = makePlannedRow('1')
+    expect(missedInlineAnswerRowIds(makeBlueprint({ planned_rows: [row] }), [makeWorkerRow(row)])).toEqual([])
   })
 })

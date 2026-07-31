@@ -108,8 +108,10 @@ export function buildWorkerRequest(
   images: readonly CallImage[],
   workerModel: string,
   previousError?: string,
+  focusInstruction?: string,
 ): VisionRequest {
   const parts = [WORKER_PROMPT, '', 'CHUNK PACKAGE:', JSON.stringify(reduced)]
+  if (focusInstruction !== undefined) parts.push('', focusInstruction)
   if (previousError !== undefined) {
     parts.push(
       '',
