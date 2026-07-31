@@ -33,6 +33,10 @@ test-results/
 input/
 output/
 scratch/
+# Root drop folder for exam PDFs — user documents, never repo content.
+# The README that explains the folder is the one tracked file in it.
+/sample/*
+!/sample/README.md
 # Exported diagnostics logs and Triviadox/ZIP bundles land in the repo root
 # when the app runs from here — they are user run data, never repo content.
 codox-diagnostics_*.json

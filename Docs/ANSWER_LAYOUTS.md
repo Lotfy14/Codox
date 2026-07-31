@@ -131,3 +131,75 @@ other.
 `node scripts/render-pdf-pages.mjs <file.pdf> <page> [page...]` renders pages
 to `scripts/out/page-N.png` with the same engine renderer. Look at the source
 before theorising about the model's output.
+
+## The sideways margin column — measured 2026-07-31
+
+`EOR IM MCQ 2025-194-2nd (2) 1.pdf` carries no per-question answer marks at all.
+Rendering its pages shows something the earlier entries above describe only as
+"a red handwritten letter in the margin": a column of very large letters written
+**sideways** (rotated 90°) down the right edge, one per question in reading
+order, each about 1.5 question-heights tall.
+
+Two consequences, both structural:
+
+- **Position does not attribute a letter to a question; order does.** The
+  letters drift out of register — page 1's first `d` overlaps the printed text of
+  BOTH Q1 and Q2, and by Q4 the column has slid well clear of its own question.
+  Only ordinal position (letter *n* ↔ question *n*) maps them.
+- **A page's letter count is not its question count.** Page 1 shows 6 questions
+  but 5 letters: Q6's options continue onto page 2, so Q6's letter is written on
+  page 2. The two counts disagreed on **4 of 8 pages**.
+
+This is the honest explanation for INDEX's `answer_present` returning false on
+page 1 while returning true for all of page 3 — the earlier theory in CLAUDE.md
+that hedged prompt wording drove it toward `false`. On a document laid out this
+way the per-question question *has no answer*: there is no letter attributable to
+Q4 alone. Page 3 scores 7/7 because seven evenly-sized questions happen to keep
+the column in register, not because the stage judged each question. Rewording
+cannot fix a field the document cannot answer, and neither can one page per call.
+
+`scripts/probe-margin-letters.mjs` tests the well-posed alternative — ask ONE
+page for two short lists (the letters top-to-bottom, and the question labels
+starting on that page) and let code do the mapping. Deliberately two list fields,
+not ten per-question fields, since collapse-to-a-constant is a property of long
+enumerations.
+
+**What works.** Where the read could be checked against the printed answers it
+was exactly right, including glyphs a human could not call from the render:
+
+| Page | Read | Truth |
+|---|---|---|
+| 1 | `d c d d c` → Q1–Q5 | all 5 correct |
+| 3 | `c b d b b c d` → Q13–Q19 | all 7 correct |
+
+Page 3's rotated `b`/`d` pair is genuinely ambiguous to the eye at render
+resolution; the model resolved every one. And on the unanswered twin
+(`EOR SUR MCQ 2025-194-1st.pdf`) it returned **0 letters on all 5 pages tested** —
+no fabrication, against the 33-of-65 rows the current path answers from subject
+knowledge on that same document.
+
+**What does not work — the read is not stable.** Repeating pages 1–8 gave a
+different answer on **5 of 8 pages**: page 2's last letter `d`→`c`, page 4
+`d a d d a a a` (7) → `a b d c a` (5), page 5's last two transposed, page 6's
+sixth `d`→`a`, page 7 six letters → seven. Page 4 alone, run four times
+sequentially, produced three distinct readings, one containing **`g`** — not a
+valid option letter on that page. Total letters across the document came to
+exactly 50 (matching a 50-question exam) on the first pass and 49 on the second,
+so that global check is luck, not a property.
+
+Concurrency is **not** the cause: page 4 varies identically at
+`PROBE_CONCURRENCY=1`. This is ordinary run-to-run variance, consistent with the
+~5% answer flakiness recorded for the highlighter exam above, but far worse on
+this document's rotated glyphs.
+
+**Still open.**
+- *Attribution.* The count check (`MAP` only when letters == questions) refuses
+  the 4 pages where a question spans a page break, discarding 5 correct answers
+  on page 1 alone; and it is not sufficient either — two page-4 runs agreed on a
+  7-letter reading that would have mapped. Doing this properly means tracking
+  where each question's options **end**, not where it starts.
+- *Stability.* Pages 1, 3 and 8 repeat byte-identically; 2, 4, 5, 6, 7 do not.
+  Nothing here distinguishes a trustworthy read from an untrustworthy one at
+  runtime, which is what a shipping design would need.
+
+Treat this as a measured layout finding and a probe, **not** a validated design.
