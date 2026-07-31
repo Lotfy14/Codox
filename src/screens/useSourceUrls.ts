@@ -8,6 +8,12 @@ interface SourceUrls {
   page: string | null
   /** Cropped linked figures, in blueprint order. */
   figures: string[]
+  /**
+   * Top of the next page, for a row the engine flagged as cut at the page
+   * break — the only place the missing options are readable. Null for every
+   * other row, so no extra page is decoded on the normal path.
+   */
+  continuation: string | null
 }
 
 export function isTypingTarget(target: EventTarget | null): boolean {
@@ -85,19 +91,25 @@ export function useSourceUrls(
   runId: string,
   reviewRow: ReviewRow | undefined,
 ): SourceUrls {
-  const [urls, setUrls] = useState<SourceUrls>({ crop: null, page: null, figures: [] })
+  const [urls, setUrls] = useState<SourceUrls>({
+    crop: null,
+    page: null,
+    figures: [],
+    continuation: null,
+  })
 
   useEffect(() => {
     let cancelled = false
     const created: string[] = []
+    const empty: SourceUrls = { crop: null, page: null, figures: [], continuation: null }
     const load = async () => {
       if (reviewRow?.pageIndex == null) {
-        setUrls({ crop: null, page: null, figures: [] })
+        setUrls(empty)
         return
       }
       const artifact = await getPageArtifact(runId, reviewRow.pageIndex)
       if (artifact?.bytes === undefined) {
-        if (!cancelled) setUrls({ crop: null, page: null, figures: [] })
+        if (!cancelled) setUrls(empty)
         return
       }
       const { cropJpeg } = await import('../pdf/images')
@@ -160,22 +172,38 @@ export function useSourceUrls(
         const url = await cropFrom(source, figure.box)
         if (url !== null) figureUrls.push(url)
       }
+      // Only a row flagged as cut at the page break carries a continuation, so
+      // the extra page is decoded for those rows and no others.
+      let continuationUrl: string | null = null
+      if (reviewRow.continuation !== null) {
+        const source = await pageFor(reviewRow.continuation.pageIndex)
+        if (source !== null) {
+          continuationUrl = await cropFrom(source, reviewRow.continuation.box)
+        }
+      }
       const pageUrl = URL.createObjectURL(questionPage.blob)
       if (cancelled) {
         if (cropUrl !== null) URL.revokeObjectURL(cropUrl)
         for (const url of figureUrls) URL.revokeObjectURL(url)
+        if (continuationUrl !== null) URL.revokeObjectURL(continuationUrl)
         URL.revokeObjectURL(pageUrl)
         return
       }
       if (cropUrl !== null) created.push(cropUrl)
+      if (continuationUrl !== null) created.push(continuationUrl)
       created.push(...figureUrls, pageUrl)
-      setUrls({ crop: cropUrl, page: pageUrl, figures: figureUrls })
+      setUrls({
+        crop: cropUrl,
+        page: pageUrl,
+        figures: figureUrls,
+        continuation: continuationUrl,
+      })
     }
     void load()
     return () => {
       cancelled = true
       for (const url of created) URL.revokeObjectURL(url)
-      setUrls({ crop: null, page: null, figures: [] })
+      setUrls({ crop: null, page: null, figures: [], continuation: null })
     }
   }, [runId, reviewRow])
 

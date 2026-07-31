@@ -60,6 +60,7 @@ describe('composeReviewRows', () => {
     pageIndex: 0,
     box: null,
     figures: [],
+    continuation: null,
   })
 
   it('folds added rows in after the engine rows and numbers them contiguously', () => {
@@ -220,6 +221,99 @@ describe('loadReviewData', () => {
     expect(reviewRow.box).toEqual([70, 20, 530, 930])
   })
 
+  describe('a row whose options were cut at the page break', () => {
+    // Row '1' is the last question on page 2 of a 4-page document; row '2' is
+    // the first question printed on page 3.
+    const cut: Pick<Blueprint, 'planned_rows' | 'document_profile'> = {
+      document_profile: {
+        page_count: 4,
+        question_count: 2,
+        group_count: 0,
+        question_pages: [2, 3],
+        answer_policy: {
+          type: 'inline_marks',
+          answer_key_present: false,
+          marking_style: '',
+          worker_rule: '',
+        },
+      },
+      planned_rows: [
+        {
+          id: '1', group_id: '', topic: '', subtopic: '', year: '',
+          question_assembly: { mode: 'plain_question_prompt', final_format: '{question_prompt}' },
+          regions: {
+            case_stem: null,
+            question_prompt: { page: 2, box_2d: [700, 50, 800, 900] },
+            options: { page: 2, box_2d: [800, 50, 940, 900] },
+            answer_evidence: { page: 2, box_2d: [0, 0, 1000, 1000] },
+          },
+          image_urls: [],
+          correct_index_policy: { type: 'extract_visible_evidence', value: '', needs_review: '' },
+          worker_task: { case_stem_required: false, read_regions_only: false, must_follow_planner_structure: true },
+        },
+        {
+          id: '2', group_id: '', topic: '', subtopic: '', year: '',
+          question_assembly: { mode: 'plain_question_prompt', final_format: '{question_prompt}' },
+          regions: {
+            case_stem: null,
+            question_prompt: { page: 3, box_2d: [220, 50, 320, 900] },
+            options: { page: 3, box_2d: [320, 50, 500, 900] },
+            answer_evidence: { page: 3, box_2d: [0, 0, 1000, 1000] },
+          },
+          image_urls: [],
+          correct_index_policy: { type: 'extract_visible_evidence', value: '', needs_review: '' },
+          worker_task: { case_stem_required: false, read_regions_only: false, must_follow_planner_structure: true },
+        },
+      ],
+    }
+
+    const load = async (runId: string, needsReview: string, blueprintJson: unknown = cut) => {
+      await putArtifact({
+        runId,
+        kind: 'merged-rows',
+        json: [
+          makeRow({ id: '1', correct_index: '', needs_review: needsReview }),
+          makeRow({ id: '2', correct_index: '0', needs_review: '' }),
+        ],
+      })
+      await putArtifact({ runId, kind: 'blueprint-valid', json: blueprintJson })
+      return (await loadReviewData(runId)).reviewRows
+    }
+
+    it('points at the top of the next page, down to the first question there', async () => {
+      const reviewRows = await load('run-cut', 'options_cut_at_page_break')
+      // 0-based index of page 3, and the strip above that page's first prompt.
+      expect(reviewRows[0].continuation).toEqual({ pageIndex: 2, box: [0, 0, 250, 1000] })
+      // The crop the tutor sees for the question itself is unchanged.
+      expect(reviewRows[0].pageIndex).toBe(1)
+    })
+
+    it('carries no continuation for a row flagged for any other reason', async () => {
+      const reviewRows = await load('run-other', 'no_visible_answer')
+      expect(reviewRows[0].continuation).toBeNull()
+      // And never for an unflagged row.
+      expect(reviewRows[1].continuation).toBeNull()
+    })
+
+    it('has none when the cut row sits on the last page', async () => {
+      const lastPage = {
+        ...cut,
+        document_profile: { ...cut.document_profile, page_count: 2 },
+      }
+      const reviewRows = await load('run-last', 'options_cut_at_page_break', lastPage)
+      expect(reviewRows[0].continuation).toBeNull()
+    })
+
+    it('shows the whole next page when no question is boxed on it', async () => {
+      const noNext = {
+        ...cut,
+        planned_rows: [cut.planned_rows[0]],
+      }
+      const reviewRows = await load('run-nonext', 'options_cut_at_page_break', noNext)
+      expect(reviewRows[0].continuation).toEqual({ pageIndex: 2, box: [0, 0, 1000, 1000] })
+    })
+  })
+
   it('flags rows without a blueprint region as page-less', async () => {
     await putArtifact({ runId: 'run2', kind: 'merged-rows', json: [makeRow()] })
     const data = await loadReviewData('run2')
@@ -346,6 +440,7 @@ describe('effectiveAnswer', () => {
     pageIndex: null,
     box: null,
     figures: [],
+    continuation: null,
   }
 
   it('uses a valid resolution before the engine answer', () => {
@@ -367,6 +462,7 @@ describe('answerSource', () => {
     pageIndex: null,
     box: null,
     figures: [],
+    continuation: null,
   })
 
   it('uses extracted answer when no resolution', () => {
@@ -410,6 +506,7 @@ describe('aiApplyPlan (the bulk-switch approval summary)', () => {
     pageIndex: null,
     box: null,
     figures: [],
+    continuation: null,
   })
 
   it('splits rows into fill / differ / agree / unsure and picks only fill+differ', () => {

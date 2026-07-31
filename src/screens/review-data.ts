@@ -49,6 +49,14 @@ export interface ReviewFigure {
   path: string
 }
 
+/** Where a page-break-cut row's options carry on: page N+1 and the strip of it. */
+export interface ReviewContinuation {
+  /** 0-based page index of the page the options continue onto. */
+  pageIndex: number
+  /** Top strip of that page, down to the first question printed there. */
+  box: Box2d
+}
+
 export interface ReviewRow {
   row: MergedRow
   /** 1-based position among the run's rows — the tutor's question number. */
@@ -60,6 +68,12 @@ export interface ReviewRow {
   box: Box2d | null
   /** Figures the planner linked to this row, in blueprint order. */
   figures: readonly ReviewFigure[]
+  /**
+   * Set only when the engine flagged this row `options_cut_at_page_break` and
+   * a page follows: the tutor cannot fix a truncated question from a crop of
+   * the page it was cut on, so review shows where it continues too.
+   */
+  continuation: ReviewContinuation | null
 }
 
 export interface ReviewData {
@@ -152,6 +166,47 @@ function sourceRegion(
   }
 }
 
+/** The engine's own verdict that this row's options ran off the page. */
+export function optionsCutAtPageBreak(row: MergedRow): boolean {
+  return row.needs_review.includes('options_cut_at_page_break')
+}
+
+/**
+ * The strip of page N+1 a cut row's options continue into: the top of the page
+ * down to the first question printed there (the options cannot run past it),
+ * with a floor so a page whose first question starts high still shows context.
+ *
+ * The engine already tries to recover such a row and sometimes fails
+ * (measured 2026-07-30: two of three recovered, one flagged). When it fails the
+ * tutor is the last line of defence — and could not see the missing options at
+ * all, because `regions.options` is one Region on one page and review crops
+ * that page only. This adds no engine authority: it is the same stored page
+ * image, cropped for reading.
+ */
+function continuationRegion(
+  plannedRows: readonly PlannedRow[],
+  rowId: string,
+  pageCount: number,
+): ReviewContinuation | null {
+  const planned =
+    plannedRows.find((row) => row.id === rowId) ??
+    plannedRows.find((row) => row.id === parentRowId(rowId))
+  const options = planned?.regions.options
+  if (options === undefined || options === null) return null
+  const nextPage = options.page + 1
+  if (nextPage > pageCount) return null
+  let firstTop: number | null = null
+  for (const other of plannedRows) {
+    for (const region of [other.regions.case_stem, other.regions.question_prompt]) {
+      if (region === null || region.page !== nextPage) continue
+      const top = region.box_2d[0]
+      if (firstTop === null || top < firstTop) firstTop = top
+    }
+  }
+  const bottom = firstTop === null ? 1000 : Math.min(1000, Math.max(250, firstTop + 30))
+  return { pageIndex: nextPage - 1, box: [0, 0, bottom, 1000] }
+}
+
 /** Loads a finished run's rows and a review row for every question. */
 export async function loadReviewData(runId: string): Promise<ReviewData> {
   const merged = await getArtifact(runId, 'merged-rows')
@@ -178,6 +233,11 @@ export async function loadReviewData(runId: string): Promise<ReviewData> {
       else list.push(figure)
     }
   }
+  const allPlanned = blueprint?.planned_rows ?? []
+  // Optional-chained on purpose: this reads a stored artifact, and an older or
+  // partial blueprint without a profile must degrade to "no continuation",
+  // never throw in the middle of loading the tutor's questions.
+  const pageCount = blueprint?.document_profile?.page_count ?? 0
   const reviewRows = rows.map((row, index) => {
     const { pageIndex, box } = sourceRegion(plannedRows, row.id)
     return {
@@ -189,6 +249,9 @@ export async function loadReviewData(runId: string): Promise<ReviewData> {
       pageIndex,
       box: box,
       figures: figuresByRow.get(row.id) ?? [],
+      continuation: optionsCutAtPageBreak(row)
+        ? continuationRegion(allPlanned, row.id, pageCount)
+        : null,
     }
   })
   return { rows, reviewRows, figureByPath }
@@ -249,6 +312,7 @@ export function composeReviewRows(
     pageIndex: null,
     box: null,
     figures: [],
+    continuation: null,
   }))
   const edited = applyEditsToReviewRows(
     [...baseReviewRows, ...addedRows],

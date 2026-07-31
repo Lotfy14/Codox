@@ -33,6 +33,7 @@ function makeReviewRow(
     pageIndex: null,
     box: null,
     figures: [],
+    continuation: null,
   }
 }
 

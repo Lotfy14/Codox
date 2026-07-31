@@ -450,6 +450,24 @@ export function ReviewDetail({
     </figure>
   ))
 
+  // A row the engine flagged as cut at the page break: its missing options are
+  // printed at the top of the NEXT page, which the question's own crop can
+  // never show. Both the notice and the strip are keyed on the same signal.
+  const continuationPage =
+    reviewRow.continuation === null ? null : reviewRow.continuation.pageIndex + 1
+  const continuationCrop =
+    continuationPage === null || source.continuation === null ? null : (
+      <figure className="review-paper review-paper--figure" key="continuation">
+        <figcaption className="review-paper__label">
+          {reviewMessages.continuationCaption(continuationPage)}
+        </figcaption>
+        <img
+          alt={reviewMessages.continuationAlt(reviewRow.questionNumber, continuationPage)}
+          src={source.continuation}
+        />
+      </figure>
+    )
+
   return (
     <section aria-labelledby="review-heading" className="review">
       <h2 className="ds-visually-hidden" id="review-heading">
@@ -482,6 +500,7 @@ export function ReviewDetail({
               {wholePage ? reviewMessages.questionArea : reviewMessages.wholePage}
             </Button>
           ) : null}
+          {continuationCrop}
           {figureCrops}
         </section>
 
@@ -612,8 +631,21 @@ export function ReviewDetail({
               </figure>
             </button>
           ) : null}
-          {!editing && figureCrops.length > 0 ? (
-            <div className="review__mobile-figures">{figureCrops}</div>
+          {!editing && (figureCrops.length > 0 || continuationCrop !== null) ? (
+            <div className="review__mobile-figures">
+              {continuationCrop}
+              {figureCrops}
+            </div>
+          ) : null}
+
+          {continuationPage !== null ? (
+            <p
+              className="ds-inline-note ds-inline-note--info"
+              role="status"
+              style={{ marginBottom: 'var(--space-3)' }}
+            >
+              {reviewMessages.optionsCutNotice(continuationPage)}
+            </p>
           ) : null}
 
           {editing ? (

@@ -450,6 +450,11 @@ export const reviewMessages = {
     `Figure ${figureNumber} linked to question ${questionNumber}`,
   figureCaption: (figureNumber: number, total: number) =>
     total === 1 ? 'Linked figure' : `Linked figure ${figureNumber} of ${total}`,
+  optionsCutNotice: (page: number) =>
+    `This question runs off the bottom of its page and continues on page ${page}, so some options may be missing. The top of that page is shown below — use Edit to add anything that is not here.`,
+  continuationCaption: (page: number) => `Continues on page ${page}`,
+  continuationAlt: (questionNumber: number, page: number) =>
+    `Top of page ${page}, where question ${questionNumber} continues`,
   pageCaption: (page: number, fileName: string, wholePage: boolean) =>
     `Page ${page} · ${fileName}${wholePage ? ' · whole page' : ''}`,
   reviewHeading: (fileName: string) => `Review · ${fileName}`,

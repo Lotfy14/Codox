@@ -446,6 +446,17 @@ printed at the top of page 3) and contributes to `notSafeToImport`. Not worked
 around: the AUDIT prompt is pinned, and suppressing "options added" failures in
 code would also suppress genuine invention reports. Owner call.
 
+*Review shows the continuation page (2026-07-31):* the flag is only half the
+guarantee — when the re-ask fails, the tutor is the fix, and review showed them
+the crop of the page the question was cut on, where the missing options are by
+definition not printed. A row flagged `options_cut_at_page_break` now carries a
+`continuation` (`review-data.ts`): the top of page N+1 down to the first
+question boxed there (floor 25% of the page, whole page when none), cropped from
+the same stored page image and shown beside the question with a notice naming
+the page. Nothing else changes — no engine authority, no extra call, and the
+extra page is decoded only for a flagged row, so the normal path is untouched.
+Verified by click-through (`scripts/drive-options-cut.mjs`).
+
 *FIGURE DETECT's findings now reach BOX (2026-07-31):* the FIGURE DETECT stage
 ran a Gemini call per index window, parsed the response, and **discarded the
 result** — `parseFigureDetection(response.text)` was a bare expression whose
