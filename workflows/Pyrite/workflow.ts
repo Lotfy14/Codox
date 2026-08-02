@@ -8,7 +8,10 @@ export const PYRITE_WORKFLOW: WorkflowDefinition = {
   version: '0.1.0',
   description: 'Fast draft conversion with far fewer requests. Every result is sent to Review.',
   status: 'experimental',
-  render: { dpi: 200, reinitEvery: 8 },
+  // Pyrite needs to work on phone-scanned papers that sometimes advertise a
+  // huge physical page size. 120 DPI keeps option marks and highlighter
+  // strokes legible while staying within the browser PDF renderer's memory.
+  render: { dpi: 120, reinitEvery: 8 },
   models: {
     steps: PYRITE_STEPS,
     defaults: DEFAULT_PYRITE_MODELS,

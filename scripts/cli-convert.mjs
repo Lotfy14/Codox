@@ -342,6 +342,8 @@ Examples:
           return { success: false, error: `Execution stopped: ${outcome.reason}` }
         } else if (outcome.status === 'provider-stopped') {
           return { success: false, error: `Provider stopped: ${outcome.kind}` }
+        } else if (outcome.status === 'aborted') {
+          return { success: false, error: 'Execution aborted' }
         }
 
         const crops = await db.runArtifacts.where('[runId+kind]').equals([runId, 'crop']).toArray()

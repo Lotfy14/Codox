@@ -239,7 +239,15 @@ export async function loadReviewData(runId: string): Promise<ReviewData> {
   // never throw in the middle of loading the tutor's questions.
   const pageCount = blueprint?.document_profile?.page_count ?? 0
   const reviewRows = rows.map((row, index) => {
-    const { pageIndex, box } = sourceRegion(plannedRows, row.id)
+    const plannedSource = sourceRegion(plannedRows, row.id)
+    // Pyrite deliberately skips Gold's geometry-planning request. It still
+    // records the page that produced each row, which is enough for Review to
+    // show the full source page on the left even without a question crop.
+    const pageIndex = plannedSource.pageIndex ??
+      (typeof row.source_page === 'number' && row.source_page >= 1
+        ? row.source_page - 1
+        : null)
+    const box = plannedSource.box
     return {
       row,
       questionNumber: index + 1,

@@ -182,6 +182,11 @@ export interface ExamQuestion {
   correct_index: string
   image_urls: string[]
   needs_review: string
+  /**
+   * Optional 1-based source page for workflows that do not create a full
+   * planner blueprint. It is Review-only metadata and never leaves in CSV.
+   */
+  source_page?: number
   continuation?: boolean
 }
 
