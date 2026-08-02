@@ -70,6 +70,8 @@ export interface RunState {
   pdfId: string
   /** Separate key used by this run, when one was actually processed. */
   answerKeyPdfId?: string
+  /** Named conversion workflow selected when this run began. */
+  workflowId?: string
   fileName: string
   status: 'running' | 'paused' | 'stopped' | 'done'
   /** §1.3's machine-readable stop reason, when status is 'stopped'. */
@@ -166,8 +168,8 @@ export interface LogEvent {
 
 
 /**
- * Every step's inputs and outputs, on disk before the next step starts
- * (CODOX_MIGRATION §1.3). Exactly one of `blob` / `json` / `text` is set.
+ * Every step's inputs and outputs, on disk before the next step starts.
+ * Exactly one of `blob` / `json` / `text` is set.
  */
 export type RunArtifactKind =
   | 'page-jpeg'

@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { MergedRow } from '../engine/types'
+import type { ExamQuestion } from '../../workflows/Gold/engine/types'
 import { db } from '../state/db'
 import {
   addRow,
@@ -12,10 +12,9 @@ import {
   setRowsDeleted,
 } from './review-mutations'
 
-function makeRow(id: string): MergedRow {
+function makeRow(id: string): ExamQuestion {
   return {
     id,
-    group_id: '',
     topic: '',
     subtopic: '',
     year: '',

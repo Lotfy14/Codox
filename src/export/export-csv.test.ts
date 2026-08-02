@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import type { MergedRow } from '../engine/types'
+import type { ExamQuestion } from '../../workflows/Gold/engine/types'
 import { emitExportCsv, exportColumns } from './export-csv'
 
-function makeRow(overrides: Partial<MergedRow> = {}): MergedRow {
+function makeRow(overrides: Partial<ExamQuestion> = {}): ExamQuestion {
   return {
     id: '1',
-    group_id: 'group01',
     topic: 'Surgery',
     subtopic: 'Appendix',
     year: '2023',

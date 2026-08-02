@@ -14,12 +14,12 @@ import {
   aiReviewMessages,
   appMessages,
 } from '../copy/messages'
-import type { AiAnswer } from '../engine/solver'
+import type { AiAnswer } from '../../workflows/Gold/engine/solver'
 import {
   clearAiAnswers,
   estimateSolverRequests,
   solveRows,
-} from '../engine/solver'
+} from '../../workflows/Gold/engine/solver'
 import { geminiController } from '../providers/controller'
 import type { ControllerStatus } from '../providers/controller'
 import type { RunState } from '../state/types'

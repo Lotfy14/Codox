@@ -52,7 +52,7 @@ function histogram(values) {
 
 /**
  * The document's own dominant option count — the norm a short row violates.
- * Mirrors `modalOptionCount` in src/engine/executor.ts deliberately, so this
+ * Mirrors `modalOptionCount` in workflows/Gold/engine/executor.ts deliberately, so this
  * grader's "below modal" means exactly what the engine's page-break repair
  * means. A Map (not an object) is required: JS objects iterate integer-like
  * keys in ascending numeric order, so a histogram object silently reports the

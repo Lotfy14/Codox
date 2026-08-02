@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { MergedRow } from '../engine/types'
+import type { ExamQuestion } from '../../workflows/Gold/engine/types'
 import { db } from '../state/db'
 import { getArtifact, putArtifact } from '../state/runs'
 import {
@@ -16,10 +16,9 @@ import {
   type EditorOption,
 } from './review-edits'
 
-function makeRow(overrides: Partial<MergedRow> = {}): MergedRow {
+function makeRow(overrides: Partial<ExamQuestion> = {}): ExamQuestion {
   return {
     id: '1',
-    group_id: '',
     topic: '',
     subtopic: '',
     year: '',
@@ -33,11 +32,11 @@ function makeRow(overrides: Partial<MergedRow> = {}): MergedRow {
 }
 
 /** Unchanged options as the editor would hold them. */
-function keptOptions(row: MergedRow): EditorOption[] {
+function keptOptions(row: ExamQuestion): EditorOption[] {
   return row.options.map((text, index) => ({ text, originalIndex: index }))
 }
 
-function formFrom(row: MergedRow, correctChoice: number | null) {
+function formFrom(row: ExamQuestion, correctChoice: number | null) {
   return {
     question: row.question,
     options: keptOptions(row),

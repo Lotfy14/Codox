@@ -1,10 +1,10 @@
 /**
  * Export-time CSV projection (owner-approved 2026-07-14). The engine's
- * internal 10-column format (`CSV_SCHEMA`, the in-run `csv` artifact, the
- * output contract) is untouched — this module only decides which columns leave
- * the device in an exported bundle:
+ * internal format (`CSV_SCHEMA`, the in-run `csv` artifact) is
+ * untouched — this module only decides which columns leave the device in an
+ * exported bundle:
  *
- * - `id` and `group_id` are never exported (internal keying only).
+ * - `id` is never exported (internal keying only).
  * - `needs_review` is never exported (owner-approved 2026-07-17): review
  *   flags — including the AI-answer provenance flags — stay in-app.
  * - `topic`/`subtopic` appear only when the user provided a topic list
@@ -15,8 +15,8 @@
  * Same emission contract as `emitCsv`: RFC-4180 quoting, JSON arrays
  * inside one cell for `options`/`image_urls`, CRLF endings, no BOM.
  */
-import { csvLine } from '../engine/csv'
-import type { MergedRow } from '../engine/types'
+import { csvLine } from '../../workflows/Gold/engine/csv'
+import type { ExamQuestion } from '../../workflows/Gold/engine/types'
 
 export interface ExportColumnFlags {
   topics: boolean
@@ -54,7 +54,7 @@ function headerLabel(column: ExportColumn): string {
   return column === 'image_urls' ? 'image_url' : column
 }
 
-function cell(row: MergedRow, column: ExportColumn): string {
+function cell(row: ExamQuestion, column: ExportColumn): string {
   if (column === 'options' || column === 'image_urls') {
     return JSON.stringify(row[column])
   }
@@ -63,7 +63,7 @@ function cell(row: MergedRow, column: ExportColumn): string {
 
 /** Emits the exported CSV content for a run's final (projected) rows. */
 export function emitExportCsv(
-  rows: readonly MergedRow[],
+  rows: readonly ExamQuestion[],
   columns: readonly ExportColumn[],
 ): string {
   const lines = [csvLine(columns.map(headerLabel))]

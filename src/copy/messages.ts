@@ -260,6 +260,10 @@ export const customizeMessages = {
   title: 'Customize',
   subtitle:
     'Choose which optional details your exported question sets carry. These choices apply to conversions you start next — finished runs keep the columns they were made with.',
+  workflowPanelLabel: 'Conversion workflow',
+  workflowLabel: 'Conversion workflow',
+  workflowHint:
+    'A workflow is the complete strategy Codox uses to read an exam. Verified workflows have passed the shared benchmark suite. Your choice applies to conversions you start next.',
   yearPanelLabel: 'Year column',
   yearLegend: 'Year',
   yearOff: 'No year',

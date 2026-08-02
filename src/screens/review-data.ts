@@ -7,10 +7,10 @@
  * intact: only an explicit human pick ever fills a blank `correct_index`.
  */
 import { useLiveQuery } from 'dexie-react-hooks'
-import { assetJpegPath } from '../engine/blueprint'
-import { parentRowId } from '../engine/matching'
-import type { Blueprint, Box2d, MergedRow, PlannedRow } from '../engine/types'
-import type { AiAnswer } from '../engine/solver'
+import { assetJpegPath } from '../../workflows/Gold/engine/blueprint'
+import { parentRowId } from '../../workflows/Gold/engine/matching'
+import type { Blueprint, Box2d, ExamQuestion, PlannedRow } from '../../workflows/Gold/engine/types'
+import type { AiAnswer } from '../../workflows/Gold/engine/solver'
 import { db } from '../state/db'
 import { getArtifact, putArtifact } from '../state/runs'
 import {
@@ -58,7 +58,7 @@ export interface ReviewContinuation {
 }
 
 export interface ReviewRow {
-  row: MergedRow
+  row: ExamQuestion
   /** 1-based position among the run's rows — the tutor's question number. */
   questionNumber: number
   category: FlagCategory | null
@@ -77,7 +77,7 @@ export interface ReviewRow {
 }
 
 export interface ReviewData {
-  rows: MergedRow[]
+  rows: ExamQuestion[]
   reviewRows: ReviewRow[]
   /** Blueprint figure regions by bundle crop path — edit mode's picker. */
   figureByPath: Record<string, ReviewFigure>
@@ -120,7 +120,7 @@ export function flagCategory(reason: string, correctIndex: string): FlagCategory
 }
 
 /** A row needs review when its answer is blank or a reason is recorded. */
-export function isFlagged(row: MergedRow): boolean {
+export function isFlagged(row: ExamQuestion): boolean {
   return row.correct_index === '' || row.needs_review !== ''
 }
 
@@ -167,7 +167,7 @@ function sourceRegion(
 }
 
 /** The engine's own verdict that this row's options ran off the page. */
-export function optionsCutAtPageBreak(row: MergedRow): boolean {
+export function optionsCutAtPageBreak(row: ExamQuestion): boolean {
   return row.needs_review.includes('options_cut_at_page_break')
 }
 
@@ -211,7 +211,7 @@ function continuationRegion(
 export async function loadReviewData(runId: string): Promise<ReviewData> {
   const merged = await getArtifact(runId, 'merged-rows')
   const blueprintArtifact = await getArtifact(runId, 'blueprint-valid')
-  const rows = (merged?.json as MergedRow[] | undefined) ?? []
+  const rows = (merged?.json as ExamQuestion[] | undefined) ?? []
   const blueprint = blueprintArtifact?.json as Blueprint | undefined
   const plannedRows = new Map(
     (blueprint?.planned_rows ?? []).map((row) => [row.id, row]),
@@ -300,7 +300,7 @@ export function applyEditsToReviewRows(
  */
 export function composeReviewRows(
   baseReviewRows: readonly ReviewRow[],
-  additions: readonly MergedRow[],
+  additions: readonly ExamQuestion[],
   deleted: ReadonlySet<string>,
   edits: Edits,
   figureByPath: Record<string, ReviewFigure>,
@@ -507,9 +507,9 @@ export async function clearResolution(
  * index into that row's options or it is ignored and the flag stays.
  */
 export function applyResolutions(
-  rows: readonly MergedRow[],
+  rows: readonly ExamQuestion[],
   resolutions: Resolutions,
-): MergedRow[] {
+): ExamQuestion[] {
   return rows.map((row) => {
     const pick = resolutions[row.id]
     if (
@@ -526,7 +526,7 @@ export function applyResolutions(
 
 /** Flags the tutor has not confirmed yet. */
 export function unresolvedCount(
-  rows: readonly MergedRow[],
+  rows: readonly ExamQuestion[],
   resolutions: Resolutions,
 ): number {
   return applyResolutions(rows, resolutions).filter(isFlagged).length
@@ -543,7 +543,7 @@ export function useUnresolvedCounts(
     const counts: Record<string, number> = {}
     for (const runId of runIds) {
       const merged = await getArtifact(runId, 'merged-rows')
-      const rows = (merged?.json as MergedRow[] | undefined) ?? []
+      const rows = (merged?.json as ExamQuestion[] | undefined) ?? []
       // Tutor-added rows count toward the flag total (a blank added row
       // needs an answer); deleted rows never do. Both are applied exactly
       // as export applies them, before edits.

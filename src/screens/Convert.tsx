@@ -22,7 +22,7 @@ import {
   topicsMessages,
   uploadMessages,
 } from '../copy/messages'
-import { isBatchRunning, runProgress } from '../engine/progress'
+import { isBatchRunning, runProgress } from '../../workflows/Gold/engine/progress'
 import { formatStageTotals } from '../pdf/timing'
 import {
   countUnexportedFlagged,
@@ -243,7 +243,7 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
     setTopicsNote(null)
     try {
       const { extractTopicsFromDocument } = await import(
-        '../engine/topic-extract'
+        '../../workflows/Gold/engine/topic-extract'
       )
       const bytes = new Uint8Array(await doc.blob.arrayBuffer())
       const mimeType =

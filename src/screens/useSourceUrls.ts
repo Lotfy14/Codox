@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { boxToCropBox } from '../engine/boxes'
+import { boxToCropBox } from '../../workflows/Gold/engine/boxes'
 import { getArtifacts, getCropByPath, getPageArtifact } from '../state/runs'
 import type { ReviewRow } from './review-data'
 

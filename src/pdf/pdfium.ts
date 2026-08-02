@@ -9,7 +9,7 @@ import pdfiumWasmUrl from '@hyzyla/pdfium/pdfium.wasm?url'
 import type { PageBitmap, PageFailure } from './types'
 import type { StageTimer } from './timing'
 
-/** Pinned reference render DPI (CODOX_MIGRATION.md parameters table). */
+/** Pinned reference render DPI (Docs/OUTPUT_CONTRACT.md §1.11). */
 export const RENDER_DPI = 200
 
 /** PDF user-space units are points, 72 per inch. */

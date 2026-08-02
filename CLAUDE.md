@@ -2,9 +2,14 @@
 
 Codox converts exam PDFs into Triviadox-ready CSV bundles, entirely
 client-side, for non-technical tutors. Read [Docs/CODOX_CONTEXT.md](Docs/CODOX_CONTEXT.md)
-for the full product context, [Docs/BUILD_PLAN.md](Docs/BUILD_PLAN.md) for the
-current phase, and [Docs/TECHSTACK_RESEARCH.md](Docs/TECHSTACK_RESEARCH.md)
-for why each stack piece was chosen.
+for the product and the platform facts every decision has to survive,
+[Docs/OUTPUT_CONTRACT.md](Docs/OUTPUT_CONTRACT.md) for what every conversion
+workflow must produce, and [workflows/README.md](workflows/README.md) for how
+the strategies are separated. Gold's own pipeline semantics are
+[workflows/Gold/ENGINE.md](workflows/Gold/ENGINE.md).
+
+This file is the decision history and the binding rules. Where it and a doc
+disagree, this file wins.
 
 ## Hard rules (non-negotiable)
 
@@ -62,7 +67,7 @@ freely — this is a map, not a rulebook.
   `answer.source`: `extracted` (read off the page) fills `correct_index`;
   `reasoned` (worked out from knowledge) lands in `ai-answers` for tutor
   approval; `none` or an out-of-range index imports blank and flagged.
-  `validateAgentExam`/`toMergedRow` demote rather than repair. The import makes
+  `validateAgentExam`/`toExamQuestion` demote rather than repair. The import makes
   no network request — no Gemini call, no key — so the provider/quota rule is
   untouched, and it writes the same artifacts a finished conversion does, so
   Review, edit mode, topic matching and export work on it unchanged. Import is
@@ -72,20 +77,28 @@ freely — this is a map, not a rulebook.
 ## Engine semantics
 
 The Planner-Worker-Audit engine semantics, its three prompts, and the
-Triviadox CSV output contract came **as-is** from
-[Docs/CODOX_MIGRATION.md](Docs/CODOX_MIGRATION.md). Deterministic code owns all
-formatting, IDs, and CSV emission — models only read pages, never format
-output.
+Triviadox CSV output contract migrated **as-is** from CodoxSandbox. They now
+live where they belong: the semantics in
+[workflows/Gold/ENGINE.md](workflows/Gold/ENGINE.md) (Gold's strategy, not the
+repo's), the prompts in [workflows/Gold/PROMPTS.md](workflows/Gold/PROMPTS.md),
+and the output contract in [Docs/OUTPUT_CONTRACT.md](Docs/OUTPUT_CONTRACT.md)
+(shared — it is what earns every mineral one Review screen). Deterministic
+code owns all formatting, IDs, and CSV emission — models only read pages,
+never format output.
 
-The three prompts are SHA-pinned by `prompts.test.ts`: the constant, the
-`Docs/CODOX_MIGRATION.md` block, and the hash in `PROMPT_SHA256` must agree.
-That is a speed bump, not a lock — editing a prompt means updating all three
-together, which the 2026-07-15 output split and the 2026-07-30 answer
-extraction both did.
+Prompts belong to the workflow that runs them. Gold's three big prompts live in
+**`workflows/Gold/PROMPTS.md`** and `engine/prompts.ts` is GENERATED from it —
+edit the block, run `node scripts/sync-workflow-prompts.mjs Gold`, done.
+`prompts.test.ts` only verifies the generator was run (doc block ≡ constant), so
+"edited the doc, forgot to regenerate" fails loudly instead of silently shipping
+the old prompt. **They are not frozen** — they have been edited four times
+(2026-07-15 output split, 2026-07-30 answer extraction, 2026-08-02 `group_id`
+removal ×2). What proves an edit good is a benchmark run on real documents; the
+SHA-256 pins that used to guard them were removed 2026-08-02 as ceremony.
 
 *Model assignment (owner-approved 2026-07-14, superseded 2026-07-22):* the
 2026-07-14 pin ran all roles on `gemini-3.1-flash-lite` (chosen over
-CODOX_MIGRATION §1.2's `gemini-3.5-flash` planner because 3.5-flash's free-tier
+the migrated design's `gemini-3.5-flash` planner because 3.5-flash's free-tier
 per-minute ceiling 429'd a single multi-page planner call on its own). As of
 2026-07-22 the **primary** for every role is Google's newer
 `gemini-3.5-flash-lite` (GA; model id verified live against the Gemini docs
@@ -196,7 +209,7 @@ untouched. Post-audit AI steps (topic matching, Ask-AI solver, matching-split)
 are **not** part of this selection — they keep their own `gemini-3.1-flash-lite`
 pin.
 
-*Question count is code-owned (owner-approved 2026-07-14):* CODOX_MIGRATION
+*Question count is code-owned (owner-approved 2026-07-14):* ENGINE.md
 §1.6's rule "`planned_rows` count equals `document_profile.question_count`" no
 longer runs as a validation rule. `question_count` must still BE a number (the
 contract shape), but deterministic code emits `rows.length` — the rows are the
@@ -274,9 +287,10 @@ touching a prompt. The assembled format itself changed from
 `Case stem: {case_stem}\nQuestion: {question_prompt}` to
 `{case_stem}\n\n{question_prompt}` — the printed case identity in the stem
 ("Case 10 …") is kept, the `Case stem:`/`Question:` labels are dropped, and a
-blank line separates the two. This edited the pinned WORKER prompt (new SHA in
-`PROMPT_SHA256.worker`) and CODOX_MIGRATION §2.2; the legacy format is still
-accepted on blueprint input so pre-change checkpoints resume unchanged. 
+blank line separates the two. This edited the WORKER prompt and §2.2's block
+(and, at the time, re-pinned its SHA — those pins were removed 2026-08-02); the
+legacy format is still accepted on blueprint input so pre-change checkpoints
+resume unchanged. 
 
 *Worker chunk split-retry (owner-approved 2026-07-18):* §1.3's "worker chunk
 retry is exactly one, then stop" no longer stops the run. A chunk that fails
@@ -304,9 +318,8 @@ whether a response filled answers at all was decided once per response. The
 answer paragraph now adds a positive instruction — find the mark (option mark,
 or the letter in an answer column/cell/margin), return its 0-based index, "for
 every row in the chunk, not only the first few" — closing with ONE clause
-permitting blank when the mark genuinely cannot be read. New SHA in
-`PROMPT_SHA256.worker` (`274e8002…`, previously `b2b42964…`), doc block §2.2
-updated byte-identically, `prompts.test.ts` re-pinned.
+permitting blank when the mark genuinely cannot be read. Doc block §2.2 updated
+byte-identically and the prompt re-pinned (SHA pins removed 2026-08-02).
 
 **Deliberately calibrated, not maximal:** a first attempt appended a
 hedging-heavy directive (three separate sentences on returning empty) and
@@ -370,7 +383,7 @@ page-3 picks are exactly the printed letters; the seventh is Q19, whose fourth
 option is on the next page — the page-boundary defect, which
 `options_cut_at_page_break` catches. Without that guard `forceAnswer` would have
 accepted the in-range index and shipped a wrong answer, so the two 2026-07-30
-fixes depend on each other. Details in `ANSWER_LAYOUTS.md`. **Still open:** a
+fixes depend on each other. Details in `workflows/Gold/ANSWER_LAYOUTS.md`. **Still open:** a
 full conversion of an unanswered exam at production chunk size (10 rows, several
 page images per worker call) — the probe isolates one page at a time.
 
@@ -399,7 +412,7 @@ with a deliberately unreadable one-page key attached: the log recorded
 `{keyPolicy: "no_answer_key", documentPolicy: "mixed"}`, the blueprint carried
 `mixed`, and 11 of 47 rows kept an answer that the pre-fix path would have
 blanked — all 47 of them. **Still open:** the separate-key path has no
-end-to-end verification on a REAL key document (`ANSWER_LAYOUTS.md`, *Still
+end-to-end verification on a REAL key document (`workflows/Gold/ANSWER_LAYOUTS.md`, *Still
 uncovered*) — treat a keyed run's output as unproven, not as a regression.
 
 *Options split across a page break (2026-07-30):* a question's prompt and first
@@ -567,11 +580,11 @@ bank) are explicitly *not* matching questions and are left alone.
 
 *Export projection (owner-approved 2026-07-14):* exported CSVs are a
 column projection of the pinned format (`src/export/export-csv.ts`,
-CODOX_MIGRATION §3.1): `id`/`group_id` never leave the device;
+OUTPUT_CONTRACT §3.1): `id` never leaves the device;
 `topic`/`subtopic`/`year` are conditional per the Customizations settings.
-The engine prompts, blueprint `csv_schema`, merge, the in-run `csv`
-artifact are untouched — they keep the internal
-10-column format. The topic matcher (`src/engine/topic-matcher.ts`) and
+The in-run `csv` artifact keeps the internal format — the 9-column
+`CSV_SCHEMA` as of the 2026-08-02 note below.
+The topic matcher (`src/engine/topic-matcher.ts`) and
 topics-document reader (`src/engine/topic-extract.ts`) are new surface
 outside the engine path, solver-style: they never modify `merged-rows`,
 deterministic code validates every pick against the user's list, and
@@ -622,6 +635,140 @@ the engine path with `merged-rows` untouched (unsure rows stay blank). Export al
 `topics-list` artifact (`hasTopics` in `exporter.ts`), not the global topics
 setting, so an added-after-the-fact list flows straight into the exported
 `topic`/`subtopic` columns.
+
+## Workflows (mineral-named conversion strategies)
+
+**Full reference: [workflows/README.md](workflows/README.md)** — the three
+tiers, the output contract, and how to add a mineral. The notes below are the
+binding rules and the reasoning behind them.
+
+*Workflow split (2026-08-02):* the single conversion pipeline became a set of
+named strategies under `workflows/`. **Gold** is the original, verified one and
+its behavior is unchanged; `workflows/Gold/engine/` is the former `src/engine/`
+verbatim. Three tiers, and the boundary is the point:
+
+1. **Workflow-owned.** `workflows/<Mineral>/workflow.ts` declares the strategy's
+   render policy (`dpi`, `reinitEvery`), its request-making steps with each
+   step's default model AND the Customize picker grouping, and a `run()` entry
+   point. Customize renders whatever the selected workflow declares, so a new
+   mineral needs no screen edit. `workflow.ts` must load its engine **lazily**
+   inside `run` — `registry.ts` is reachable from the widely-imported settings
+   module, and a static engine import there drags every prompt string and the
+   pdfium WASM into the main bundle.
+2. **Shared device/account plumbing, deliberately NOT per-workflow.** The pdfium
+   binding, the measured JPEG encoder probe, the one on-device Gemini key, the
+   per-model quota tally, IndexedDB, backup. These are facts about the machine
+   and the user's Google project, not strategy. A workflow sets render *policy*;
+   the shared rasteriser applies it. Copying the rasteriser per mineral would
+   mean the next Android encoder fix has to land in every copy — the failure
+   "ship everywhere or nowhere" exists to prevent.
+3. **Shared output contract.** `ExamQuestion[]` written to `merged-rows`, plus
+   `crop` records for anything a row names in `image_urls` and `page-jpeg` for
+   Review's source view. That is what earns every mineral ONE Review screen and
+   ONE "Export to Triviadox" instead of a fork per workflow. Note it is
+   deliberately wider than "just the CSV": export never reads the `csv`
+   artifact — `exporter.ts` re-projects columns from `merged-rows` — and Review
+   works on `ExamQuestion`, so a CSV-only contract would leave Review nothing to
+   render. Gold's own checkpoints (`blueprint-raw`, `index-window`,
+   `index-reconcile`, `figure-window`, `chunk-request`, `chunk-response`) are
+   private; nothing outside Gold reads them, and `backup.ts` already archives
+   every shared kind and none of these.
+
+*`MergedRow` → `ExamQuestion` (2026-08-02):* the old name described the pipeline
+step that produced the row rather than the thing itself, which is wrong for what
+is now a cross-workflow contract. (`PlannedRow`/`WorkerRow` keep their
+stage names — those genuinely ARE "the row as that stage made it".) The
+`merged-rows` artifact KIND is deliberately unchanged: it is a persisted key,
+and renaming it would orphan every stored run.
+
+*The whole `group_id` concept removed — third and fourth pinned-prompt edits
+(owner-approved 2026-08-02):* `group_id` was a **derived label nothing read**.
+`assemble.ts` minted it from `caseStemKey ?? ref`, `linked_group_id` was always
+`''`, `group_count` was a statistic, and case assembly keys off `caseStemKey`,
+never the group — so removing it is behaviourally inert. It was never exported
+and no downstream consumer touched it.
+
+Removed from the PLANNER prompt (`csv_schema`, the `planned_rows` example,
+`group_count`, `linked_group_id`, `may_change_grouping`, and the "a group is a
+real shared case stem" rule) and from the WORKER prompt (its output example and
+the copy-through list, since the planner no longer supplies it). The AUDIT
+prompt was **not** touched — its one mention of "grouping" is a word in a prose
+list, not a field reference, and leaving it saves a third re-pin. New SHAs:
+planner `5807f59f…` (was `550503d8…`), worker `ab4798fd…` (was `274e8002…`),
+audit unchanged at `7bedae91…` — which is the proof only two prompts moved.
+
+`CSV_SCHEMA` is now the **9-column** list, and it is again the single source for
+both the blueprint handshake and the in-run `csv` artifact (the brief
+`QUESTION_CSV_COLUMNS` split existed only to hold `group_id` back from the CSV
+and is gone). `assemble.ts` now spreads `CSV_SCHEMA` instead of re-typing the
+list, so the two can no longer drift. Also gone: `PlannedRow.group_id`,
+`WorkerRow.group_id`, `DocumentProfile.group_count`,
+`BlueprintAsset.linked_group_id`, `WorkerConstraints.may_change_grouping`, the
+`group_id must be non-empty` blueprint rule, `windows.ts`'s cross-window group
+renumbering, and the agent bundle's `groupId` (dropping it from the schema is
+backward compatible — an older bundle that still carries the key is ignored, not
+rejected). Split matching rows relate to their parent through the
+`{parentId}~m{n}` id and `parentRowId`, which is what Review always used.
+
+**Two tests were deleted, not adapted** — the `group_id must be non-empty`
+validation test and `windows.test.ts`'s group-renumbering test — because the
+behaviour they covered no longer exists. Suite: 577 → 575.
+
+*Prompts moved into the workflow (2026-08-02):* the three big prompt blocks left
+the former `Docs/CODOX_MIGRATION.md` §2 for **`workflows/Gold/PROMPTS.md`**. A repo-level
+doc asserting "this file contains exactly three prompt blocks" was a
+Gold-specific claim in a shared place; another mineral has its own steps and
+prompts and need not have three. The §2.1/2.2/2.3 subheadings moved WITH the
+blocks so the ~15 code comments citing "§2.2" still resolve. The move was
+byte-exact — all three hashes were identical before and after, which is how it
+was verified (the hashes still existed at that point).
+
+*The rest of the migration doc followed, and the docs were pruned
+(2026-08-02):* the prompt move left the job half done. §1 (engine semantics)
+was the **same** Gold-specific claim in a shared place — four roles, a planner,
+a blueprint, an 8-step sequence, none of which a second mineral need have. It
+is now **`workflows/Gold/ENGINE.md`**, beside the prompts it implements, and
+`Docs/ANSWER_LAYOUTS.md` went with it as `workflows/Gold/ANSWER_LAYOUTS.md` —
+its findings are about INDEX/EVIDENCE/WORKER, Gold's stages.
+
+The split followed the **tier boundary, not the section numbering**, because
+citation counts showed §1 was not purely Gold's: §1.5/1.6/1.7/1.9/1.10 are
+cited 20 times, every one from inside Gold, but §1.8 (the 0–1000 box
+convention) is cited by `src/pdf/`, §1.3 by `src/state/`, and §1.4 by
+`src/agent-import/` — the shared tier. So §1.8, the shared render parameters,
+and all of §3 became **`Docs/OUTPUT_CONTRACT.md`**, which is the honest name
+for them: the thing every workflow must satisfy to earn one Review screen and
+one Export button. Original section numbers are preserved in both files so
+existing comments still resolve; the file *names* in those comments were
+updated.
+
+Deleted outright as historical: `Docs/BUILD_PLAN.md` (phases 0–9, last dated
+2026-07-13, describing none of the work since, while CLAUDE.md sent every agent
+to it "for the current phase"), `Docs/TECHSTACK_RESEARCH.md` (a dated research
+snapshot whose multi-provider chain was superseded by the Gemini-only rule
+within two days of being written — its still-binding parts, the AGPL/paid PDF
+library traps, moved into CODOX_CONTEXT §6), and CODOX_CONTEXT's own §6–13
+(the v2 PRD stack table, the pre-build spike list, the old research repo's
+evidence log, the resolved BLIND-SPOTS — all written to decide a rebuild that
+finished a month ago). Nothing measured was lost: the numbers that still matter
+already live in this file, and the answer-layout measurements live in Gold.
+
+*SHA-256 pins removed (owner call 2026-08-02):* `PROMPT_SHA256` and its
+assertions are gone. They restated what the byte-equality check already proves,
+while turning every prompt edit into a three-place ritual — and a checksum never
+indicated whether a prompt was *better*. The freeze made sense when there was
+one pipeline and the archived research was the only evidence; workflows now
+exist so alternative prompt strategies can be tried, and `benchmarks/` is what
+compares them. What SURVIVES in `prompts.test.ts`, and is worth keeping: three
+blocks present, each constant byte-equal to its block (the generated file is
+stale otherwise — a real, silent bug), plus two content spot-checks a retyped
+prompt tends to lose (the literal backslash-n in `final_format`, the
+image-discovery clauses). It resolves PROMPTS.md relative to ITSELF, so a second
+workflow is independent. Suite 575 → 574.
+
+Gold's OTHER prompts — INDEX, EVIDENCE, FIGURE_DETECT, BOX, BOX_BATCH,
+REFERENCE_RESOLVER, and the post-audit matching/solver/topic prompts — were
+never generated or pinned and are edited directly in `engine/prompts.ts`.
 
 ## Ship everywhere or nowhere (non-negotiable)
 

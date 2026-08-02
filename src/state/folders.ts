@@ -14,7 +14,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from './db'
 import { ensureStoragePersisted } from './persist'
 import { getArtifact } from './runs'
-import { clearTopicMatches, rematchRunTopics } from '../engine/topic-matcher'
+import { clearTopicMatches, rematchRunTopics } from '../../workflows/Gold/engine/topic-matcher'
 import type { JobState, RunState, StoredPdf } from './types'
 
 export function isFolderId(id: string): boolean {

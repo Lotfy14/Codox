@@ -11,17 +11,17 @@
  * `reasoned` one lands in `ai-answers`, leaving the row blank and flagged
  * until the tutor approves it in Review.
  */
-import { assetJpegPath } from '../engine/blueprint'
-import type { AiAnswer, AiAnswersArtifact } from '../engine/solver'
-import type { TopicMatch, TopicMatchesArtifact } from '../engine/topic-matcher'
+import { assetJpegPath } from '../../workflows/Gold/engine/blueprint'
+import type { AiAnswer, AiAnswersArtifact } from '../../workflows/Gold/engine/solver'
+import type { TopicMatch, TopicMatchesArtifact } from '../../workflows/Gold/engine/topic-matcher'
 import {
   CSV_SCHEMA,
   type Blueprint,
   type BlueprintAsset,
   type Box2d,
-  type MergedRow,
+  type ExamQuestion,
   type PlannedRow,
-} from '../engine/types'
+} from '../../workflows/Gold/engine/types'
 import { addStoredPdf } from '../state/files'
 import { createRun, putArtifact, updateRun } from '../state/runs'
 import type { YearMode } from '../state/types'
@@ -204,7 +204,7 @@ async function importOneExam(
   })
 
   const figurePaths = figurePathsById(exam)
-  const rows = exam.questions.map((question) => toMergedRow(question, figurePaths))
+  const rows = exam.questions.map((question) => toExamQuestion(question, figurePaths))
   const yearMode: YearMode = rows.some((row) => row.year !== '') ? 'ai' : 'off'
   const runId = await createRun({
     jobId: folderId,
@@ -325,10 +325,10 @@ export function figurePathsById(exam: AgentExam): Map<string, string> {
  * ships blank with a reason from merge's existing vocabulary, so Review's
  * `flagCategory` explains it to the tutor in the usual words.
  */
-export function toMergedRow(
+export function toExamQuestion(
   question: AgentQuestion,
   figurePaths: ReadonlyMap<string, string>,
-): MergedRow {
+): ExamQuestion {
   const extracted =
     question.answer.source === 'extracted' && question.answer.index !== null
   const correctIndex = extracted ? String(question.answer.index) : ''
@@ -340,7 +340,6 @@ export function toMergedRow(
         : ''
   return {
     id: question.id,
-    group_id: question.groupId,
     topic: question.topic,
     subtopic: question.subtopic,
     year: question.year,
@@ -384,7 +383,6 @@ export function buildBlueprint(exam: AgentExam): Blueprint {
     page: figure.page,
     box_2d: figure.box,
     output_path: assetJpegPath(figure.file),
-    linked_group_id: '',
     linked_row_ids: exam.questions
       .filter((question) => question.figures.includes(figure.id))
       .map((question) => question.id),
@@ -393,7 +391,6 @@ export function buildBlueprint(exam: AgentExam): Blueprint {
 
   const plannedRows: PlannedRow[] = exam.questions.map((question) => ({
     id: question.id,
-    group_id: question.groupId,
     topic: question.topic,
     subtopic: question.subtopic,
     year: question.year,
@@ -429,7 +426,6 @@ export function buildBlueprint(exam: AgentExam): Blueprint {
     document_profile: {
       page_count: exam.pages.length,
       question_count: exam.questions.length,
-      group_count: 0,
       question_pages: [
         ...new Set(exam.questions.map((question) => question.page)),
       ].sort((a, b) => a - b),
@@ -449,7 +445,6 @@ export function buildBlueprint(exam: AgentExam): Blueprint {
     worker_constraints: {
       may_add_rows: false,
       may_remove_rows: false,
-      may_change_grouping: false,
       may_change_image_assignments: false,
       may_change_answer_policy: false,
       may_flag_planner_disagreement: false,

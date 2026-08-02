@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from '../state/db'
 import { getArtifact, getArtifacts } from '../state/runs'
-import type { Blueprint, MergedRow } from '../engine/types'
+import type { Blueprint, ExamQuestion } from '../../workflows/Gold/engine/types'
 import { groupExamFolders, importAgentBundle } from './import'
 
 const FOLDER = 'folder-test'
@@ -132,7 +132,7 @@ describe('importAgentBundle', () => {
   it('fills correct_index only for the answer the agent saw', async () => {
     const { exams } = await importAgentBundle(FOLDER, bundleFiles())
     const rows = (await getArtifact(exams[0].runId, 'merged-rows'))
-      ?.json as MergedRow[]
+      ?.json as ExamQuestion[]
 
     expect(rows[0]).toMatchObject({ id: 'q001', correct_index: '1', needs_review: '' })
     // The reasoned answer never reaches the row without tutor approval.
@@ -169,7 +169,7 @@ describe('importAgentBundle', () => {
 
     // The row's image_urls must name the crop path exactly, or the exported
     // bundle's images/ folder will not resolve.
-    const rows = (await getArtifact(runId, 'merged-rows'))?.json as MergedRow[]
+    const rows = (await getArtifact(runId, 'merged-rows'))?.json as ExamQuestion[]
     expect(rows[0].image_urls).toEqual(['images/fig-01.jpg'])
   })
 

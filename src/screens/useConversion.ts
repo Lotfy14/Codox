@@ -9,8 +9,9 @@
  * left off.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { executeRun, type RunOutcome } from '../engine/executor'
-import { matchRunTopics } from '../engine/topic-matcher'
+import { workflowFor } from '../../workflows/registry'
+import type { WorkflowRunOutcome } from '../../workflows/types'
+import { matchRunTopics } from '../../workflows/Gold/engine/topic-matcher'
 import { geminiController, type ControllerStatus } from '../providers/controller'
 import { runAutoBackup } from '../state/auto-backup'
 import { getCustomizationSettings } from '../state/customization-settings'
@@ -47,7 +48,7 @@ export interface ConversionState {
   retryTopicMatching: (runIds: readonly string[]) => Promise<void>
   /** User stop: aborts in-flight work, marks unfinished runs stopped. */
   stop: () => Promise<void>
-  outcomes: RunOutcome[]
+  outcomes: WorkflowRunOutcome[]
 }
 
 interface QueueItem {
@@ -94,7 +95,7 @@ export function useConversion(jobId: string): ConversionState {
   const [topicMatchIssue, setTopicMatchIssue] = useState<
     'wrong-key' | 'failed' | null
   >(null)
-  const [outcomes, setOutcomes] = useState<RunOutcome[]>([])
+  const [outcomes, setOutcomes] = useState<WorkflowRunOutcome[]>([])
   // One driver at a time, even across re-renders and StrictMode remounts.
   const driving = useRef(false)
   const abortRef = useRef<AbortController | null>(null)
@@ -150,12 +151,17 @@ export function useConversion(jobId: string): ConversionState {
         // Engine-shaping settings are read once per batch, at drive time, so
         // start, retry, and resume all honor the current Customize choices.
         const settings = await getCustomizationSettings()
+        // The tutor's chosen strategy, resolved once per batch. Everything
+        // from rendering to the audit gate is this workflow's; what comes
+        // back is the shared row/artifact contract Review and export read.
+        const workflow = workflowFor(settings.workflowId)
         for (const item of queue) {
           if (aborter.signal.aborted) break
           try {
+            await updateRun(item.run.id, { workflowId: workflow.id })
             // One file's stop never kills the batch: the outcome is recorded
             // and the next file starts.
-            const outcome = await executeRun(item.run.id, item.bytes, {
+            const outcome = await workflow.run(item.run.id, item.bytes, {
               signal: aborter.signal,
               examPageCount: item.examPageCount,
               answerKeyBytes: item.answerKey?.bytes,

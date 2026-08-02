@@ -1,6 +1,6 @@
 /**
  * pdf.js text-layer extraction — the words specialty, alongside pdfium's
- * pixels specialty (TECHSTACK_RESEARCH.md). The extracted text is a hint
+ * pixels specialty (Docs/CODOX_CONTEXT.md §6). The extracted text is a hint
  * for born-digital PDFs, passed alongside the page image; Gemini reads
  * the images, and the text never replaces them.
  */

@@ -23,6 +23,7 @@ describe('customization settings', () => {
       yearMode: 'ai',
       topicsMode: 'off',
       exportTarget: 'zip',
+      workflowId: 'gold',
       debugConsole: true,
       boxCrops: true,
       indexPagesPerCall: 3,
@@ -42,6 +43,7 @@ describe('customization settings', () => {
       yearMode: 'ai',
       topicsMode: 'off',
       exportTarget: 'zip',
+      workflowId: 'gold',
       debugConsole: true,
       boxCrops: true,
       indexPagesPerCall: 3,
@@ -101,6 +103,7 @@ describe('customization settings', () => {
       yearMode: DEFAULT_CUSTOMIZATION_SETTINGS.yearMode,
       topicsMode: 'off',
       exportTarget: DEFAULT_CUSTOMIZATION_SETTINGS.exportTarget,
+      workflowId: DEFAULT_CUSTOMIZATION_SETTINGS.workflowId,
       debugConsole: DEFAULT_CUSTOMIZATION_SETTINGS.debugConsole,
       boxCrops: DEFAULT_CUSTOMIZATION_SETTINGS.boxCrops,
       // Out of range below the floor — a 0-page window would emit no windows

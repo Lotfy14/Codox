@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from 'react'
 import { Button, GlassInput } from '../design/components'
-import type { AiAnswer } from '../engine/solver'
+import type { AiAnswer } from '../../workflows/Gold/engine/solver'
 import type { RunState, TopicItem } from '../state/types'
 import { reviewMessages } from '../copy/messages'
 import {

@@ -36,7 +36,7 @@ const pageNumbers = range
 
 // The INDEX prompt, read out of the generated constants so this probe can
 // never drift from what the engine actually sends.
-const promptsSrc = await readFile(new URL('../src/engine/prompts.ts', import.meta.url), 'utf8')
+const promptsSrc = await readFile(new URL('../workflows/Gold/engine/prompts.ts', import.meta.url), 'utf8')
 const match = /export const INDEX_PROMPT = ("(?:[^"\\]|\\.)*")/.exec(promptsSrc)
 if (!match) throw new Error('could not read INDEX_PROMPT')
 // PROBE_PROMPT_EXTRA appends a candidate instruction; PROBE_PROMPT_FILE

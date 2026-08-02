@@ -62,7 +62,7 @@ export interface KeyCheckSuccess {
 export type KeyCheckResult = KeyCheckSuccess | ProviderFailure
 
 /**
- * Generation parameters the engine pins per call (CODOX_MIGRATION §1.11:
+ * Generation parameters the engine pins per call (OUTPUT_CONTRACT §1.11:
  * temperature 0, per-role max output tokens, JSON-only responses). The
  * adapter passes this object through to `generateContent` verbatim.
  */

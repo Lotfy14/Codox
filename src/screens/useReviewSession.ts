@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { readRunTopics, readTopicMatches } from '../engine/topic-matcher'
+import { readRunTopics, readTopicMatches } from '../../workflows/Gold/engine/topic-matcher'
 import type { RunState } from '../state/types'
 import {
   composeReviewRows,

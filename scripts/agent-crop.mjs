@@ -7,7 +7,7 @@
  * image, see that a label is clipped, and try again. Same script both times,
  * so what was checked is exactly what ships.
  *
- * Boxes use the pinned convention (CODOX_MIGRATION §1.8, src/engine/boxes.ts):
+ * Boxes use the pinned convention (OUTPUT_CONTRACT §1.8, workflows/Gold/engine/boxes.ts):
  * `[ymin, xmin, ymax, xmax]`, normalized 0–1000 against the rendered page.
  * y comes FIRST — an x/y swap makes a plausible-looking wrong crop.
  *

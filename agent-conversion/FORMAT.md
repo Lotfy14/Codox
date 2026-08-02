@@ -63,8 +63,7 @@ agent-conversion/output/<batch>/
   "year": "2024",
   "page": 1,                       // 1-based, required
   "box": [80, 100, 700, 900],      // optional; omit for the whole page
-  "flag": "",                      // "not_mcq" etc. when something is wrong
-  "groupId": ""                    // shared stem grouping; "" is fine
+  "flag": ""                       // "not_mcq" etc. when something is wrong
 }
 ```
 

@@ -29,7 +29,7 @@ import {
   uploadMessages,
 } from '../copy/messages'
 import { AgentImport } from './AgentImport'
-import { isBatchRunning, runProgress } from '../engine/progress'
+import { isBatchRunning, runProgress } from '../../workflows/Gold/engine/progress'
 import {
   countUnexportedFlagged,
   exportableRuns,
@@ -393,7 +393,7 @@ function FolderDetail({
     setTopicsBusy(true)
     setNote({ text: topicsMessages.reading, tone: 'working' })
     try {
-      const { extractTopicsFromDocument } = await import('../engine/topic-extract')
+      const { extractTopicsFromDocument } = await import('../../workflows/Gold/engine/topic-extract')
       const bytes = new Uint8Array(await file.arrayBuffer())
       const mimeType = file.type === '' ? 'application/pdf' : file.type
       const outcome = await extractTopicsFromDocument({ bytes, mimeType })

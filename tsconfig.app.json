@@ -23,6 +23,6 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"],
-  "exclude": ["src/**/*.test.ts"]
+  "include": ["src", "workflows"],
+  "exclude": ["src/**/*.test.ts", "workflows/**/*.test.ts"]
 }

@@ -1,0 +1,32 @@
+{
+  "case": "EOR SUR MCQ 2025-194-1st",
+  "workflow": "pyrite",
+  "version": "0.1.0",
+  "source": "sample/EOR SUR MCQ 2025-194-1st.pdf",
+  "reference": "benchmarks/reference/eor-sur-mcq-2025-194-1st.reasoned.json",
+  "reference_status": "provisional independent reasoning; source PDF contains no answer key or visible marks",
+  "pages": 8,
+  "questions_expected": 65,
+  "rows_extracted": 65,
+  "question_recall": "65/65",
+  "option_count": 4,
+  "empty_questions": 0,
+  "duplicate_questions": 0,
+  "answered": 33,
+  "blank_for_review": 32,
+  "flag_reasons": {
+    "no_visible_answer": 32
+  },
+  "reference_agreement": {
+    "aligned": 30,
+    "different": 3,
+    "blank": 32
+  },
+  "differences": {
+    "40": { "reference": "A", "pyrite": "B" },
+    "56": { "reference": "A", "pyrite": "B" },
+    "63": { "reference": "D", "pyrite": "A" }
+  },
+  "request_count": 2,
+  "safety": "not_safe_to_import; no independent audit; Review required"
+}

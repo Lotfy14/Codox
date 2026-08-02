@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { Blueprint, MergedRow } from '../engine/types'
+import type { Blueprint, ExamQuestion } from '../../workflows/Gold/engine/types'
 import { db } from '../state/db'
 import { getArtifact, putArtifact } from '../state/runs'
 import {
@@ -20,10 +20,9 @@ import {
   type ReviewRow,
 } from './review-data'
 
-function makeRow(overrides: Partial<MergedRow> = {}): MergedRow {
+function makeRow(overrides: Partial<ExamQuestion> = {}): ExamQuestion {
   return {
     id: '1',
-    group_id: '',
     topic: '',
     subtopic: '',
     year: '',
@@ -144,7 +143,6 @@ describe('loadReviewData', () => {
     planned_rows: [
       {
         id: '2',
-        group_id: '',
         topic: '',
         subtopic: '',
         year: '',
@@ -200,7 +198,7 @@ describe('loadReviewData', () => {
     const answered: Pick<Blueprint, 'planned_rows'> = {
       planned_rows: [
         {
-          id: '1', group_id: '', topic: '', subtopic: '', year: '',
+          id: '1', topic: '', subtopic: '', year: '',
           question_assembly: { mode: 'plain_question_prompt', final_format: '{question_prompt}' },
           regions: {
             case_stem: null,
@@ -228,7 +226,6 @@ describe('loadReviewData', () => {
       document_profile: {
         page_count: 4,
         question_count: 2,
-        group_count: 0,
         question_pages: [2, 3],
         answer_policy: {
           type: 'inline_marks',
@@ -239,7 +236,7 @@ describe('loadReviewData', () => {
       },
       planned_rows: [
         {
-          id: '1', group_id: '', topic: '', subtopic: '', year: '',
+          id: '1', topic: '', subtopic: '', year: '',
           question_assembly: { mode: 'plain_question_prompt', final_format: '{question_prompt}' },
           regions: {
             case_stem: null,
@@ -252,7 +249,7 @@ describe('loadReviewData', () => {
           worker_task: { case_stem_required: false, read_regions_only: false, must_follow_planner_structure: true },
         },
         {
-          id: '2', group_id: '', topic: '', subtopic: '', year: '',
+          id: '2', topic: '', subtopic: '', year: '',
           question_assembly: { mode: 'plain_question_prompt', final_format: '{question_prompt}' },
           regions: {
             case_stem: null,
@@ -341,7 +338,6 @@ describe('loadReviewData', () => {
       planned_rows: [
         {
           id: '1',
-          group_id: '',
           topic: '',
           subtopic: '',
           year: '',
@@ -365,7 +361,6 @@ describe('loadReviewData', () => {
         },
         {
           id: '2',
-          group_id: '',
           topic: '',
           subtopic: '',
           year: '',
@@ -410,7 +405,6 @@ describe('loadReviewData', () => {
           page: 2,
           box_2d: [200, 100, 500, 800],
           output_path: 'images/asset01.jpg',
-          linked_group_id: '',
           linked_row_ids: ['2'],
           anchor: '',
         },
@@ -455,7 +449,7 @@ describe('effectiveAnswer', () => {
 })
 
 describe('answerSource', () => {
-  const reviewRow = (row: MergedRow) => ({
+  const reviewRow = (row: ExamQuestion) => ({
     row,
     questionNumber: 1,
     category: null,
@@ -499,7 +493,7 @@ describe('answerSource', () => {
 })
 
 describe('aiApplyPlan (the bulk-switch approval summary)', () => {
-  const reviewRow = (row: MergedRow) => ({
+  const reviewRow = (row: ExamQuestion) => ({
     row,
     questionNumber: 1,
     category: null,

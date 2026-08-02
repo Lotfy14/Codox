@@ -1,37 +1,20 @@
-# Codox — Product & Decision Context for the Rebuild
+# Codox — product context
 
-_Audience: AI agents working in the new Codox repository. This file is the
-context payload for re-deciding the tech stack, UI/UX, and other additions.
-Written 2026-07-08 from the original research repository (the product's design/
-research repo, formerly named Triviadox-Conv). Codox is the product formerly
-named Lucy — older documents and results use that name interchangeably._
+_What Codox is, who uses it, and the platform facts every design decision has
+to survive. This file **describes**; the binding rules live in
+[CLAUDE.md](../CLAUDE.md), the shared output contract in
+[OUTPUT_CONTRACT.md](OUTPUT_CONTRACT.md), and each conversion strategy's
+semantics in its own workflow (e.g.
+[workflows/Gold/ENGINE.md](../workflows/Gold/ENGINE.md))._
 
-_Companion file: [CODOX_MIGRATION.md](CODOX_MIGRATION.md) carries the artifacts
-that migrate **as-is** (the Planner-Worker-Audit engine semantics, its three
-prompts, and the Triviadox output contract). This file describes; that file
-prescribes._
+_Originally written 2026-07-08 as the rebuild's context payload. Trimmed
+2026-08-02: the "prior decisions, open for re-decision" material (the v2 PRD
+stack table, the multi-provider research, the pre-build spike list, the old
+research repo's evidence log) went out with the rebuild it was written for —
+those decisions are made and the app is built. What remains is the product
+definition and the platform constraints, which have not changed._
 
 ---
-
-## 0. How to read this file (agent instructions)
-
-- **Sections 1–5 are fixed.** Product definition, users, hard rules, input
-  space, and output contract are settled. Do not re-open them.
-- **Sections 6–9 are prior decisions with rationale.** The tech stack, UI/UX,
-  and architecture shell were decided once (v2 PRD, 2026-07-08) but are being
-  **re-decided in the new repo**. Treat them as the strongest known candidate
-  plus the reasoning that produced it — not as constraints. When you propose
-  something different, your proposal must still satisfy the *constraints and
-  facts* listed there (those are platform reality, not preference).
-- **Section 10 is measured evidence.** Numbers from real experiment runs.
-  Never contradict them from intuition; if a decision needs a number that
-  isn't here, say the number is unmeasured.
-- **Testing does not migrate.** The eval/scoring harness, the degraded-input
-  corpus, and the v1 Python reference engine stayed in the old repo and are no
-  longer used as a gate.
-- The implementation language and libraries in the new repo **may differ**
-  from anything named here. Nothing in the engine semantics
-  (CODOX_MIGRATION.md) depends on a language.
 
 ## 1. What Codox is
 
@@ -41,14 +24,13 @@ options, and answers — including scanned pages, circled/ticked answers,
 handwritten keys, and clinical figures — and **never silently guesses an
 answer**: anything uncertain is emitted blank and flagged for human review.
 Triviadox is the separate quiz platform that imports the CSV; its import
-schema is ours to change and is pinned by the output contract
-(CODOX_MIGRATION.md §3).
+schema is ours to change and is pinned by
+[OUTPUT_CONTRACT.md](OUTPUT_CONTRACT.md).
 
 The value chain: a tutor has a folder of messy exam PDFs → drops them into
-Codox → declares where the answers are → gets, per PDF, a portable bundle
-(`<pdf-name> Cx.csv` + an `images/` folder of cropped figures) → imports it into
-Triviadox, where every answer is either correct or explicitly queued for the
-tutor's review.
+Codox → gets, per PDF, a portable bundle (`<pdf-name> Cx.csv` + an `images/`
+folder of cropped figures) → imports it into Triviadox, where every answer is
+either correct or explicitly queued for the tutor's review.
 
 ## 2. Users
 
@@ -67,20 +49,28 @@ published to app stores.
 | **COST-ZERO** | $0 recurring cost to the developer. Free hosting, no stores, no signing certificates, no paid dependencies, no developer-paid API usage. Anything with a price must be flagged to the human and worked around by default. |
 | **PRIVACY-TOLD** | The user's PDF pages go **directly from their device to Google Gemini** using **their own Gemini API key** — never through a Codox-operated server. The consent notice states plainly that full page images are sent to Gemini and that its free tier may train on the data. The one key is stored only on that user's device, and every request consumes only that user's Gemini quota. |
 
+Each installation stores exactly one user-supplied key. There is no shared key
+pool, bundled key, developer key, fallback key, or second provider — a user may
+replace or remove their key but cannot pool several for quota. When that user's
+quota is exhausted the job **pauses** and resumes when Gemini allows requests
+again; it never switches key or provider. The full rule, including the runtime
+*model* fallback that does not touch it, is in CLAUDE.md.
+
 Derived invariants that must also survive:
 
 - One bad page never crashes a job — it flags and continues.
 - `id` is unique per PDF, not globally; batch imports must namespace per file.
 - Image references are **relative paths** into the bundle's `images/` folder
   with human-readable filenames; the bundle must survive being moved.
+- Provider errors stay distinguishable in the UI: bad key ≠ provider
+  unreachable ≠ quota exhausted, and quota reads as "paused," not broken.
 
 ## 4. The input space (what the engine must handle)
 
-Four **answer forms**, detected by the planner from document evidence alone
-(changed 2026-07-13, owner-approved: the upload-time declaration question was
-removed — the planner's evidence-based `answer_policy` is the sole authority;
-a separate answer-key PDF may optionally be attached and is always read when
-present):
+Four **answer forms**, detected from document evidence alone (changed
+2026-07-13, owner-approved: the upload-time declaration question was removed —
+the evidence-based `answer_policy` is the sole authority; a separate answer-key
+PDF may optionally be attached and is always read when present):
 
 1. **Separate answer grid/key** — printed key pages at the end of the PDF,
    joined to questions by (section, question number).
@@ -93,268 +83,78 @@ present):
 4. **Questions only** — no answer evidence exists; every `correct_index` is
    blank by construction, flagged `no_answer_key`.
 
+What real documents actually do with answers — the layout corpus, and the two
+layouts that are structurally hard to read — is
+[benchmarks/corpus/ANSWER_LAYOUTS.md](../benchmarks/corpus/ANSWER_LAYOUTS.md).
+What a workflow measured on them stays with that workflow
+([Gold's](../workflows/Gold/ANSWER_LAYOUTS.md)).
+
 Three **fidelity classes**: clean digital text (has a text layer), scanned
 pages (no text layer), and photo-of-screen (glary phone photo of a monitor —
 the measured worst case). Plus **figures**: clinical photos / x-rays that must
 be cropped out and attributed to the right question(s), including case-based
-pairs of questions sharing one image and one stem (`group_id`).
+pairs of questions sharing one image and one stem (such rows share an entry in
+`image_urls`).
 
-Out of scope (v2): Arabic / RTL / non-English languages (detect and flag
+Out of scope: Arabic / RTL / non-English languages (detect and flag
 "unsupported," never silently corrupt); quiz-taking or editing beyond the
 review step; offline *conversion* (reading pages requires the cloud LLM;
-review/export of an already-converted bundle should work offline).
+review/export of an already-converted bundle works offline).
 
-## 5. Output (summary — the authoritative contract migrates as-is)
+## 5. Output (summary — the contract is OUTPUT_CONTRACT.md)
 
 One bundle per PDF: `<pdf-name> Cx/` containing `<pdf-name> Cx.csv` plus a
 sibling `images/` folder, delivered in a PDF-named `Cx.zip` (universal) or
 written to a user-chosen folder where the platform supports it. The CSV core
-is 10 columns:
+is 9 columns:
 
-`id,group_id,topic,subtopic,year,question,options,correct_index,image_urls,needs_review`
+`id,topic,subtopic,year,question,options,correct_index,image_urls,needs_review`
 
-plus an optional 10th `needs_review` column carrying the flag *reason*. Blank
-`correct_index` is the hard review signal. `options` is a JSON array in one
-CSV cell; `image_urls` is a JSON array of relative paths. True/False questions
-are `options=["True","False"]` with a normal 0-based index. Full parsing
-rules, semantics, and the definition of "compatible" are in
-CODOX_MIGRATION.md §3 and are **not open for redesign**.
+The last column carries the flag *reason*. Blank `correct_index` is the hard
+review signal. `options` is a JSON array in one CSV cell; `image_urls` is a
+JSON array of relative paths. Full parsing rules, the exported projection, and
+the definition of "compatible" are in
+[OUTPUT_CONTRACT.md](OUTPUT_CONTRACT.md) and are **not open for redesign**.
 
 Correctness is judged on real documents, by eye.
 
-## 6. Prior UX design (open for redesign — preserve the intent stated per item)
-
-The v2 PRD specified **five screens**. Each carries a reason; a redesign may
-change the surface but must keep the reason satisfied:
-
-1. **Setup (first run)** — paste exactly one Gemini API key; deep link to
-   Google's key page; paste-and-validate with a live test call; green check or
-   plain-English failure. *Intent:* key onboarding is the #1 drop-off risk for
-   this audience. Ask for exactly one user-supplied Gemini key. The user may
-   replace or remove it later, but Codox does not accept additional provider
-   keys or provide any shared key.
-2. **Upload** — one drop zone (1..n PDFs) plus an always-visible, optional
-   answer-key drop zone (changed 2026-07-13, owner-approved: the "Where are
-   the answers?" declaration question was removed). *Intent:* the planner
-   detects the answer form from the pages themselves, so the tutor never has
-   to characterize a document; a supplied key PDF is always attached and read
-   alongside the exam pages.
-3. **Progress** — per-file and overall progress, quota-aware pacing,
-   pause/resume. *Intent:* free-tier quota exhaustion mid-PDF must read as
-   "paused, resumes when quota allows," never as "the app broke." A dropped
-   connection resumes, not restarts.
-4. **Review** — every flagged row (blank `correct_index`, low confidence,
-   length mismatch, source conflict) shown with the **source crop** beside it;
-   the user sets or corrects the answer; keyboard-navigable; works offline on
-   an already-converted bundle. *Intent:* the review screen is where the
-   human resolves what the engine left open, with the evidence in front of
-   them.
-5. **Export** — zip download universally; write-to-folder where supported.
-   *Intent:* **export early, export often** — browser storage (especially iOS)
-   can evict unexported work, so the app must never be the sole holder of a
-   user's work; nudge loudly, or export automatically when review completes.
-   On phones, prefer the OS share sheet over a bare zip download where
-   supported (BLIND-SPOTS #13: a zip in Downloads is an awkward deliverable
-   for a non-technical phone user).
-
-Accessibility note that shaped a prior stack rejection: the review screen must
-be a real-DOM, keyboard-navigable UI (Flutter-web was rejected partly on this).
-
-## 7. Provider & key model (facts + prior design)
-
-**Current design (owner decision 2026-07-11):** each user brings exactly one
-Google Gemini API key. Codox has no shared key pool, bundled key, developer
-key, fallback key, or second provider. Every request from an installation uses
-only the key entered on that installation. This is a quota-isolation rule as
-well as an on-device-storage rule: one user can never consume requests from
-another user's Gemini quota through Codox. A user may replace or remove their
-key, but cannot add multiple active keys for quota aggregation.
-
-When that user's Gemini quota is exhausted, the job pauses and resumes when
-Gemini allows requests again. Codox does not switch to another key or provider.
-
-**Historical measured facts (2026-07-08, from browser context):** these
-measurements explain earlier plans but do not override the current Gemini-only
-decision above.
-
-- **Gemini's API is CORS-blocked for direct browser calls** (verified). In a
-  browser architecture it participates only via a stateless free-tier
-  Cloudflare Worker relay (pass-through, no logging/storage) or drops out.
-- **Groq and OpenRouter (`:free` models) accept direct browser calls.**
-- **NVIDIA NIM browser CORS is unverified.**
-- Prior chain order was Groq → OpenRouter `:free` → NVIDIA NIM → Gemini
-  (relay-only). That chain is superseded. CORS can still change silently, so
-  the Gemini-only client must probe reachability and distinguish "Gemini is
-  unreachable" from "your key is wrong."
-- A native (non-browser) runtime is not CORS-bound at all — if the new stack
-  has a native network layer, the Gemini relay question disappears. This is a
-  real lever in the stack re-decision.
-
-**Update (2026-07-11) — Gemini only + Gemini re-measured:** Google Gemini is
-the only active provider. NVIDIA NIM, Groq, OpenRouter, GitHub Models, Mistral,
-and all multi-provider failover behavior are out of scope unless the owner
-explicitly revisits this decision. The Phase-2 spike measured
-`gemini-3.5-flash` returning **HTTP 200** from
-inside the Tauri (WebView2) and Capacitor shells — direct calls work there, so
-the relay is dropped, superseding the 2026-07-08 CORS-blocked measurement.
-Re-confirm one call from the deployed browser PWA before deleting the relay
-option for good.
-
-**Consent:** before the first cloud call, a plain notice: full page images go
-to the provider under the user's key; free tiers may train on the data; the
-key lives only on this device.
-
-## 8. Platform & distribution constraints (facts, not choices)
+## 6. Platform & distribution constraints (facts, not choices)
 
 - **No app stores** — files and links are shared directly with the targeted
   audience. $0 fees, no review processes, instant updates.
 - **Windows:** unsigned installers trigger a SmartScreen "protected your PC"
   prompt; acceptable (signing costs money — COST-ZERO). Double-click install
-  works.
+  works. School IT can ban "Run anyway" outright, so the landing page tells
+  tutors on managed laptops to use the browser version.
 - **Android:** direct `.apk` installs work after a one-time "install from
-  unknown sources" setting. No Play fee, no 12-tester gate.
+  unknown sources" setting. No Play fee, no 12-tester gate. Android only
+  accepts updates signed by the same key — across a key change the user must
+  uninstall first.
 - **iOS (Apple-imposed):** installing an app *file* on iPhone outside the App
   Store/TestFlight requires a paid ($99/yr) developer account, on **any**
   framework. The only free install path is the browser PWA: Safari → Share →
   "Add to Home Screen" — and Safari never prompts for this itself, so the
   landing page needs a visual 2-step guide. Revisit the $99/yr path only on
   real demand.
-- **iOS PWA storage eviction:** Safari can evict PWA storage (IndexedDB/
-  Cache) after weeks of disuse — unexported work simply vanishes. This is why
-  export-early is a hard UX requirement, not a nicety (BLIND-SPOTS #10).
-- **Mobile memory ceilings:** a 25-page scan at 300 DPI is ~825 MB if all
-  pages are rasterized at once — mobile browsers kill the tab. Page-at-a-time
+- **iOS PWA storage eviction:** Safari can evict PWA storage (IndexedDB /
+  Cache) after weeks of disuse — unexported work simply vanishes.
+  `persist()` is a polite request Apple may ignore, and a plain download link
+  silently fails inside an installed iOS PWA (the share sheet is the one
+  reliable export path there). This is why export-early is a hard requirement,
+  not a nicety.
+- **Mobile memory ceilings:** an iPhone-SE-class browser tab dies at roughly
+  **~100 MB** of working set, with no catchable error — it just crashes. A
+  25-page scan at 300 DPI is ~825 MB if rasterized at once. Page-at-a-time
   rendering (render → send → release) is mandatory, not an optimization.
-- **macOS:** shipping a native Mac app non-scarily requires notarization
-  ($99/yr) — violates COST-ZERO; the prior answer was "macOS uses the
-  web/PWA path." Any stack re-decision inherits this constraint.
+- **macOS/Linux:** shipping a native Mac app non-scarily requires notarization
+  ($99/yr) — violates COST-ZERO. Both use the browser/PWA path; do not
+  introduce a "desktop app" assumption for them.
 - **No local OCR in a browser:** browsers cannot reach OS-native OCR
-  (measured at 91–97% word accuracy in v1), and browser-runnable OCR
-  (RapidOCR-class) measured ~53% word-for-word — below the quality bar. In a
-  browser stack, **all page reading is LLM-based**. A native stack could
-  reopen the OS-OCR option; that trade (quota burn vs. platform reach) is
-  quantified in section 10 and BLIND-SPOTS #8.
-
-## 9. Prior tech-stack decision (v2 PRD, 2026-07-08 — open for re-decision)
-
-The stack below was "locked" in the v2 PRD and is now **explicitly re-opened**
-for the new repo. It is the benchmark to beat, with each choice's rationale:
-
-| Layer | Prior choice | Why it was chosen |
-|---|---|---|
-| App | TypeScript + React + Vite | largest ecosystem / AI-assistance corpus; real DOM (accessibility, keyboard-navigable review) |
-| Desktop/mobile shell | Tauri 2 | wraps the *same* web build into a real Windows `.exe`/`.msi` and Android `.apk` — one codebase, three shells, no UI fork |
-| PWA (web + iOS) | manifest + service worker | browser-installable where Apple blocks file installs; offline review/export |
-| PDF render/text/crop | pdfium-wasm | same engine class as v1's pypdfium2, so rendering behavior carries over |
-| Zip export | client-side archiver (fflate-class) | MIT, no server |
-| Multimodal | user-supplied Gemini key (§7) | each user consumes only their own free-tier quota |
-| Hosting | Cloudflare Pages | free, unlimited bandwidth |
-| Relay (only if kept) | Cloudflare Worker free tier, stateless | $0; only exists because of Gemini's browser CORS block |
-
-Known caveats attached to that decision (must be answered by any successor):
-
-- **Tauri mobile is "stable, not first-class"** per its own docs — the plan
-  required a P1 spike proving a clean Android `.apk` before building on it,
-  with Capacitor-for-Android as the named fallback (BLIND-SPOTS #11).
-- Rejected alternatives on record: **Flutter-web** (no real DOM →
-  accessibility), **local OCR of any kind in-browser** (measured quality,
-  §8), **Electron-class bundles** implicitly by the thin-shell requirement,
-  and v1's **Python desktop app** (superseded; a 300–600 MB Python+OCR bundle
-  was itself a documented adoption barrier).
-- The single most decision-relevant unmeasured number: **Gemini calls / quota
-  consumed per real 25-page scan under one user's key** (BLIND-SPOTS #8,
-  rated the one number that could force a redesign). Measure it before
-  building deep, whatever the stack. Never solve quota pressure by pooling
-  keys between users.
-
-Prior phasing (P0 docs → P1 skeleton+shells spike → P2 easy screens + pure
-logic ports → P3 PDF+AI reader end-to-end → P4 hard inputs + review screen)
-is a reasonable template but not binding on the new repo.
-
-## 10. Empirical evidence log (measured, decision-relevant)
-
-_History, kept for the engineering lessons only — the grading setup these
-numbers came from is retired (2026-07-30). The documents were: a clean digital
-127-row exam with a separate key; two scanned IM exams (50 rows with
-conflicting tick+highlight marks, 30 rows with clean inline circles); and a
-dermatology photo-of-screen, 20 questions in 10 image-sharing case pairs._
-
-1. **Phase 0 (2026-07-03) — raw one-shot, native PDF to `gemini-3.1-flash-lite`,
-   clean 127-row PDF:** emitted all 127 rows but scored **119/127 with 4
-   confidently wrong answers**. Verdict: a raw single prompt is not shippable.
-2. **Phase 0b (2026-07-03) — staged 9-stage single-call prompt, same model/PDF:**
-   raw import score failed on formatting (option labels leaked into text,
-   section-local IDs duplicated), but the label-stripped diagnostic showed
-   **0 confident wrong answers, 2 safely flagged blanks, 4 formatting
-   drifts**. Verdict: in-prompt structure achieves *safety*; formatting/IDs
-   must be owned by deterministic emit code, not the model.
-3. **NVIDIA free-model bench (2026-07-04) — all 6 free NVIDIA multimodal
-   models, full corpus, fixed prompt:** no model produced a usable result on
-   the 15-page clean exam (context windows, 8–12-image caps, timeouts, one
-   full provider outage); best (kimi-k2.6) got 30/30 on one scanned exam and
-   40/50 on another but was slow and produced 1 confidently wrong answer.
-   Notably **no model ever hit an HTTP 429** — free-tier throughput limits,
-   not daily quotas, were the binding constraint. Verdict at the time: free
-   LLMs can read exam pages but couldn't replace the local path wholesale.
-4. **Two-model planner/worker derm tests (2026-07-05, Gemini_Test_1–5 +
-   gemini_two_model):** on the hardest input (photo-of-screen, no key),
-   structure was solved — 20/20 rows, all 10 case groups matched the gold
-   pairing, all 10 vision-bbox crops valid. Remaining failures: **option-text
-   transcription drift** (dropped/substituted option strings) and, in one run,
-   the model **hallucinated `answer_key_present=true` and filled answers** —
-   including 1 wrong answer. Verdict: structure/grouping/crops are provable;
-   transcription fidelity and answer-policy enforcement must be guarded by
-   deterministic code and an audit gate — which is exactly what the migrated
-   Planner-Worker-Audit design does.
-5. **LLM-only Planner-Worker-Audit protocol (2026-07-08):** designed and
-   hardened (see CODOX_MIGRATION.md), **not yet executed** as of this file's
-   writing. Its 4-PDF × 3-run execution matrix, safety classification, and
-   audit-accuracy measurement run.
-6. **v1 OCR measurements (for the record):** OS-native OCR 91–97% word
-   accuracy; RapidOCR-class portable OCR ~53%. This is the measured basis for
-   "no local OCR in a browser" and for the quota-burn concern if the LLM
-   reads every page.
-
-## 11. Risks that must be resolved before deep building (from BLIND-SPOTS v2)
-
-Ranked; #8, #11, #12 were flagged as "resolve before the architecture locks
-in around them":
-
-- **#8 Quota burn (High):** LLM-only reading sends every scanned page to the
-  cloud; quota-per-25-page-scan is unmeasured. Mitigations in design:
-  declaration-routed smaller prompts and coarse batch calls. Quota is never
-  pooled across users or keys.
-  Measure early and publish the number.
-- **#9 CORS drift (Medium):** provider CORS can change silently; needs
-  startup re-verification + an error UX distinguishing provider-down from
-  bad-key.
-- **#10 iOS storage eviction (Medium-High on iOS):** unexported bundles can
-  vanish; export-early must be loud or automatic.
-- **#11 Tauri Android maturity (Medium):** hard P1 gate — produce a real
-  clean `.apk` before anything depends on it; fallback named (Capacitor for
-  Android only).
-- ~~**#12 Multi-key onboarding (Medium)**~~ — **RESOLVED 2026-07-11:** Codox
-  accepts exactly one user-supplied Gemini key. There is no multi-key flow.
-- **#13 Zip on phones (Medium):** prefer the OS share sheet on mobile; zip is
-  the fallback, not the mobile default.
-
-## 12. Open decisions (carried into the new repo)
-
-- ~~**Gemini: relay vs drop**~~ — **RESOLVED 2026-07-11:** direct calls work in
-  the shells (HTTP 200); relay dropped. One re-confirm left: the deployed
-  browser PWA path.
-- ~~**NVIDIA NIM CORS**~~ — **REMOVED 2026-07-11:** NVIDIA is not an active
-  provider. Its historical benchmark remains in §10 for context only.
-- **Flag-rate ceiling** — set from the first real measurement on hard inputs,
-  not guessed; a nonzero rate is *correct* (genuinely ambiguous marks should
-  flag), the target is "low enough to still feel automatic."
-- **iOS App Store ($99/yr)** — out of scope unless real demand appears.
-- **Tech stack / UI/UX** — the subject of the new repo's first decision pass,
-  per this file.
-
-## 13. Division of labor between the two repos
-
-_Retired 2026-07-30. The old repo is no longer a grading gate; Codox is
-judged on real documents. Its archived experiment results remain there as
-history only._
-
+  (measured at 91–97% word accuracy), and browser-runnable OCR
+  (RapidOCR-class) measured ~53% — below the quality bar. In a browser stack,
+  **all page reading is LLM-based.**
+- **Dependency licence traps** found while choosing the PDF stack, recorded so
+  they are not re-evaluated: **MuPDF.js is AGPL-or-pay** and **Nutrient /
+  Apryse have no free tier**. Both are COST-ZERO violations. pdfium
+  (`@hyzyla/pdfium`, MIT) draws pages and crops rectangles; pdf.js reads the
+  text layer.

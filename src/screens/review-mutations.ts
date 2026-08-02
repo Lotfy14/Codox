@@ -7,7 +7,7 @@
  *  - `review-deletions` (a rowId list) hides rows from review and the CSV. It
  *    is REVERSIBLE: nothing is destroyed, so a deleted row (and its edits and
  *    resolution) comes back intact when the id is removed from the list.
- *  - `review-additions` (a MergedRow list) holds tutor-authored questions
+ *  - `review-additions` (a ExamQuestion list) holds tutor-authored questions
  *    appended after the engine's rows. An added row is a plain blank row the
  *    tutor fills in through the ordinary editor; its content, answer, topic and
  *    year flow through `review-edits`/`review-resolutions` by id exactly like
@@ -17,7 +17,7 @@
  * explicit pick; a blank added row stays flagged until they fill it.
  */
 import { useLiveQuery } from 'dexie-react-hooks'
-import type { MergedRow } from '../engine/types'
+import type { ExamQuestion } from '../../workflows/Gold/engine/types'
 import { db } from '../state/db'
 import { getArtifact, putArtifact } from '../state/runs'
 
@@ -57,9 +57,9 @@ export async function setRowsDeleted(
 
 /** Drops the deleted rows — the one place the deletion set is consumed. */
 export function applyDeletions(
-  rows: readonly MergedRow[],
+  rows: readonly ExamQuestion[],
   deleted: ReadonlySet<string>,
-): MergedRow[] {
+): ExamQuestion[] {
   return rows.filter((row) => !deleted.has(row.id))
 }
 
@@ -76,10 +76,9 @@ export function isAddedRowId(rowId: string): boolean {
 
 /** A fresh, empty MCQ the tutor will fill in. Blank answer → it ships flagged
  *  (and shows in "needs review") until the tutor gives it one. */
-export function blankAddedRow(id: string): MergedRow {
+export function blankAddedRow(id: string): ExamQuestion {
   return {
     id,
-    group_id: '',
     topic: '',
     subtopic: '',
     year: '',
@@ -91,14 +90,14 @@ export function blankAddedRow(id: string): MergedRow {
   }
 }
 
-export async function getAdditions(runId: string): Promise<MergedRow[]> {
+export async function getAdditions(runId: string): Promise<ExamQuestion[]> {
   const artifact = await getArtifact(runId, 'review-additions')
-  const json = artifact?.json as MergedRow[] | undefined
+  const json = artifact?.json as ExamQuestion[] | undefined
   return Array.isArray(json) ? json : []
 }
 
 /** Live view of a run's tutor-added rows. undefined while loading. */
-export function useAdditions(runId: string): MergedRow[] | undefined {
+export function useAdditions(runId: string): ExamQuestion[] | undefined {
   return useLiveQuery(() => getAdditions(runId), [runId])
 }
 
@@ -106,7 +105,7 @@ export function useAdditions(runId: string): MergedRow[] | undefined {
 export async function addRow(runId: string): Promise<string> {
   const id = `${ADDED_PREFIX}${crypto.randomUUID()}`
   const artifact = await getArtifact(runId, 'review-additions')
-  const current = (artifact?.json as MergedRow[] | undefined) ?? []
+  const current = (artifact?.json as ExamQuestion[] | undefined) ?? []
   const next = [...current, blankAddedRow(id)]
   if (artifact === undefined) {
     await putArtifact({ runId, kind: 'review-additions', json: next })

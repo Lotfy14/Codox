@@ -10,12 +10,12 @@
  * `verbatimModuleSyntax`), so:
  *   - every app import here is `import type` (erased, never resolved), and
  *   - the one RUNTIME import carries an explicit `.ts` extension and is
- *     itself dependency-free (`../engine/boxes.ts`).
+ *     itself dependency-free (`../../workflows/Gold/engine/boxes.ts`).
  * Adding any other runtime import — especially one that reaches the DOM,
  * Dexie, or Vite — breaks the Node script. Keep this module pure.
  */
-import { hasPositiveExtent, isBox2d } from '../engine/boxes.ts'
-import type { Box2d } from '../engine/types'
+import { hasPositiveExtent, isBox2d } from '../../workflows/Gold/engine/boxes.ts'
+import type { Box2d } from '../../workflows/Gold/engine/types'
 import type { TopicItem } from '../state/types'
 
 /** Bumped only on a breaking change to the shape below. */
@@ -89,7 +89,6 @@ export interface AgentQuestion {
   box?: Box2d
   /** Structural problem the tutor must fix, e.g. `not_mcq`. */
   flag: string
-  groupId: string
 }
 
 export interface AgentExam {
@@ -372,7 +371,6 @@ export function validateAgentExam(
       page,
       box,
       flag,
-      groupId: asString(value.groupId),
     })
   })
 

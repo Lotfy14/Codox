@@ -9,10 +9,10 @@ import {
 import type { RunState, TopicItem } from '../state/types'
 import { useCustomizationSettings } from '../state/customization-settings'
 import { ExportButton } from './ExportButton'
-import type { AiAnswer } from '../engine/solver'
-import { solveRows } from '../engine/solver'
-import type { MergedRow } from '../engine/types'
-import type { TopicMatchesArtifact } from '../engine/topic-matcher'
+import type { AiAnswer } from '../../workflows/Gold/engine/solver'
+import { solveRows } from '../../workflows/Gold/engine/solver'
+import type { ExamQuestion } from '../../workflows/Gold/engine/types'
+import type { TopicMatchesArtifact } from '../../workflows/Gold/engine/topic-matcher'
 import {
   answerSource,
   clearResolution,
@@ -47,7 +47,7 @@ export interface ReviewDetailProps {
   resolutions: Resolutions
   aiAnswers: Record<string, AiAnswer> | undefined
   /** The engine's untouched merged rows — edit mode diffs against them. */
-  pristineRows: readonly MergedRow[]
+  pristineRows: readonly ExamQuestion[]
   edits: Edits
   topicMatches: TopicMatchesArtifact | undefined
   runTopics: TopicItem[] | undefined

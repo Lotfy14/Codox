@@ -1,7 +1,7 @@
 /**
  * Types shared across the client-side PDF pipeline (Phase 5).
  *
- * Coordinate rule (pinned by CODOX_MIGRATION.md §1.8): every box lives in
+ * Coordinate rule (pinned by Docs/OUTPUT_CONTRACT.md §1.8): every box lives in
  * pixel coordinates on the page image rendered at the fixed reference DPI.
  * Pages are rendered once at that scale; planning, cropping, and review all
  * use those exact images.

@@ -20,8 +20,8 @@ import {
   applyTopicMatches,
   readRunTopics,
   readTopicMatches,
-} from '../engine/topic-matcher'
-import type { MergedRow } from '../engine/types'
+} from '../../workflows/Gold/engine/topic-matcher'
+import type { ExamQuestion } from '../../workflows/Gold/engine/types'
 import { bytesToBase64 } from '../providers/base64'
 import { getArtifact, getArtifacts, updateRun } from '../state/runs'
 import type { RunState } from '../state/types'
@@ -103,13 +103,13 @@ function triviadoxOrigin(): string {
  * the projection treat them exactly like engine rows; deletion is reversible
  * upstream, here it simply omits.
  */
-async function reviewedRows(runId: string): Promise<MergedRow[]> {
+async function reviewedRows(runId: string): Promise<ExamQuestion[]> {
   const merged = await getArtifact(runId, 'merged-rows')
   if (!Array.isArray(merged?.json)) {
     throw new Error(`Finished run ${runId} has no merged rows`)
   }
   const rows = applyDeletions(
-    [...(merged.json as MergedRow[]), ...(await getAdditions(runId))],
+    [...(merged.json as ExamQuestion[]), ...(await getAdditions(runId))],
     new Set(await getDeletions(runId)),
   )
   // Content edits (question/options/pictures/answer override) go first so

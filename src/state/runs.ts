@@ -1,8 +1,9 @@
 /**
- * Run + artifact persistence (Dexie v5). The executor writes every step's
- * inputs and outputs here before the next step starts (CODOX_MIGRATION
- * §1.3) — which is also exactly what resume needs: the artifacts present
- * ARE the checkpoint.
+ * Run + artifact persistence (Dexie v5). A workflow writes every step's
+ * inputs and outputs here before the next step starts — which is also exactly
+ * what resume needs: the artifacts present ARE the checkpoint. Shared across
+ * workflows; the shared artifact kinds are the ones OUTPUT_CONTRACT names,
+ * and a workflow's own checkpoints are private to it.
  */
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from './db'

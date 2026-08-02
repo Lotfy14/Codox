@@ -20,12 +20,12 @@ import {
   type MatchingMode,
   type TopicsMode,
 } from '../state/customization-settings'
+import { WORKFLOWS, workflowFor, type WorkflowId } from '../../workflows/registry'
 import {
   DEFAULT_GEMINI_VISION_MODEL,
   FALLBACK_GEMINI_VISION_MODEL,
   type EngineModel,
 } from '../providers/gemini'
-import type { EngineStep } from '../engine/model-steps'
 import type { YearMode } from '../state/types'
 
 const YEAR_OPTIONS: readonly ChoiceOption<YearMode>[] = [
@@ -101,13 +101,10 @@ const MODEL_SELECT_OPTIONS: readonly SelectOption<EngineModel>[] = [
   { id: FALLBACK_GEMINI_VISION_MODEL, label: customizeMessages.modelOlder },
 ]
 
-/** The request-making steps, in pipeline order, with their tutor-facing copy. */
-const MODEL_STEPS: readonly { steps: readonly EngineStep[]; label: string; hint: string }[] = [
-  { steps: ['index', 'evidence', 'audit'], label: 'Planner', hint: 'Finding questions, reading answer keys, and final validation.' },
-  { steps: ['worker'], label: 'Worker', hint: 'Transcribes questions and choices.' },
-  { steps: ['figure'], label: 'Figure', hint: 'Finds essential question-linked figures.' },
-  { steps: ['box'], label: 'Crop', hint: 'Draws optional Review question crops.' },
-]
+const WORKFLOW_OPTIONS: readonly SelectOption<WorkflowId>[] = WORKFLOWS.map((workflow) => ({
+  id: workflow.id,
+  label: `${workflow.name} ${workflow.version}`,
+}))
 
 const TOPICS_OPTIONS: readonly ChoiceOption<TopicsMode>[] = [
   {
@@ -134,6 +131,22 @@ export function Customizations() {
       </header>
       <div className="ds-stack">
         <p className="ds-muted">{customizeMessages.subtitle}</p>
+        <GlassPanel
+          aria-label={customizeMessages.workflowPanelLabel}
+          as="section"
+          padding="compact"
+        >
+          <Select<WorkflowId>
+            description={customizeMessages.workflowHint}
+            label={customizeMessages.workflowLabel}
+            onChange={(workflowId) => {
+              if (workflowId === null) return
+              void saveCustomizationSettings({ ...settings, workflowId })
+            }}
+            options={WORKFLOW_OPTIONS}
+            value={settings.workflowId}
+          />
+        </GlassPanel>
         <GlassPanel
           aria-label={customizeMessages.exportPanelLabel}
           as="section"
@@ -265,7 +278,10 @@ export function Customizations() {
         >
           <div className="ds-stack">
             <p className="ds-muted">{customizeMessages.modelsIntro}</p>
-            {MODEL_STEPS.map(({ steps, label, hint }) => (
+            {/* The pickers, their labels, and which steps each one sets all
+                belong to the selected workflow — this screen only renders
+                them, so a new mineral needs no edit here. */}
+            {workflowFor(settings.workflowId).models.groups.map(({ steps, label, hint }) => (
               <Select<EngineModel>
                 key={label}
                 description={hint}

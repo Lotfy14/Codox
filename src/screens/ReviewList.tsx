@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Badge, Button, GlassInput } from '../design/components'
 import { aiReviewMessages, reviewMessages } from '../copy/messages'
-import type { AiAnswer } from '../engine/solver'
+import type { AiAnswer } from '../../workflows/Gold/engine/solver'
 import type { TopicItem } from '../state/types'
 import { effectiveAnswer, type Resolutions, type ReviewRow } from './review-data'
 import { saveRowEditsPatch, type MetaPatch } from './review-edits'

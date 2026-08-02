@@ -23,7 +23,7 @@ import { parseArgs } from 'node:util'
 import { PDFiumLibrary } from '@hyzyla/pdfium'
 import sharp from 'sharp'
 
-/** Pinned by CODOX_MIGRATION's parameters table; mirrors src/pdf/pdfium.ts. */
+/** Pinned by Docs/OUTPUT_CONTRACT.md §1.11; mirrors src/pdf/pdfium.ts. */
 const RENDER_DPI = 200
 const PDF_POINTS_PER_INCH = 72
 /** Mirrors PAGE_JPEG_QUALITY (0.8) in src/pdf/images.ts. */

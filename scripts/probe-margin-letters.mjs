@@ -36,7 +36,7 @@ if (!dir || !pageArg || !key) {
   process.exit(1)
 }
 
-/** Mirrors CALL_CONCURRENCY in src/engine/executor.ts. See the note below. */
+/** Mirrors CALL_CONCURRENCY in workflows/Gold/engine/executor.ts. See the note below. */
 const CONCURRENCY = Number(process.env.PROBE_CONCURRENCY ?? 3)
 
 const range = /^(\d+)-(\d+)$/.exec(pageArg)
@@ -111,7 +111,7 @@ async function probe(number, run) {
 
 /**
  * Calls go out concurrently, bounded — the same shape as the engine's own
- * `mapConcurrent` (src/engine/concurrency.ts) at its `CALL_CONCURRENCY` of 3,
+ * `mapConcurrent` (workflows/Gold/engine/concurrency.ts) at its `CALL_CONCURRENCY` of 3,
  * and for the same reason. The free tier's ceiling is ~15 requests per provider
  * minute, and the controller pads its pacing window because requests are paced
  * when they START but counted when they ARRIVE (`>14 requests in an AI Studio

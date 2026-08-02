@@ -8,8 +8,8 @@ import {
   pendingMatchRows,
   readRunTopics,
   readTopicMatches,
-} from '../engine/topic-matcher'
-import type { MergedRow } from '../engine/types'
+} from '../../workflows/Gold/engine/topic-matcher'
+import type { ExamQuestion } from '../../workflows/Gold/engine/types'
 import { getArtifact } from '../state/runs'
 import type { RunState } from '../state/types'
 
@@ -27,7 +27,7 @@ export function useTopicMatchPending(
         const topics = await readRunTopics(runId)
         if (topics === undefined) continue
         const merged = await getArtifact(runId, 'merged-rows')
-        const rows = (merged?.json as MergedRow[] | undefined) ?? []
+        const rows = (merged?.json as ExamQuestion[] | undefined) ?? []
         pending += pendingMatchRows(rows, await readTopicMatches(runId)).length
       }
       return pending

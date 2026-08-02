@@ -14,7 +14,7 @@ import { useState } from 'react'
 import { Button, FileDropZone } from '../design/components'
 import type { FileAccept } from '../design/components'
 import { topicsMessages, uploadMessages } from '../copy/messages'
-import { rematchRunTopics } from '../engine/topic-matcher'
+import { rematchRunTopics } from '../../workflows/Gold/engine/topic-matcher'
 import type { TopicItem } from '../state/types'
 import { TopicsEditor } from './TopicsEditor'
 
@@ -101,7 +101,7 @@ export function RunTopicsPanel({ runId, runTopics }: PanelProps) {
     setExtracting(true)
     setNote({ text: topicsMessages.reading, tone: 'working' })
     try {
-      const { extractTopicsFromDocument } = await import('../engine/topic-extract')
+      const { extractTopicsFromDocument } = await import('../../workflows/Gold/engine/topic-extract')
       const bytes = new Uint8Array(await file.arrayBuffer())
       const mimeType = file.type === '' ? 'application/pdf' : file.type
       const outcome = await extractTopicsFromDocument({ bytes, mimeType })

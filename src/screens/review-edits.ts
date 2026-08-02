@@ -13,8 +13,8 @@
  * so clearing an edit back to baseline removes it.
  */
 import { useLiveQuery } from 'dexie-react-hooks'
-import type { AiAnswer } from '../engine/solver'
-import type { MergedRow } from '../engine/types'
+import type { AiAnswer } from '../../workflows/Gold/engine/solver'
+import type { ExamQuestion } from '../../workflows/Gold/engine/types'
 import { db } from '../state/db'
 import { getArtifact, putArtifact } from '../state/runs'
 
@@ -133,9 +133,9 @@ export async function updateAiAnswerIndex(
  * validated against the options the tutor actually sees.
  */
 export function applyContentEdits(
-  rows: readonly MergedRow[],
+  rows: readonly ExamQuestion[],
   edits: Edits,
-): MergedRow[] {
+): ExamQuestion[] {
   return rows.map((row) => {
     const edit = edits[row.id]
     if (edit === undefined) return row
@@ -155,9 +155,9 @@ export function applyContentEdits(
  * over the matcher and the run-wide year.
  */
 export function applyMetaEdits(
-  rows: readonly MergedRow[],
+  rows: readonly ExamQuestion[],
   edits: Edits,
-): MergedRow[] {
+): ExamQuestion[] {
   return rows.map((row) => {
     const edit = edits[row.id]
     if (edit === undefined) return row
@@ -243,8 +243,8 @@ function sameList(a: readonly string[], b: readonly string[]): boolean {
  * form's `originalIndex` values and the stored resolution refer to.
  */
 export function planEditSave(
-  pristine: MergedRow,
-  current: MergedRow,
+  pristine: ExamQuestion,
+  current: ExamQuestion,
   form: EditorForm,
   baseline: EditBaseline,
   storedResolution: number | undefined,

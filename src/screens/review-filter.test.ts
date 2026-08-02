@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { MergedRow } from '../engine/types'
+import type { ExamQuestion } from '../../workflows/Gold/engine/types'
 import type { ReviewRow } from './review-data'
 import {
   filterReviewRows,
@@ -11,13 +11,12 @@ import {
 function makeReviewRow(
   id: string,
   questionNumber: number,
-  overrides: Partial<MergedRow> = {},
+  overrides: Partial<ExamQuestion> = {},
   flagged = false,
 ): ReviewRow {
   return {
     row: {
       id,
-      group_id: '',
       topic: '',
       subtopic: '',
       year: '',

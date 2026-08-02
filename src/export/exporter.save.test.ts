@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fileSave } from 'browser-fs-access'
-import type { MergedRow } from '../engine/types'
+import type { ExamQuestion } from '../../workflows/Gold/engine/types'
 import { db } from '../state/db'
 import { createRun, getRun, putArtifact, updateRun } from '../state/runs'
 import { exportRuns } from './exporter'
@@ -34,10 +34,9 @@ beforeEach(async () => {
 })
 
 async function seedDoneRun(): Promise<string> {
-  const rows: MergedRow[] = [
+  const rows: ExamQuestion[] = [
     {
       id: '1',
-      group_id: '',
       topic: 'Surgery',
       subtopic: '',
       year: '',

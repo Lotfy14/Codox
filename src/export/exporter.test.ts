@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto'
 import { unzipSync } from 'fflate'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { MergedRow } from '../engine/types'
+import type { ExamQuestion } from '../../workflows/Gold/engine/types'
 import { db } from '../state/db'
 import { createRun, getArtifact, getRun, putArtifact, updateRun } from '../state/runs'
 import { countUnexportedFlagged, exportRuns } from './exporter'
@@ -46,10 +46,9 @@ beforeEach(async () => {
  * export now (owner-approved 2026-07-21), so the projection/edit tests below
  * start from an exportable row and the exclusion tests opt into a blank one.
  */
-function row(id: string, fill: Partial<MergedRow> = {}): MergedRow {
+function row(id: string, fill: Partial<ExamQuestion> = {}): ExamQuestion {
   return {
     id,
-    group_id: '',
     topic: 'Surgery',
     subtopic: '',
     year: '',
@@ -63,11 +62,11 @@ function row(id: string, fill: Partial<MergedRow> = {}): MergedRow {
 }
 
 /** An unresolved row: no confirmed answer, still flagged for review. */
-function blankRow(id: string, fill: Partial<MergedRow> = {}): MergedRow {
+function blankRow(id: string, fill: Partial<ExamQuestion> = {}): ExamQuestion {
   return row(id, { correct_index: '', needs_review: 'no_answer_key', ...fill })
 }
 
-async function seedDoneRun(rows: MergedRow[]): Promise<string> {
+async function seedDoneRun(rows: ExamQuestion[]): Promise<string> {
   const runId = await createRun({
     jobId: 'current',
     pdfId: 'pdf1',

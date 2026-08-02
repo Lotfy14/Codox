@@ -4,13 +4,14 @@ import {
   SELECTABLE_ENGINE_MODELS,
   type EngineModel,
 } from '../providers/gemini'
-import {
-  DEFAULT_ENGINE_MODELS,
-  ENGINE_STEPS,
-  type EngineStep,
-} from '../engine/model-steps'
 import { db } from './db'
 import type { YearMode } from './types'
+import {
+  DEFAULT_WORKFLOW_ID,
+  isWorkflowId,
+  workflowFor,
+  type WorkflowId,
+} from '../../workflows/registry'
 
 /**
  * The Customizations tab's settings — one JSON row in the `meta` table.
@@ -41,6 +42,8 @@ export interface CustomizationSettings {
   topicsMode: TopicsMode
   /** 'triviadox' uploads to the Triviadox import page; 'zip' saves locally. */
   exportTarget: ExportTarget
+  /** Named conversion strategy; snapshotted on every run. */
+  workflowId: WorkflowId
   /** Shows the Convert screen's step-timing debug console. Off by default. */
   debugConsole: boolean
   /** Draw question/figure crops for Review; extraction itself does not need them. */
@@ -74,14 +77,19 @@ export interface CustomizationSettings {
    */
   matchingMode: MatchingMode
   /**
-   * Which model each request-making engine step uses as its PRIMARY (Advanced).
-   * Every step (index, evidence, figure, box, worker, audit) defaults to
-   * `DEFAULT_GEMINI_VISION_MODEL`; the model NOT chosen becomes that step's
-   * runtime fallback ("the other one is the fallback"). All run under the same
-   * one user key — a second model, never a second key or provider. Snapshotted
-   * per run at creation like the other knobs.
+   * Which model each request-making step uses as its PRIMARY (Advanced),
+   * keyed by the SELECTED WORKFLOW's own step ids — the steps, their defaults,
+   * and their Customize grouping all belong to the workflow, not here. The
+   * model NOT chosen becomes that step's runtime fallback ("the other one is
+   * the fallback"). All run under the same one user key — a second model,
+   * never a second key or provider. Snapshotted per run at creation like the
+   * other knobs.
+   *
+   * Stored flat rather than per workflow: switching workflows falls steps the
+   * new one does not recognise back to its defaults. Harmless while one
+   * mineral exists; revisit when a second ships with different steps.
    */
-  engineModels: Record<EngineStep, EngineModel>
+  engineModels: Record<string, EngineModel>
 }
 
 export const INDEX_PAGES_MIN = 1
@@ -104,13 +112,14 @@ export const DEFAULT_CUSTOMIZATION_SETTINGS: CustomizationSettings = {
   yearMode: 'type',
   topicsMode: 'on',
   exportTarget: 'triviadox',
+  workflowId: DEFAULT_WORKFLOW_ID,
   debugConsole: false,
   boxCrops: true,
   indexPagesPerCall: INDEX_PAGES_MAX,
   boxPagesPerCall: BOX_PAGES_MIN,
   workerChunkSize: 6,
   matchingMode: 'split',
-  engineModels: { ...DEFAULT_ENGINE_MODELS },
+  engineModels: { ...workflowFor(DEFAULT_WORKFLOW_ID).models.defaults },
 }
 
 const YEAR_MODES: readonly YearMode[] = ['off', 'type', 'ai']
@@ -119,28 +128,30 @@ const EXPORT_TARGETS: readonly ExportTarget[] = ['triviadox', 'zip']
 const MATCHING_MODES: readonly MatchingMode[] = ['skip', 'split']
 
 /** A selectable engine model, or a fallback (legacy value, then the default). */
-function engineModel(value: unknown, legacy?: unknown): EngineModel {
+function engineModel(value: unknown, fallback: EngineModel, legacy?: unknown): EngineModel {
   if (SELECTABLE_ENGINE_MODELS.includes(value as EngineModel)) {
     return value as EngineModel
   }
   if (SELECTABLE_ENGINE_MODELS.includes(legacy as EngineModel)) {
     return legacy as EngineModel
   }
-  return DEFAULT_GEMINI_VISION_MODEL
+  return fallback
 }
 
 /**
- * Per-step primary models, narrowing each step independently. Falls a missing
- * or unrecognized step back to the first-shipped grouped fields
- * (`plannerModel` → the four planner-family steps; `workerModel`/`auditModel`),
- * so the brief 3-picker settings migrate without losing the tutor's choice,
- * then to the default primary.
+ * Per-step primary models for one workflow, narrowing each of ITS steps
+ * independently. Falls a missing or unrecognized step back to the
+ * first-shipped grouped fields (`plannerModel` → the planner-family steps;
+ * `workerModel`/`auditModel`), so the brief 3-picker settings migrate without
+ * losing the tutor's choice, then to that step's own default.
  */
 function narrowEngineModels(
   parsed: Record<string, unknown>,
-): Record<EngineStep, EngineModel> {
+  workflowId: WorkflowId,
+): Record<string, EngineModel> {
+  const { steps, defaults } = workflowFor(workflowId).models
   const stored = (parsed.engineModels ?? {}) as Record<string, unknown>
-  const legacy: Record<EngineStep, unknown> = {
+  const legacy: Record<string, unknown> = {
     index: parsed.plannerModel,
     evidence: parsed.plannerModel,
     figure: parsed.plannerModel,
@@ -148,9 +159,13 @@ function narrowEngineModels(
     worker: parsed.workerModel,
     audit: parsed.auditModel,
   }
-  const result = {} as Record<EngineStep, EngineModel>
-  for (const step of ENGINE_STEPS) {
-    result[step] = engineModel(stored[step], legacy[step])
+  const result: Record<string, EngineModel> = {}
+  for (const step of steps) {
+    result[step] = engineModel(
+      stored[step],
+      defaults[step] ?? DEFAULT_GEMINI_VISION_MODEL,
+      legacy[step],
+    )
   }
   return result
 }
@@ -174,6 +189,11 @@ function narrow(value: string | undefined): CustomizationSettings {
   if (value === undefined) return DEFAULT_CUSTOMIZATION_SETTINGS
   try {
     const parsed = JSON.parse(value) as Partial<CustomizationSettings>
+    // Resolved first: the workflow owns which steps exist and what each one
+    // defaults to, so the model narrowing below depends on it.
+    const workflowId = isWorkflowId(parsed.workflowId)
+      ? parsed.workflowId
+      : DEFAULT_CUSTOMIZATION_SETTINGS.workflowId
     return {
       yearMode: YEAR_MODES.includes(parsed.yearMode as YearMode)
         ? (parsed.yearMode as YearMode)
@@ -184,6 +204,7 @@ function narrow(value: string | undefined): CustomizationSettings {
       exportTarget: EXPORT_TARGETS.includes(parsed.exportTarget as ExportTarget)
         ? (parsed.exportTarget as ExportTarget)
         : DEFAULT_CUSTOMIZATION_SETTINGS.exportTarget,
+      workflowId,
       debugConsole:
         typeof parsed.debugConsole === 'boolean'
           ? parsed.debugConsole
@@ -213,7 +234,10 @@ function narrow(value: string | undefined): CustomizationSettings {
       matchingMode: MATCHING_MODES.includes(parsed.matchingMode as MatchingMode)
         ? (parsed.matchingMode as MatchingMode)
         : DEFAULT_CUSTOMIZATION_SETTINGS.matchingMode,
-      engineModels: narrowEngineModels(parsed as Record<string, unknown>),
+      engineModels: narrowEngineModels(
+        parsed as Record<string, unknown>,
+        workflowId,
+      ),
     }
   } catch {
     return DEFAULT_CUSTOMIZATION_SETTINGS

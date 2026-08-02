@@ -1,5 +1,5 @@
 import { db } from './db'
-import { isBatchRunning } from '../engine/progress'
+import { isBatchRunning } from '../../workflows/Gold/engine/progress'
 import type { JobState } from './types'
 
 export const CURRENT_JOB_ID = 'current'

@@ -1,6 +1,7 @@
 # Releasing Codox
 
-This file records the Phase 2 shell-spike release paths.
+How each channel is built and shipped. One push to `main` ships all of them —
+see CLAUDE.md, "Ship everywhere or nowhere".
 
 ## Automated builds (every push to main)
 
@@ -76,7 +77,9 @@ reinstall future builds.
 
 ## Windows
 
-The Windows shell is built on GitHub Actions, not locally on macOS.
+The Windows shell is built on GitHub Actions — `auto-release.yml` does it on
+every push to `main`, so the steps below are only for a manual out-of-band
+build (no local Rust toolchain needed).
 
 Owner steps:
 
@@ -91,16 +94,19 @@ The workflow uploads the NSIS installer from:
 src-tauri/target/release/bundle/nsis/*.exe
 ```
 
-## GitHub Release Dry Run
+## Publishing a release by hand
 
-After the Android APK and Windows installer exist, the owner can publish a
-prerelease from the repo root:
+Releases normally come from `auto-release.yml` on every push to `main`
+(`v0.0.<run-number>`), and that is the path the Windows auto-updater and the
+Android update banner read. Publish by hand only for an out-of-band build:
 
 ```sh
-gh release create v0.2.0-spike --prerelease --title "Phase 2 shell spike" \
-  --notes "Spike artifacts -- not for real use" \
+gh release create v0.0.<n> --title "Codox v0.0.<n>" \
+  --notes "<what changed>" \
   app-release.apk Codox_<version>_x64-setup.exe
 ```
 
-Install both artifacts from the GitHub Release page on the target devices before
-using this path for real distribution.
+Install both artifacts from the GitHub Release page on real devices before
+relying on that build. Note the signing-key boundary: an APK signed with a
+different key than the installed one cannot upgrade in place — the user must
+uninstall first (this happened once at v0.0.51).

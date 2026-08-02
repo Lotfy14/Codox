@@ -4,7 +4,7 @@
  * This runs the SAME validator the Codox importer runs
  * (`src/agent-import/manifest.ts`) — Node 24 executes that TypeScript
  * directly by stripping types, and the module is deliberately free of runtime
- * imports beyond the dependency-free `src/engine/boxes.ts`. One validator, so
+ * imports beyond the dependency-free `workflows/Gold/engine/boxes.ts`. One validator, so
  * a bundle that passes here cannot be rejected by the app.
  *
  * Errors mean the exam will not import. Warnings mean it will, with those

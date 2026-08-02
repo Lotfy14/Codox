@@ -198,7 +198,7 @@ export async function decodeImageToBitmap(
 /**
  * Clamp a crop box to the page's pixel bounds. Returns null when nothing
  * of the box lies on the page. Clamping is the only adjustment allowed —
- * the cropper never reinterprets planner boxes (CODOX_MIGRATION §1.8).
+ * the cropper never reinterprets planner boxes (OUTPUT_CONTRACT §1.8).
  */
 export function clampCropBox(
   box: CropBox,

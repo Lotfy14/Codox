@@ -4,7 +4,7 @@
  * Born 2026-07-30, to answer the question that gates removing INDEX's
  * `answer_present` veto: with every row permitted to carry an answer, does the
  * worker INVENT answers on a genuinely unanswered exam? That is the negative
- * case `Docs/ANSWER_LAYOUTS.md` has always listed as uncovered, and it is now
+ * case `workflows/Gold/ANSWER_LAYOUTS.md` has always listed as uncovered, and it is now
  * load-bearing — the worker's own restraint is the only thing left.
  *
  * Builds the request the way `buildWorkerRequest` does: the pinned WORKER
@@ -26,7 +26,7 @@ if (!file || !pageArg || !key) {
 }
 const rowCount = Number(process.env.PROBE_ROWS ?? 6)
 
-const promptsSrc = await readFile(new URL('../src/engine/prompts.ts', import.meta.url), 'utf8')
+const promptsSrc = await readFile(new URL('../workflows/Gold/engine/prompts.ts', import.meta.url), 'utf8')
 const match = /export const WORKER_PROMPT: string = ("(?:[^"\\]|\\.)*")/.exec(promptsSrc)
 if (!match) throw new Error('could not read WORKER_PROMPT')
 const WORKER_PROMPT = JSON.parse(match[1])

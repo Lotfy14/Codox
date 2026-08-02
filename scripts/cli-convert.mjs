@@ -78,6 +78,7 @@ async function main() {
     'answer-key': { type: 'string', short: 'a' },
     year: { type: 'string', short: 'y' },
     topics: { type: 'string', short: 't' },
+    workflow: { type: 'string', short: 'w' },
     help: { type: 'boolean', short: 'h' },
   }
 
@@ -99,6 +100,7 @@ Options:
   -a, --answer-key <pdf>      Path to a separate answer-key PDF (optional).
   -y, --year <year>           Override the year value to be stamped on all questions (optional).
   -t, --topics <topics-file>  Path to a JSON or indented text topics list file (optional).
+  -w, --workflow <id>         Workflow id: gold (default) or pyrite.
   -h, --help                  Show this help message.
 
 Examples:
@@ -115,6 +117,7 @@ Examples:
   const examBytes = await fs.readFile(pdfPath)
 
   const apiKey = values.key || process.env.GEMINI_API_KEY
+  const workflowId = values.workflow || 'gold'
   if (!apiKey) {
     console.error('Error: Google Gemini API key is required. Specify it with --key or the GEMINI_API_KEY environment variable.')
     process.exit(1)
@@ -213,7 +216,8 @@ Examples:
       hasAnswerKey,
       answerKeyName,
       year,
-      topicsList
+      topicsList,
+      workflowId
     }) => {
       try {
         const { db } = await import('/src/state/db.ts')
@@ -224,7 +228,7 @@ Examples:
 
         const { saveGeminiKey } = await import('/src/state/credentials.ts')
         const { createRun, getRun, putArtifact } = await import('/src/state/runs.ts')
-        const { executeRun } = await import('/src/engine/executor.ts')
+        const { workflowFor } = await import('/workflows/registry.ts')
         const { readPdfInfo } = await import('/src/pdf/index.ts')
         const { bytesToBase64 } = await import('/src/providers/base64.ts')
 
@@ -287,6 +291,7 @@ Examples:
           answerKeyPdfId,
           fileName: examName,
           pageCount: examPageCount + answerKeyPageCount,
+          workflowId,
           yearMode: year ? 'type' : 'ai',
           ...(year ? { typedYear: year } : {})
         })
@@ -325,7 +330,7 @@ Examples:
           } catch (e) {}
         }, 500)
 
-        const outcome = await executeRun(runId, examBytes, {
+        const outcome = await workflowFor(workflowId).run(runId, examBytes, {
           examPageCount,
           answerKeyBytes: answerKeyBytes || undefined,
           answerKeyPageCount,
@@ -346,7 +351,7 @@ Examples:
         }))
 
         // Custom CSV projection for CLI: options, question, correct_index, image_url
-        const { csvLine } = await import('/src/engine/csv.ts')
+        const { csvLine } = await import('/workflows/Gold/engine/csv.ts')
         const mergedRowsArtifact = await db.runArtifacts.where('[runId+kind]').equals([runId, 'merged-rows']).first()
         const mergedRows = mergedRowsArtifact ? mergedRowsArtifact.json : []
 
@@ -413,7 +418,8 @@ Examples:
       hasAnswerKey: answerKeyBytes !== null,
       answerKeyName,
       year: values.year,
-      topicsList
+      topicsList,
+      workflowId
     })
 
     if (!result.success) {
