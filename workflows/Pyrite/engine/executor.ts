@@ -250,10 +250,15 @@ export function stitchContinuations(rows: readonly ParsedRow[]): ParsedRow[] {
   return output
 }
 
-function dedupe(rows: readonly ParsedRow[]): ExamQuestion[] {
+function normalizedContent(value: string): string {
+  return value.toLowerCase().replace(/\s+/g, ' ').trim()
+}
+
+export function dedupe(rows: readonly ParsedRow[]): ExamQuestion[] {
   const output = new Map<string, ExamQuestion>()
+  const keyByLabel = new Map<string, string>()
+  const keyByContent = new Map<string, string>()
   for (const [index, row] of rows.entries()) {
-    const key = row.label === '' ? `${row.sourcePages.join('-')}:${row.question.slice(0, 80)}` : row.label
     const candidate: ExamQuestion = {
       // Keep the document's visible label when it exists. Gold does the same,
       // and shared benchmark truth is intentionally keyed by that label.
@@ -263,10 +268,22 @@ function dedupe(rows: readonly ParsedRow[]): ExamQuestion[] {
       ...(row.sourcePages[0] === undefined ? {} : { source_page: row.sourcePages[0] }),
       ...(row.sourceBox === null ? {} : { source_box: row.sourceBox }),
     }
+    // Look-ahead images can make the next bundle report a question twice.
+    // Its label may be omitted or re-read differently, so labels alone cannot
+    // safely recognize the duplicate. Exact normalized content is stable while
+    // still allowing genuinely distinct questions with different choices.
+    const contentKey = `${normalizedContent(candidate.question)}\u0000${candidate.options.map(normalizedContent).join('\u0000')}`
+    const key = (candidate.id !== '' ? keyByLabel.get(candidate.id) : undefined) ??
+      keyByContent.get(contentKey) ??
+      (candidate.id !== '' ? `label:${candidate.id}` : `content:${contentKey}`)
     const prior = output.get(key)
-    if (prior === undefined || candidate.question.length + candidate.options.join('').length > prior.question.length + prior.options.join('').length) {
+    const candidateScore = candidate.question.length + candidate.options.join('').length + (candidate.correct_index === '' ? 0 : 1_000_000)
+    const priorScore = prior === undefined ? -1 : prior.question.length + prior.options.join('').length + (prior.correct_index === '' ? 0 : 1_000_000)
+    if (candidateScore > priorScore) {
       output.set(key, candidate)
     }
+    if (candidate.id !== '') keyByLabel.set(candidate.id, key)
+    keyByContent.set(contentKey, key)
   }
   return [...output.values()]
 }
