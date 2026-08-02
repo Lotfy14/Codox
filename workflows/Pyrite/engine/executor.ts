@@ -326,11 +326,7 @@ export async function executeRun(runId: string, pdfBytes: Uint8Array, options: E
           await updateRun(runId, { status: 'stopped', stopReason: 'extract_invalid' })
           return { status: 'stopped', runId, reason: 'extract_invalid' }
         }
-        if (mode === 'exam') {
-          extracted.push(...(result.rows as ParsedRow[]).filter((row) =>
-            row.continuation || (row.sourcePages[0] !== undefined && row.sourcePages[0] >= result.start + 1 && row.sourcePages[0] <= result.coreLast),
-          ))
-        }
+        if (mode === 'exam') extracted.push(...(result.rows as ParsedRow[]))
         else for (const answer of result.rows as KeyAnswer[]) answers.set(answer.label, answer)
       }
     }
