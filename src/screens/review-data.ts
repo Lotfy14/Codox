@@ -247,7 +247,7 @@ export async function loadReviewData(runId: string): Promise<ReviewData> {
       (typeof row.source_page === 'number' && row.source_page >= 1
         ? row.source_page - 1
         : null)
-    const box = plannedSource.box
+    const box = plannedSource.box ?? row.source_box ?? null
     return {
       row,
       questionNumber: index + 1,

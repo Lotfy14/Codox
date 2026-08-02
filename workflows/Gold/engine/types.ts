@@ -187,6 +187,8 @@ export interface ExamQuestion {
    * planner blueprint. It is Review-only metadata and never leaves in CSV.
    */
   source_page?: number
+  /** Optional normalized source region returned by a lightweight workflow. */
+  source_box?: Box2d
   continuation?: boolean
 }
 
