@@ -17,6 +17,7 @@ const JPEG = 'image/jpeg'
 // Page-level requests make a cross-page option list explicit, while bounded
 // concurrency keeps the fast path responsive without flooding the provider.
 const CALL_CONCURRENCY = 5
+const CORE_PAGES_PER_REQUEST = 2
 
 export interface ExecutorOptions {
   controller?: GeminiController
@@ -83,13 +84,18 @@ function sourceBox(value: unknown): Box2d | null {
   return value.every((edge) => edge >= 0 && edge <= 1000) ? value : null
 }
 
+/** Review draws the A/B/C/D badge itself; keep only the option's text. */
+function optionText(value: string): string {
+  return value.trim().replace(/^[A-Za-z][.)\-:]\s*/, '').trim()
+}
+
 function parseRows(value: unknown, maximumPage: number): ParsedRow[] | undefined {
   if (!isRecord(value) || !Array.isArray(value.rows)) return undefined
   const rows: ParsedRow[] = []
   for (const raw of value.rows) {
     if (!isRecord(raw)) continue
     const question = text(raw.question)
-    const options = isStringArray(raw.options) ? raw.options.map((option) => option.trim()).filter(Boolean) : []
+    const options = isStringArray(raw.options) ? raw.options.map(optionText).filter(Boolean) : []
     const label = text(raw.label)
     let needsReview = text(raw.needs_review)
     let correctIndex = text(raw.correct_index)
@@ -124,7 +130,7 @@ function parseKey(value: unknown): KeyAnswer[] | undefined {
   })
 }
 
-function requestPrompt(mode: 'exam' | 'key', firstPage: number, lastPage: number): string {
+function requestPrompt(mode: 'exam' | 'key', firstPage: number, lastPage: number, coreLastPage = lastPage): string {
   if (mode === 'key') return [
     'Read this answer-key page window. Return JSON only: {"answers":[{"label":"printed question number","correct_index":"zero-based option index or empty","needs_review":""}]}.',
     'Do not infer an answer. Return an empty correct_index and a reason when a mark is unclear. Do not return question text.',
@@ -132,22 +138,13 @@ function requestPrompt(mode: 'exam' | 'key', firstPage: number, lastPage: number
   ].join('\n')
   return [
     'Read these exam pages and return JSON only: {"rows":[{"label":"printed question number or empty","source_pages":[1],"question":"verbatim question text","options":["choice text"],"correct_index":"zero-based visible answer or empty","needs_review":"","continuation":false,"box_2d":[ymin,xmin,ymax,xmax]}]}.',
-    'Extract every question that starts in these images. Keep question text and choices verbatim. Never infer an answer from subject knowledge.',
+    `Extract every question that starts on core pages ${firstPage} through ${coreLastPage}; page ${coreLastPage + 1} may be included only as a look-ahead for options that continue from a core page. Keep question text and choices verbatim. Never infer an answer from subject knowledge.`,
     'For EACH question, inspect every option row for answer evidence: especially a coloured highlighter stroke (including yellow), a tick, circle, underline, strike-through, or a letter written beside the option/question. A single clear highlight on an option IS visible answer evidence: return that option\'s zero-based correct_index. Do not copy the highlight into option text. If marks identify multiple options, are too faint, or are absent, leave correct_index empty and give a concise needs_review reason.',
     'Some papers place one large handwritten answer letter beside each question in an outer page margin rather than on an option. Read that ordered margin column from top to bottom and map each letter to the question aligned with it; it is visible answer evidence, not a subject-knowledge answer.',
     'For every normal question return box_2d as a tight normalized [ymin,xmin,ymax,xmax] box in 0–1000 page coordinates. Include its printed number, full stem, every option, and the nearby answer mark; use the image edges only when the question truly touches them. This box is for Review display only and does not change extraction.',
     'Use an empty correct_index and a concise needs_review reason for unclear text, continuations, diagrams, tables, or ambiguous answer marks.',
     'A question whose choices continue beyond this page must be retained and flagged options_cut_at_page_break. If this page begins with choices that complete a question from the preceding page, emit one row before normal questions with label and question empty, those continued choices in options, and continuation:true. Do not omit those choices or turn them into a new question.',
     `The images are exam pages ${firstPage} through ${lastPage}; source_pages uses these document page numbers.`,
-  ].join('\n')
-}
-
-function answerRescuePrompt(page: number, labels: readonly string[]): string {
-  return [
-    'Recheck the listed questions on this single exam page. Return JSON only: {"answers":[{"label":"printed question number","correct_index":"zero-based option index or empty","needs_review":""}]}.',
-    'This is an answer-mark pass, not a medical question. Inspect every option for visible marking evidence. A single yellow (or other coloured) highlighter stroke over an option is the selected answer, even if no circle or tick is present. Also accept a handwritten margin letter aligned with the question.',
-    'Never infer an answer from subject knowledge. Return empty only when the visible mark is genuinely absent or ambiguous.',
-    `This is document page ${page}. Recheck exactly these question labels: ${labels.join(', ')}.`,
   ].join('\n')
 }
 
@@ -292,13 +289,15 @@ export async function executeRun(runId: string, pdfBytes: Uint8Array, options: E
       const count = mode === 'exam' ? examPages : keyPages
       const offset = mode === 'exam' ? 0 : examPages
       const pageResults = await mapConcurrent(
-        Array.from({ length: count }, (_, page) => page),
+        Array.from({ length: Math.ceil(count / CORE_PAGES_PER_REQUEST) }, (_, index) => index * CORE_PAGES_PER_REQUEST),
         CALL_CONCURRENCY,
         async (start) => {
         await updateRun(runId, { step: mode === 'exam' ? 'extract' : 'answer-key', stepStartedAt: Date.now() })
-        const images = await imagesFor(runId, [offset + start])
+        const coreLast = Math.min(count, start + CORE_PAGES_PER_REQUEST)
+        const visibleLast = mode === 'exam' ? Math.min(count, coreLast + 1) : coreLast
+        const images = await imagesFor(runId, Array.from({ length: visibleLast - start }, (_, index) => offset + start + index))
         let requests = 1
-        let response = await call(controller, runId, requestPrompt(mode, start + 1, start + 1), images, model, options.signal)
+        let response = await call(controller, runId, requestPrompt(mode, start + 1, visibleLast, coreLast), images, model, options.signal)
         let parsed = response.finishReason === 'MAX_TOKENS' ? undefined : parseModelJson(response.text).value
         let rows = mode === 'exam' ? parseRows(parsed, examPages) : parseKey(parsed)
         // A malformed or truncated JSON response used to be treated as an
@@ -307,18 +306,18 @@ export async function executeRun(runId: string, pdfBytes: Uint8Array, options: E
         // be used; a second invalid response stops the run for Review rather
         // than exporting a partial exam as if it were complete.
         if (rows === undefined) {
-          const retryPrompt = `${requestPrompt(mode, start + 1, start + 1)}\nRETRY: Your previous response was incomplete. Return complete valid JSON for every numbered question visible on this page. Do not include a partial object or prose.`
+          const retryPrompt = `${requestPrompt(mode, start + 1, visibleLast, coreLast)}\nRETRY: Return complete valid JSON for every numbered question starting on the core pages. Do not include a partial object or prose.`
           response = await call(controller, runId, retryPrompt, images, model, options.signal)
           requests++
           parsed = response.finishReason === 'MAX_TOKENS' ? undefined : parseModelJson(response.text).value
           rows = mode === 'exam' ? parseRows(parsed, examPages) : parseKey(parsed)
           if (rows === undefined) {
             await putArtifact({ runId, kind: 'index-window', chunkIndex: offset + start, json: { workflow: 'pyrite', mode, response: response.text, invalid: true } })
-            return { rows: undefined, requests }
+            return { start, coreLast, rows: undefined, requests }
           }
         }
         await putArtifact({ runId, kind: 'index-window', chunkIndex: offset + start, json: { workflow: 'pyrite', mode, response: response.text } })
-        return { rows, requests }
+        return { start, coreLast, rows, requests }
         },
       )
       for (const result of pageResults) {
@@ -327,7 +326,11 @@ export async function executeRun(runId: string, pdfBytes: Uint8Array, options: E
           await updateRun(runId, { status: 'stopped', stopReason: 'extract_invalid' })
           return { status: 'stopped', runId, reason: 'extract_invalid' }
         }
-        if (mode === 'exam') extracted.push(...(result.rows as ParsedRow[]))
+        if (mode === 'exam') {
+          extracted.push(...(result.rows as ParsedRow[]).filter((row) =>
+            row.continuation || (row.sourcePages[0] !== undefined && row.sourcePages[0] >= result.start + 1 && row.sourcePages[0] <= result.coreLast),
+          ))
+        }
         else for (const answer of result.rows as KeyAnswer[]) answers.set(answer.label, answer)
       }
     }
@@ -343,32 +346,6 @@ export async function executeRun(runId: string, pdfBytes: Uint8Array, options: E
         needsReview: answer.needsReview,
       }
     }))
-    // Extraction keeps the main path fast. If it left any questions blank,
-    // recheck only those source pages with an answer-focused prompt. This is
-    // especially effective for a light yellow highlighter that can be easy to
-    // miss while transcribing the surrounding question text.
-    const blanksByPage = new Map<number, ExamQuestion[]>()
-    for (const row of rows) {
-      if (row.correct_index !== '' || row.source_page === undefined || row.id === '') continue
-      const group = blanksByPage.get(row.source_page) ?? []
-      group.push(row)
-      blanksByPage.set(row.source_page, group)
-    }
-    const rescues = await mapConcurrent([...blanksByPage.entries()], CALL_CONCURRENCY, async ([page, blankRows]) => {
-      const response = await call(controller, runId, answerRescuePrompt(page, blankRows.map((row) => row.id)), await imagesFor(runId, [page - 1]), model, options.signal)
-      const recovered = response.finishReason === 'MAX_TOKENS' ? undefined : parseKey(parseModelJson(response.text).value)
-      return recovered
-    })
-    requestCount += rescues.length
-    for (const recovered of rescues) {
-      if (recovered === undefined) continue
-      const byLabel = new Map(recovered.map((answer) => [answer.label, answer]))
-      rows = rows.map((row) => {
-        const answer = byLabel.get(row.id)
-        if (row.correct_index !== '' || answer === undefined || !validIndex(answer.correctIndex, row.options.length)) return row
-        return { ...row, correct_index: answer.correctIndex, needs_review: answer.needsReview }
-      })
-    }
     await putArtifact({ runId, kind: 'merged-rows', json: rows })
     const csv = emitCsv(rows)
     await putArtifact({ runId, kind: 'csv', text: csv })
