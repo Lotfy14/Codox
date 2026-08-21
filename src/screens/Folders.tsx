@@ -47,6 +47,7 @@ import {
   addStoredPdf,
   answerKeyFor,
   putAnswerKeyPdf,
+  setStoredPdfSource,
   useJobPdfs,
 } from '../state/files'
 import { ExamKeySlot } from './ExamKeySlot'
@@ -65,6 +66,7 @@ import {
   useFolders,
 } from '../state/folders'
 import type { JobState, RunState, StoredPdf, TopicItem } from '../state/types'
+import { SourceField } from './SourceField'
 
 type Note = { text: string; tone: 'info' | 'danger' | 'working' }
 
@@ -524,6 +526,7 @@ function FolderDetail({
                   if (key !== undefined) void removeFolderPdf(key.id)
                 }}
                 onReview={(runId) => reviewSession.openNeedsReview(runId)}
+                onSourceChange={(source) => void setStoredPdfSource(pdf.id, source)}
                 pdf={pdf}
                 run={runForPdf(runs, pdf)}
               />
@@ -587,6 +590,13 @@ function FolderDetail({
                     : folderMessages.matchProgress(matchProgress.done, matchProgress.total)}
                 </p>
               ) : null}
+            </div>
+            <div className="ds-key-file-slot">
+              <SourceField
+                initial={job.source ?? ''}
+                onCommit={(source) => void updateJob({ source })}
+                scope="folder"
+              />
             </div>
             <div className="ds-key-file-slot">
               <RenameField initial={job.name ?? ''} onSave={(name) => void renameFolder(folderId, name)} />
@@ -690,6 +700,7 @@ function FolderPdfRow({
   onAddKey,
   onRemoveKey,
   onRejectKey,
+  onSourceChange,
 }: {
   pdf: StoredPdf
   run: RunState | undefined
@@ -702,6 +713,7 @@ function FolderPdfRow({
   onAddKey: (files: File[]) => void
   onRemoveKey: () => void
   onRejectKey: (files: File[]) => void
+  onSourceChange: (source: string) => void
 }) {
   const counts = useUnresolvedCounts(run?.status === 'done' ? [run.id] : [])
   const unresolved = run === undefined ? 0 : (counts?.[run.id] ?? 0)
@@ -727,6 +739,11 @@ function FolderPdfRow({
         </div>
         {statusBadge()}
       </div>
+      <SourceField
+        initial={pdf.source ?? run?.source ?? ''}
+        isDisabled={busy}
+        onCommit={onSourceChange}
+      />
       {showKeySlot ? (
         <ExamKeySlot
           isDisabled={busy}

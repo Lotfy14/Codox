@@ -24,6 +24,7 @@ import {
 import type { ExamQuestion } from '../../workflows/Gold/engine/types'
 import { bytesToBase64 } from '../providers/base64'
 import { getArtifact, getArtifacts, updateRun } from '../state/runs'
+import { db } from '../state/db'
 import type { RunState } from '../state/types'
 import {
   applyResolutions,
@@ -139,6 +140,15 @@ async function buildBundleInputs(
   const names = uniqueBundleNames(runs.map((run) => run.fileName))
   const bundles: BundleInput[] = []
   for (const [index, run] of runs.entries()) {
+    const [file, job] = await Promise.all([
+      db.files.get(run.pdfId),
+      db.jobs.get(run.jobId),
+    ])
+    const source =
+      run.source?.trim() ||
+      file?.source?.trim() ||
+      job?.source?.trim() ||
+      run.fileName
     const resolved = await reviewedRows(run.id)
     // Only resolved rows ship (owner-approved 2026-07-21): a row still
     // flagged for review is held back rather than exported blank or broken.
@@ -172,6 +182,7 @@ async function buildBundleInputs(
         topics: hasTopics || editsSetTopic(edits),
         year: run.yearMode === 'ai' || typedYear !== '' || editsSetYear(edits),
       }),
+      source,
     )
     const crops = (await getArtifacts(run.id, 'crop')).flatMap((crop) =>
       crop.path !== undefined && crop.bytes !== undefined
@@ -339,4 +350,3 @@ export async function exportToTriviadox(
     return { success: false, error: err.message || 'Network error' }
   }
 }
-

@@ -78,6 +78,15 @@ export const uploadMessages = {
   removeFile: (fileName: string) => `Remove ${fileName}`,
 } as const
 
+export const sourceMessages = {
+  pdfLabel: 'Source (optional)',
+  folderLabel: 'Folder source (optional)',
+  pdfHint: 'Used for this PDF. Leave blank to use its filename.',
+  folderHint:
+    'Used for PDFs without their own source. A blank PDF source falls back here, then to its filename.',
+  placeholder: 'e.g. Faculty question bank 2025',
+} as const
+
 export const appMessages = {
   brandName: 'Codox',
   navLabel: 'Workspace',

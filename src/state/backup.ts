@@ -91,6 +91,7 @@ interface FileRecord {
   jobId: string
   kind: 'exam' | 'answer-key' | 'topics'
   parentPdfId?: string
+  source?: string
   name: string
   size: number
   pageCount: number

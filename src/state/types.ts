@@ -27,6 +27,8 @@ export interface JobState {
   kind?: 'folder'
   /** The folder's display name; only set when `kind` is 'folder'. */
   name?: string
+  /** Default export source for every PDF in a folder. */
+  source?: string
   /** Keep the original PDF stored after conversion (History re-runs). */
   keepOriginal?: boolean
   /** User-typed year, applied to every question when yearMode is 'type'. */
@@ -52,6 +54,8 @@ export interface StoredPdf {
    * Only set on `answer-key` rows.
    */
   parentPdfId?: string
+  /** Per-PDF export source. Blank/absent falls back to the job then filename. */
+  source?: string
   name: string
   size: number
   pageCount: number
@@ -73,6 +77,8 @@ export interface RunState {
   /** Named conversion workflow selected when this run began. */
   workflowId?: string
   fileName: string
+  /** Source snapshot retained even when the original PDF is not kept. */
+  source?: string
   status: 'running' | 'paused' | 'stopped' | 'done'
   /** §1.3's machine-readable stop reason, when status is 'stopped'. */
   stopReason?: string

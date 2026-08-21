@@ -18,6 +18,30 @@ export async function addStoredPdf(entry: NewStoredPdf): Promise<string> {
 }
 
 /**
+ * Sets one exam's export source and keeps an existing run in sync. Updating
+ * the run matters when the original PDF is later omitted from History.
+ */
+export async function setStoredPdfSource(
+  pdfId: string,
+  source: string,
+): Promise<void> {
+  const normalized = source.trim()
+  await db.transaction('rw', db.files, db.runs, async () => {
+    await db.files.update(pdfId, { source: normalized })
+    const runs = await db.runs.where('pdfId').equals(pdfId).toArray()
+    if (runs.length > 0) {
+      await db.runs.bulkPut(
+        runs.map((run) => ({
+          ...run,
+          source: normalized,
+          updatedAt: Date.now(),
+        })),
+      )
+    }
+  })
+}
+
+/**
  * Store the answer-key PDF for one specific exam (`parentPdfId`). Each exam
  * carries at most one key — adding a new one replaces that exam's old key,
  * transactionally, and never touches another exam's key.

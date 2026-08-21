@@ -38,6 +38,8 @@ beforeEach(async () => {
   })
   await db.runs.clear()
   await db.runArtifacts.clear()
+  await db.files.clear()
+  await db.jobs.clear()
   await db.meta.clear()
 })
 
@@ -86,7 +88,7 @@ async function exportedCsv(): Promise<string> {
   return new TextDecoder().decode(bytes.subarray(3))
 }
 
-const BASE_HEADER = 'question,options,correct_index,image_url'
+const BASE_HEADER = 'source,question,options,correct_index,image_url'
 
 describe('export', () => {
   it('keeps document answers and tutor resolutions', async () => {
@@ -107,6 +109,37 @@ describe('export', () => {
     expect(lines[1]).toContain(',2,') // document answer intact
     expect(lines[2]).toContain(',1,') // the tutor's confirmed answer applied
     expect((await getRun(runId))?.exportedAt).toBeDefined()
+  })
+
+  it('uses the PDF filename when no source was entered', async () => {
+    const runId = await seedDoneRun([row('1')])
+
+    expect(await exportRuns([(await getRun(runId))!])).toBe('downloaded')
+    expect((await exportedCsv()).split('\r\n')[1].startsWith('Exam.pdf,')).toBe(true)
+  })
+
+  it('uses a per-PDF source and escapes it in every exported row', async () => {
+    const runId = await seedDoneRun([row('1'), row('2')])
+    await updateRun(runId, { source: 'Faculty bank, 2025' })
+
+    expect(await exportRuns([(await getRun(runId))!])).toBe('downloaded')
+    const lines = (await exportedCsv()).trimEnd().split('\r\n')
+    expect(lines[1].startsWith('"Faculty bank, 2025",')).toBe(true)
+    expect(lines[2].startsWith('"Faculty bank, 2025",')).toBe(true)
+  })
+
+  it('uses the folder source when the PDF has no override', async () => {
+    const runId = await seedDoneRun([row('1')])
+    await db.jobs.put({
+      id: 'current',
+      createdAt: Date.now(),
+      step: 'export',
+      kind: 'folder',
+      source: 'Shared folder source',
+    })
+
+    expect(await exportRuns([(await getRun(runId))!])).toBe('downloaded')
+    expect((await exportedCsv()).split('\r\n')[1].startsWith('Shared folder source,')).toBe(true)
   })
 
   it('a saved AI artifact never leaks into the export by itself', async () => {
@@ -210,9 +243,9 @@ describe('column projection', () => {
     expect(await exportRuns([run!])).toBe('downloaded')
     const lines = (await exportedCsv()).trimEnd().split('\r\n')
     expect(lines[0]).toBe(`topic,subtopic,${BASE_HEADER}`)
-    expect(lines[1].startsWith('Anatomy,Abdomen,Question 1?')).toBe(true)
+    expect(lines[1].startsWith('Anatomy,Abdomen,Exam.pdf,Question 1?')).toBe(true)
     // Unmatched row: blank cells, never the planner's heading text.
-    expect(lines[2].startsWith(',,Question 2?')).toBe(true)
+    expect(lines[2].startsWith(',,Exam.pdf,Question 2?')).toBe(true)
     expect(await getArtifact(runId, 'merged-rows').then((a) => a?.json)).toEqual(rows)
   })
 
@@ -222,7 +255,7 @@ describe('column projection', () => {
     expect(await exportRuns([(await getRun(typedId))!])).toBe('downloaded')
     let lines = (await exportedCsv()).trimEnd().split('\r\n')
     expect(lines[0]).toBe(`year,${BASE_HEADER}`)
-    expect(lines[1].startsWith('2024,Question 1?')).toBe(true)
+    expect(lines[1].startsWith('2024,Exam.pdf,Question 1?')).toBe(true)
 
     await db.runs.clear()
     await db.runArtifacts.clear()
@@ -231,9 +264,9 @@ describe('column projection', () => {
     expect(await exportRuns([(await getRun(aiId))!])).toBe('downloaded')
     lines = (await exportedCsv()).trimEnd().split('\r\n')
     expect(lines[0]).toBe(`year,${BASE_HEADER}`)
-    expect(lines[1].startsWith('1999,')).toBe(true)
+    expect(lines[1].startsWith('1999,Exam.pdf,')).toBe(true)
     // No document evidence → honestly blank, never guessed.
-    expect(lines[2].startsWith(',Question 2?')).toBe(true)
+    expect(lines[2].startsWith(',Exam.pdf,Question 2?')).toBe(true)
   })
 
   it('type mode with an empty year adds no column', async () => {
@@ -274,10 +307,10 @@ describe('review edits at export', () => {
 
     expect(await exportRuns([run!])).toBe('downloaded')
     const lines = (await exportedCsv()).trimEnd().split('\r\n')
-    expect(lines[1].startsWith('Rewritten question 1?,')).toBe(true)
+    expect(lines[1].startsWith('Exam.pdf,Rewritten question 1?,')).toBe(true)
     expect(lines[1]).not.toContain('Alpha')
     expect(lines[1]).toContain(',1,')
-    expect(lines[2].startsWith('Question 2?,')).toBe(true)
+    expect(lines[2].startsWith('Exam.pdf,Question 2?,')).toBe(true)
     expect(await getArtifact(runId, 'merged-rows').then((a) => a?.json)).toEqual(rows)
   })
 
@@ -298,8 +331,8 @@ describe('review edits at export', () => {
     const lines = (await exportedCsv()).trimEnd().split('\r\n')
     expect(lines[0]).toBe(`topic,subtopic,year,${BASE_HEADER}`)
     // The unedited row stays blank — planner heading text never leaks.
-    expect(lines[1].startsWith(',,,Question 1?')).toBe(true)
-    expect(lines[2].startsWith('Surgery,Hernia,2023,Question 2?')).toBe(true)
+    expect(lines[1].startsWith(',,,Exam.pdf,Question 1?')).toBe(true)
+    expect(lines[2].startsWith('Surgery,Hernia,2023,Exam.pdf,Question 2?')).toBe(true)
   })
 
   it('resolutions validate against the edited options', async () => {

@@ -7,7 +7,9 @@ import {
   putAnswerKeyPdf,
   putTopicsDoc,
   removeStoredPdf,
+  setStoredPdfSource,
 } from './files'
+import { createRun } from './runs'
 
 const JOB = 'current'
 
@@ -24,6 +26,7 @@ function pdfEntry(name: string) {
 
 beforeEach(async () => {
   await db.files.clear()
+  await db.runs.clear()
 })
 
 describe('stored PDFs', () => {
@@ -32,6 +35,16 @@ describe('stored PDFs', () => {
     await addStoredPdf(pdfEntry('b.pdf'))
     const files = await db.files.where('jobId').equals(JOB).toArray()
     expect(files.map((file) => file.name).sort()).toEqual(['a.pdf', 'b.pdf'])
+  })
+
+  it('stores a PDF source and syncs an existing run snapshot', async () => {
+    const pdfId = await addStoredPdf(pdfEntry('a.pdf'))
+    const runId = await createRun({ jobId: JOB, pdfId, fileName: 'a.pdf' })
+
+    await setStoredPdfSource(pdfId, '  Faculty bank  ')
+
+    expect((await db.files.get(pdfId))?.source).toBe('Faculty bank')
+    expect((await db.runs.get(runId))?.source).toBe('Faculty bank')
   })
 
   it('removes a single PDF', async () => {

@@ -11,6 +11,7 @@
  *   for the run; values come from the topic-matches artifact, blank when
  *   unmatched — never from planner heading text.
  * - `year` appears only when the run's year mode asked for it.
+ * - `source` always appears and is resolved once per PDF by the exporter.
  *
  * Same emission contract as `emitCsv`: RFC-4180 quoting, JSON arrays
  * inside one cell for `options`/`image_urls`, CRLF endings, no BOM.
@@ -27,6 +28,7 @@ export type ExportColumn =
   | 'topic'
   | 'subtopic'
   | 'year'
+  | 'source'
   | 'question'
   | 'options'
   | 'correct_index'
@@ -39,6 +41,7 @@ export function exportColumns(
   return [
     ...(flags.topics ? (['topic', 'subtopic'] as const) : []),
     ...(flags.year ? (['year'] as const) : []),
+    'source',
     'question',
     'options',
     'correct_index',
@@ -54,7 +57,12 @@ function headerLabel(column: ExportColumn): string {
   return column === 'image_urls' ? 'image_url' : column
 }
 
-function cell(row: ExamQuestion, column: ExportColumn): string {
+function cell(
+  row: ExamQuestion,
+  column: ExportColumn,
+  source: string,
+): string {
+  if (column === 'source') return source
   if (column === 'options' || column === 'image_urls') {
     return JSON.stringify(row[column])
   }
@@ -65,10 +73,11 @@ function cell(row: ExamQuestion, column: ExportColumn): string {
 export function emitExportCsv(
   rows: readonly ExamQuestion[],
   columns: readonly ExportColumn[],
+  source = '',
 ): string {
   const lines = [csvLine(columns.map(headerLabel))]
   for (const row of rows) {
-    lines.push(csvLine(columns.map((column) => cell(row, column))))
+    lines.push(csvLine(columns.map((column) => cell(row, column, source))))
   }
   return lines.join('\r\n') + '\r\n'
 }

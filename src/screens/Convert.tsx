@@ -40,6 +40,7 @@ import {
   putAnswerKeyPdf,
   putTopicsDoc,
   removeStoredPdf,
+  setStoredPdfSource,
   useJobPdfs,
 } from '../state/files'
 import { ExamKeySlot } from './ExamKeySlot'
@@ -58,6 +59,7 @@ import { ReviewExperience } from './ReviewExperience'
 import { useReviewSession } from './useReviewSession'
 import type { ControllerStatus } from '../providers/controller'
 import { useGeminiCredential } from '../state/credentials'
+import { SourceField } from './SourceField'
 
 type ConversionStatus = ControllerStatus
 
@@ -498,6 +500,11 @@ export function Convert({ onRequestApiKey }: ConvertProps) {
                     pageCountLabel={uploadMessages.pageCount(file.pageCount)}
                     removeLabel={uploadMessages.removeFile(file.name)}
                     size={file.size}
+                  />
+                  <SourceField
+                    initial={file.source ?? ''}
+                    isDisabled={busy}
+                    onCommit={(source) => void setStoredPdfSource(file.id, source)}
                   />
                   <ExamKeySlot
                     isDisabled={busy}

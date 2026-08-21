@@ -17,7 +17,7 @@ function makeRow(overrides: Partial<ExamQuestion> = {}): ExamQuestion {
   }
 }
 
-const BASE_HEADER = 'question,options,correct_index,image_url'
+const BASE_HEADER = 'source,question,options,correct_index,image_url'
 
 describe('exportColumns', () => {
   it('never includes id, group_id, or needs_review, whatever the flags', () => {
@@ -31,8 +31,9 @@ describe('exportColumns', () => {
     }
   })
 
-  it('base flags yield exactly the four always-present columns', () => {
+  it('base flags yield exactly the five always-present columns', () => {
     expect(exportColumns({ topics: false, year: false })).toEqual([
+      'source',
       'question',
       'options',
       'correct_index',
@@ -45,6 +46,7 @@ describe('exportColumns', () => {
       'topic',
       'subtopic',
       'year',
+      'source',
       'question',
       'options',
       'correct_index',
@@ -60,6 +62,7 @@ describe('emitExportCsv', () => {
     const csv = emitExportCsv(
       [makeRow()],
       exportColumns({ topics: false, year: false }),
+      'Exam.pdf',
     )
     const lines = csv.split('\r\n')
     expect(lines[0]).toBe(BASE_HEADER)
@@ -72,10 +75,11 @@ describe('emitExportCsv', () => {
     const csv = emitExportCsv(
       [makeRow()],
       exportColumns({ topics: false, year: false }),
+      'Exam.pdf',
     )
     expect(csv).not.toContain('group01')
     expect(csv.split('\r\n')[1]).toBe(
-      'What is the diagnosis?,"[""Appendicitis"",""Cholecystitis""]",1,"[""images/asset01.jpg""]"',
+      'Exam.pdf,What is the diagnosis?,"[""Appendicitis"",""Cholecystitis""]",1,"[""images/asset01.jpg""]"',
     )
   })
 
@@ -83,9 +87,10 @@ describe('emitExportCsv', () => {
     const csv = emitExportCsv(
       [makeRow()],
       exportColumns({ topics: true, year: true }),
+      'Exam.pdf',
     )
     expect(csv.split('\r\n')[1]).toBe(
-      'Surgery,Appendix,2023,What is the diagnosis?,"[""Appendicitis"",""Cholecystitis""]",1,"[""images/asset01.jpg""]"',
+      'Surgery,Appendix,2023,Exam.pdf,What is the diagnosis?,"[""Appendicitis"",""Cholecystitis""]",1,"[""images/asset01.jpg""]"',
     )
   })
 
@@ -93,15 +98,26 @@ describe('emitExportCsv', () => {
     const csv = emitExportCsv(
       [makeRow({ topic: '', subtopic: '' })],
       exportColumns({ topics: true, year: false }),
+      'Exam.pdf',
     )
-    expect(csv.split('\r\n')[1].startsWith(',,What is')).toBe(true)
+    expect(csv.split('\r\n')[1].startsWith(',,Exam.pdf,What is')).toBe(true)
   })
 
   it('quotes fields with quotes, commas, and newlines (RFC-4180 parity)', () => {
     const csv = emitExportCsv(
       [makeRow({ question: 'He said "acute", then\npaused' })],
       exportColumns({ topics: false, year: false }),
+      'Exam.pdf',
     )
     expect(csv).toContain('"He said ""acute"", then\npaused"')
+  })
+
+  it('quotes the repeated PDF source as an ordinary CSV cell', () => {
+    const csv = emitExportCsv(
+      [makeRow()],
+      exportColumns({ topics: false, year: false }),
+      'Faculty bank, 2025',
+    )
+    expect(csv.split('\r\n')[1].startsWith('"Faculty bank, 2025",')).toBe(true)
   })
 })

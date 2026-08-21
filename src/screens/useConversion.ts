@@ -282,6 +282,7 @@ export function useConversion(jobId: string): ConversionState {
           pdfId: exam.id,
           answerKeyPdfId: answerKey?.id,
           fileName: exam.name,
+          ...(exam.source?.trim() ? { source: exam.source.trim() } : {}),
           pageCount: exam.pageCount + (answerKey?.pageCount ?? 0),
           yearMode: settings.yearMode,
           ...(typedYear === '' ? {} : { typedYear }),
