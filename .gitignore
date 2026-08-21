@@ -29,6 +29,9 @@ scripts/out/
 playwright-report/
 test-results/
 
+# Raw local benchmark runs (curated summaries belong in benchmarks/results/)
+benchmarks/runs*/
+
 # Local conversion run artifacts and scratch (never committed)
 input/
 output/
