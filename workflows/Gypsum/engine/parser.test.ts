@@ -3,6 +3,7 @@ import { validBox, pixelBox } from './boxes'
 import { emitCsv } from './csv'
 import { modelJson } from './json'
 import { dedupeCoreQuestions } from './executor'
+import { buildReviewBlueprint } from './blueprint'
 import type { PageExtraction } from './types'
 
 describe('Gypsum-owned primitives', () => {
@@ -30,5 +31,17 @@ describe('Gypsum-owned primitives', () => {
     expect(dedupeCoreQuestions([page(1, [2]), page(2, [2])])).toEqual({
       questions: [question([2])], issues: [],
     })
+  })
+
+  it('emits shared assets linked to the rows that name each crop', () => {
+    const row = { id: '4', topic: '', subtopic: '', year: '2023', question: 'Use the diagram.', options: ['A', 'B'], correct_index: '0', image_urls: ['images/gypsum-001.jpg'], needs_review: '', source_page: 3, source_box: [100, 50, 500, 900] as const }
+    const blueprint = buildReviewBlueprint(18, [row], [{
+      path: 'images/gypsum-001.jpg', page: 3, linkedLabels: ['4'],
+      box: [200, 100, 450, 800], kind: 'diagram', anchor: 'diagram',
+    }], true)
+    expect(blueprint.assets[0]).toMatchObject({
+      output_path: 'images/gypsum-001.jpg', linked_row_ids: ['4'], page: 3,
+    })
+    expect(blueprint.planned_rows[0].image_urls).toEqual(['images/gypsum-001.jpg'])
   })
 })

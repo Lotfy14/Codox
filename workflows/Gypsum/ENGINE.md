@@ -16,7 +16,9 @@ artifact storage.
    numeric-label → printed-letter pairs.
 4. Merge rows in page order, validate sequential labels and the question count
    printed on the cover, then crop visuals directly from the exact core-page
-   JPEG. Gypsum owns its boxes, parser, crop mapping, and CSV writer.
+   JPEG. Emit matching `image_urls`, crop artifacts, and Review asset links.
+   Gypsum owns its boxes, parser, crop mapping, blueprint projection, and CSV
+   writer.
 5. Audit independent four-page windows against rows and the figure inventory.
    Missing visuals receive one focused detection/crop pass and are audited again.
    Model failures and deterministic count/crop failures make the run unsafe.

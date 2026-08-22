@@ -16,6 +16,8 @@ independently emits the page manifest, complete MCQ rows, question geometry,
 and required visual geometry. Gypsum validates and merges these records itself,
 crops the exact rendered JPEGs, reads attached mark schemes page by page, and
 performs a separate four-page audit pass with focused missing-visual repair.
+Its final blueprint records every crop as a shared Review asset and links it to
+the same rows that name the path in `image_urls`.
 
 ## Image policy
 

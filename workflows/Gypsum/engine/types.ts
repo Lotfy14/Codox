@@ -31,6 +31,10 @@ export interface ExtractedFigure {
   anchor: string
 }
 
+export interface GypsumCropLink extends ExtractedFigure {
+  path: string
+}
+
 export interface PageExtraction {
   corePage: number
   declaredLabels: string[]

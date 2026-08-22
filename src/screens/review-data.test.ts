@@ -424,6 +424,38 @@ describe('loadReviewData', () => {
       { pageIndex: 1, box: [200, 100, 500, 800], path: 'images/asset01.jpg' },
     ])
   })
+
+  it('recovers linked figures from row image_urls for older lightweight runs', async () => {
+    const row = makeRow({
+      id: '4',
+      correct_index: '2',
+      needs_review: '',
+      image_urls: ['images/gypsum-004.jpg'],
+      source_page: 3,
+      source_box: [120, 80, 620, 920],
+    })
+    await putArtifact({ runId: 'run-gypsum-legacy', kind: 'merged-rows', json: [row] })
+    await putArtifact({
+      runId: 'run-gypsum-legacy',
+      kind: 'blueprint-valid',
+      json: { workflow: 'gypsum', page_extractions: [], figures: [] },
+    })
+    await putArtifact({
+      runId: 'run-gypsum-legacy',
+      kind: 'crop',
+      pageIndex: 2,
+      path: 'images/gypsum-004.jpg',
+      bytes: new Uint8Array([1, 2, 3]),
+    })
+
+    const data = await loadReviewData('run-gypsum-legacy')
+    expect(data.reviewRows[0].figures).toEqual([{
+      pageIndex: 2,
+      box: [120, 80, 620, 920],
+      path: 'images/gypsum-004.jpg',
+    }])
+    expect(data.figureByPath['images/gypsum-004.jpg']).toBeDefined()
+  })
 })
 
 describe('effectiveAnswer', () => {

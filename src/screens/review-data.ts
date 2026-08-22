@@ -233,6 +233,31 @@ export async function loadReviewData(runId: string): Promise<ReviewData> {
       else list.push(figure)
     }
   }
+  // `image_urls` is the shared row-level source of truth. Recover its links
+  // when an older/lightweight workflow wrote crop artifacts but no Gold-shaped
+  // blueprint assets. Stored crop bytes are previewed directly, so the source
+  // box here is only a safe fallback for legacy artifacts missing geometry.
+  for (const row of rows) {
+    for (const path of row.image_urls) {
+      let figure = figureByPath[path]
+      if (figure === undefined) {
+        const pageIndex = typeof row.source_page === 'number' && row.source_page >= 1
+          ? row.source_page - 1
+          : null
+        if (pageIndex === null) continue
+        figure = {
+          pageIndex,
+          box: row.source_box ?? [0, 0, 1000, 1000],
+          path,
+        }
+        figureByPath[path] = figure
+      }
+      const linked = figuresByRow.get(row.id)
+      if (linked?.some((item) => item.path === path)) continue
+      if (linked === undefined) figuresByRow.set(row.id, [figure])
+      else linked.push(figure)
+    }
+  }
   const allPlanned = blueprint?.planned_rows ?? []
   // Optional-chained on purpose: this reads a stored artifact, and an older or
   // partial blueprint without a profile must degrade to "no continuation",

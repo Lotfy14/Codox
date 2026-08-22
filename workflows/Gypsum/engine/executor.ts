@@ -7,11 +7,12 @@ import { processPdf } from '../../../src/pdf/pipeline'
 import { clearArtifacts, getArtifacts, getPageArtifact, putArtifact, recordRequestUsage, updateRun } from '../../../src/state/runs'
 import { logEvent } from '../../../src/state/diagnostics'
 import { validBox, pixelBox } from './boxes'
+import { buildReviewBlueprint } from './blueprint'
 import { emitCsv } from './csv'
 import { isRecord, modelJson, text } from './json'
 import { AUDIT_PROMPT, KEY_PROMPT, PAGE_PROMPT, VISUAL_REPAIR_PROMPT } from './prompts'
 import { DEFAULT_GYPSUM_MODELS, type GypsumModels } from './model-steps'
-import type { AuditResult, ExtractedFigure, ExtractedQuestion, GypsumQuestion, PageExtraction, PrintedAnswer } from './types'
+import type { AuditResult, ExtractedFigure, ExtractedQuestion, GypsumCropLink, GypsumQuestion, PageExtraction, PrintedAnswer } from './types'
 
 const JPEG = 'image/jpeg'
 const CALL_CONCURRENCY = 4
@@ -263,6 +264,7 @@ function yearFrom(texts: readonly string[]): string {
 async function cropFigures(runId: string, figures: readonly ExtractedFigure[], rows: GypsumQuestion[]) {
   const byLabel = new Map(rows.map((row) => [row.id, row]))
   const failures: string[] = []
+  const crops: GypsumCropLink[] = []
   const pathOffset = (await getArtifacts(runId, 'crop')).length
   for (const [index, figure] of figures.entries()) {
     const source = await getPageArtifact(runId, figure.page - 1)
@@ -276,11 +278,12 @@ async function cropFigures(runId: string, figures: readonly ExtractedFigure[], r
       const cropped = await cropJpeg(new Blob([source.bytes as BlobPart], { type: JPEG }), pixelBox(figure.box, source.width, source.height, 24))
       await putArtifact({ runId, kind: 'crop', pageIndex: figure.page - 1, path, bytes: await blobToBytes(cropped) })
       for (const id of linked) (byLabel.get(id) as GypsumQuestion).image_urls.push(path)
+      crops.push({ ...figure, linkedLabels: linked, path })
     } catch (error) {
       failures.push(`${path}: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
-  return failures
+  return { failures, crops }
 }
 
 const COUNT_WORDS: Readonly<Record<string, number>> = {
@@ -430,8 +433,9 @@ export async function executeRun(runId: string, pdfBytes: Uint8Array, options: G
     })
 
     await updateRun(runId, { step: 'crops', stepStartedAt: Date.now() })
-    const cropFailures = await cropFigures(runId, figures, rows)
-    await putArtifact({ runId, kind: 'blueprint-valid', json: { workflow: 'gypsum', page_extractions: pages, figures } })
+    const firstCropPass = await cropFigures(runId, figures, rows)
+    const cropFailures = [...firstCropPass.failures]
+    const cropLinks = [...firstCropPass.crops]
 
     await updateRun(runId, { step: 'audit', stepStartedAt: Date.now() })
     let audits = await audit(controller, runId, rendered.examPages, rows, figures, models.audit, options.signal)
@@ -439,8 +443,9 @@ export async function executeRun(runId: string, pdfBytes: Uint8Array, options: G
     if (missingVisuals.length > 0) {
       const repairedFigures = await repairMissingVisuals(controller, runId, rows, missingVisuals, models.extract, options.signal)
       if (repairedFigures.length > 0) {
-        const repairFailures = await cropFigures(runId, repairedFigures, rows)
-        cropFailures.push(...repairFailures)
+        const repairCropPass = await cropFigures(runId, repairedFigures, rows)
+        cropFailures.push(...repairCropPass.failures)
+        cropLinks.push(...repairCropPass.crops)
         figures.push(...repairedFigures)
         audits = await audit(controller, runId, rendered.examPages, rows, figures, models.audit, options.signal)
       }
@@ -457,6 +462,7 @@ export async function executeRun(runId: string, pdfBytes: Uint8Array, options: G
 
     await updateRun(runId, { step: 'emit', stepStartedAt: Date.now() })
     const csv = emitCsv(rows)
+    await putArtifact({ runId, kind: 'blueprint-valid', json: buildReviewBlueprint(rendered.examPages, rows, cropLinks, rendered.keyPages > 0) })
     await putArtifact({ runId, kind: 'merged-rows', json: rows })
     await putArtifact({ runId, kind: 'csv', text: csv })
     const flaggedRows = rows.filter((row) => row.needs_review !== '').length
