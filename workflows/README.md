@@ -86,6 +86,23 @@ write those themselves, after the run.
 Everything a workflow persists carries its id on the run
 (`RunState.workflowId`), so a stored run always says which strategy made it.
 
+## Versioning (applies to every mineral)
+
+**Any change to a workflow's behavior increments its `version`.** That means
+`workflow.ts` and the `**Version:**` line in its README, in the same commit as
+the change. A prompt edit, a merge or validation rule, a window size, a model
+default — all behavior. Only edits that cannot change a single output row
+(comments, docs, tests, renames) may leave the version alone.
+
+The version is not decoration: `benchmarks/results/` files are keyed by
+`workflow` plus `version`, so two runs that disagree are only comparable when
+the number moved. Leaving it still silently re-labels the old measurements as
+describing the new code.
+
+A behavior change must also record what it measured in `benchmarks/results/`,
+naming the documents it ran on. One document is a data point, not a benchmark —
+say which it was.
+
 ## Where a workflow's docs go
 
 A mineral's own docs live in its folder, not in `Docs/`. Gold's are the
@@ -106,7 +123,14 @@ output contract, releasing, and the shared UI behaviour.
 **Gold** — `status: 'verified'`, the production strategy. See
 [Gold/README.md](Gold/README.md).
 
-No second workflow exists yet. Until one does, the registry has one entry and
-the Customize picker shows one option; the seam is real and dispatches, but it
-has never been exercised by a second implementation. Treat the tier boundaries
-above as designed-but-unproven where a second mineral would test them.
+**Pyrite** — `status: 'experimental'`, the low-request strategy. See
+[Pyrite/README.md](Pyrite/README.md). It is registered and selectable in
+Customize, it is not the default, and it has not cleared the benchmark gate in
+[Pyrite/ENGINE.md](Pyrite/ENGINE.md).
+
+Pyrite is what now exercises the seam: it dispatches through the registry,
+declares its own render and model policy, and writes the shared output
+contract, so Review and export work on its runs unchanged. The tier boundaries
+above are therefore no longer untested — but Pyrite reuses several of Gold's
+engine modules (`csv`, `json`, `boxes`, `concurrency`, `types`), so the line
+between workflow-owned and shared has been walked rather than proven.

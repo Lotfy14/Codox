@@ -1,0 +1,50 @@
+{
+  "case": "pyrite-im-mcq-exams-2024-193",
+  "source": "Real headless conversions via scripts/cli-convert.mjs -w pyrite on 2026-08-22. Document: IM MCQ Exams 2024-193.pdf, 12 pages, CamScanner scan of a Cairo University internal medicine paper. Two sections that each restart numbering at 1, and a photographed handwritten answer key bound in as page 12.",
+  "truth": "benchmarks/truth/im-mcq-exams-2024-193.json",
+  "questions_expected": 45,
+  "shape": "sectioned; restarting labels; bound-in answer key; scanned; no figures",
+  "gold_comparison": "Not run on this document. The 0.1.0 row below is the same workflow before this change, not a Gold baseline.",
+  "runs": [
+    {
+      "workflow": "pyrite",
+      "version": "0.1.0",
+      "rows": 27,
+      "question_recall": "25/45",
+      "answers_correct": 4,
+      "answers_wrong": 0,
+      "answers_blank": 41,
+      "corrupted_option_lists": 2,
+      "flagged_rows": 23,
+      "request_count": 6,
+      "audit": "not_run; review required",
+      "notes": "20 questions lost in local assembly, not extraction: every one of the 45 was present in the raw window responses. Section B's labels 1-20 collided with Section A's under a document-wide label key and the loser was discarded unflagged. Two complete questions were corrupted into 8-option hybrids by a continuation attaching to the wrong stem. The 4 answers came from the key page leaking into the last window as a look-ahead."
+    },
+    {
+      "workflow": "pyrite",
+      "version": "0.2.0",
+      "rows": 45,
+      "question_recall": "45/45",
+      "answers_correct": 45,
+      "answers_wrong": 0,
+      "answers_blank": 0,
+      "corrupted_option_lists": 0,
+      "flagged_rows": 0,
+      "request_count": 6,
+      "audit": "not_run; review required",
+      "notes": "Same six requests. All 45 answers read off the bound-in key page by the extraction request that already covered it."
+    }
+  ],
+  "gate": {
+    "question_recall_95pct": "pass (100%)",
+    "no_incorrect_key_answer": "pass (0 wrong of 45)",
+    "ambiguous_rows_flagged": "pass on this document (nothing left ambiguous)",
+    "requests_60pct_below_gold": "not measured on this document"
+  },
+  "caveats": [
+    "One document, two runs of the new code and one of the old. This is a data point, not a benchmark sweep.",
+    "An intermediate run of 0.2.0 exposed model variance the first run hid: printed labels came back as '15)' in some windows and '15' in others. Normalizing them is part of 0.2.0; the shape of that variance is why a single run cannot prove a merge fix.",
+    "The separate answer-key PDF path is now section-scoped but still has no end-to-end verification on a real key document.",
+    "No figure-heavy case exercised; Pyrite does not detect figures by design."
+  ]
+}

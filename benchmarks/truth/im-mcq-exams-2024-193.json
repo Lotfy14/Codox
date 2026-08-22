@@ -1,0 +1,24 @@
+{
+  "source": "Visually transcribed from page 12 of IM MCQ Exams 2024-193.pdf on 2026-08-22. Page 12 is a photographed handwritten answer key bound into the exam PDF, listing Section A 1-25 and Section B 1-20 in two columns.",
+  "note": "The paper prints two sections that each restart their numbering at 1, so answers are keyed by section. A label alone does not identify a question in this document.",
+  "question_count": 45,
+  "sections": {
+    "A": { "pages": "1-7", "question_count": 25 },
+    "B": { "pages": "8-11", "question_count": 20 }
+  },
+  "answers": {
+    "A": {
+      "1": "B", "2": "D", "3": "B", "4": "A", "5": "D",
+      "6": "A", "7": "A", "8": "C", "9": "D", "10": "C",
+      "11": "B", "12": "A", "13": "A", "14": "D", "15": "C",
+      "16": "C", "17": "A", "18": "C", "19": "D", "20": "C",
+      "21": "A", "22": "B", "23": "A", "24": "C", "25": "A"
+    },
+    "B": {
+      "1": "C", "2": "A", "3": "A", "4": "D", "5": "C",
+      "6": "B", "7": "A", "8": "D", "9": "D", "10": "B",
+      "11": "C", "12": "D", "13": "D", "14": "D", "15": "B",
+      "16": "D", "17": "D", "18": "B", "19": "D", "20": "A"
+    }
+  }
+}

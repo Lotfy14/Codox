@@ -42,7 +42,8 @@ Gold does **not** own two things, deliberately:
    earns a workflow one Review screen and one working "Export to Triviadox".
 
 A Gold behavior change increments `version` and must record benchmark results
-in `benchmarks/results/` before it is released.
+in `benchmarks/results/` before it is released. That rule is not Gold's alone —
+see [Versioning](../README.md#versioning-applies-to-every-mineral).
 
 ## Benchmark contract
 

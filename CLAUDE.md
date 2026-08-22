@@ -642,6 +642,15 @@ setting, so an added-after-the-fact list flows straight into the exported
 tiers, the output contract, and how to add a mineral. The notes below are the
 binding rules and the reasoning behind them.
 
+**Any change to a workflow's behavior increments that workflow's `version`** —
+`workflow.ts` and its README's `**Version:**` line, in the same commit as the
+change — and records what it measured in `benchmarks/results/`. Prompt edits,
+merge and validation rules, window sizes and model defaults are all behavior;
+only edits that cannot change an output row (comments, docs, tests, renames)
+may leave it alone. Results files are keyed by workflow AND version, so a
+behavior change that leaves the number still re-labels the old measurements as
+describing the new code.
+
 *Workflow split (2026-08-02):* the single conversion pipeline became a set of
 named strategies under `workflows/`. **Gold** is the original, verified one and
 its behavior is unchanged; `workflows/Gold/engine/` is the former `src/engine/`

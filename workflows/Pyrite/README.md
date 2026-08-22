@@ -1,6 +1,6 @@
 # Pyrite
 
-**Version:** 0.1.0  
+**Version:** 0.2.0  
 **Status:** experimental
 
 Pyrite is Codox's low-request conversion workflow. It is intended for clear,
@@ -39,6 +39,14 @@ read safely, Pyrite keeps a flagged draft row or stops with an honest reason.
 
 Pyrite is not the default and is not appropriate when answer correctness,
 diagram capture, or unattended import safety matters. Use Gold for those.
+
+## Version history
+
+- **0.2.0** — section-scoped deduplication, normalized printed labels, carried
+  section headings, a continuation that only feeds a stem missing choices, and
+  answers read from a key page bound into the exam PDF at no extra request.
+  Measured in `benchmarks/results/pyrite-0.2.0-im-mcq-exams-2024-193.json`.
+- **0.1.0** — first implementation.
 
 ## Safety rules
 
