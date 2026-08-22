@@ -1,9 +1,10 @@
 import { GOLD_WORKFLOW } from './Gold/workflow'
 import { PYRITE_WORKFLOW } from './Pyrite/workflow'
+import { GYPSUM_WORKFLOW } from './Gypsum/workflow'
 import type { WorkflowDefinition } from './types'
 
 /** All workflows that have passed their own benchmark contract. */
-export const WORKFLOWS: readonly WorkflowDefinition[] = [GOLD_WORKFLOW, PYRITE_WORKFLOW]
+export const WORKFLOWS: readonly WorkflowDefinition[] = [GOLD_WORKFLOW, GYPSUM_WORKFLOW, PYRITE_WORKFLOW]
 
 export type WorkflowId = (typeof WORKFLOWS)[number]['id']
 

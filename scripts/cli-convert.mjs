@@ -100,7 +100,7 @@ Options:
   -a, --answer-key <pdf>      Path to a separate answer-key PDF (optional).
   -y, --year <year>           Override the year value to be stamped on all questions (optional).
   -t, --topics <topics-file>  Path to a JSON or indented text topics list file (optional).
-  -w, --workflow <id>         Workflow id: gold (default) or pyrite.
+  -w, --workflow <id>         Workflow id: gold (default), gypsum, or pyrite.
   -h, --help                  Show this help message.
 
 Examples:
@@ -353,7 +353,10 @@ Examples:
         }))
 
         // Custom CSV projection for CLI: options, question, correct_index, image_url
-        const { csvLine } = await import('/workflows/Gold/engine/csv.ts')
+        const csvLine = fields => fields.map(value => {
+          const cell = String(value ?? '')
+          return /[",\r\n]/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell
+        }).join(',')
         const mergedRowsArtifact = await db.runArtifacts.where('[runId+kind]').equals([runId, 'merged-rows']).first()
         const mergedRows = mergedRowsArtifact ? mergedRowsArtifact.json : []
 

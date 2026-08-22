@@ -1,0 +1,67 @@
+{
+  "case": "gypsum-igcse-science-specimens",
+  "workflow": "gypsum",
+  "version": "0.1.0",
+  "run_date": "2026-08-23",
+  "status": "provisional",
+  "source": "Official Cambridge IGCSE multiple-choice specimen papers and their published mark schemes, converted end-to-end with scripts/cli-convert.mjs.",
+  "truth": "Printed cover counts and published mark-scheme answer tables. Full human transcription and crop review is not yet complete.",
+  "runs": [
+    {
+      "subject": "Biology",
+      "syllabus_paper": "0610/02",
+      "paper": "2020 specimen paper 2",
+      "rows": 40,
+      "expected_rows": 40,
+      "answers_attached": 40,
+      "flagged_rows": 0,
+      "rows_with_images": 27,
+      "image_crops": 30,
+      "automated_audit": "pass",
+      "request_count": 25,
+      "elapsed_time": "not captured by current CLI"
+    },
+    {
+      "subject": "Chemistry",
+      "syllabus_paper": "0620/02",
+      "paper": "2020 specimen paper 2",
+      "rows": 40,
+      "expected_rows": 40,
+      "answers_attached": 40,
+      "flagged_rows": 0,
+      "rows_with_images": 27,
+      "image_crops": 36,
+      "automated_audit": "pass",
+      "request_count": 25,
+      "elapsed_time": "not captured by current CLI"
+    },
+    {
+      "subject": "Physics",
+      "syllabus_paper": "0625/02",
+      "paper": "2023 specimen paper 2",
+      "rows": 40,
+      "expected_rows": 40,
+      "answers_attached": 40,
+      "flagged_rows": 0,
+      "rows_with_images": 21,
+      "image_crops": 22,
+      "automated_audit": "pass",
+      "request_count": 22,
+      "elapsed_time": "not captured by current CLI"
+    }
+  ],
+  "gate": {
+    "forty_unique_mcqs_each": "pass",
+    "published_answers_attached": "pass",
+    "automated_audit": "pass",
+    "full_human_transcription_review": "pending",
+    "full_human_crop_review": "pending",
+    "release_status": "experimental"
+  },
+  "notes": [
+    "An early Chemistry run exposed neighboring-page ownership ambiguity; Gypsum now sends exactly one core page per extraction request.",
+    "An early Biology run exposed an empty choice list for A-D labels embedded in a diagram; incomplete choices now trigger a focused extraction retry.",
+    "A crop spot-check exposed tight model boxes; Gypsum now adds bounded 2.4% page padding before cropping.",
+    "These results establish structural coverage, answer attachment, and automated audit behavior. They do not yet establish perfect verbatim transcription or perfect crops."
+  ]
+}
