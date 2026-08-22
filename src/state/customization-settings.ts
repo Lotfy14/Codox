@@ -46,30 +46,6 @@ export interface CustomizationSettings {
   workflowId: WorkflowId
   /** Shows the Convert screen's step-timing debug console. Off by default. */
   debugConsole: boolean
-  /** Draw question/figure crops for Review; extraction itself does not need them. */
-  boxCrops: boolean
-  /**
-   * Pages per INDEX window core. 10 is the default and the safe value.
-   * LOWERING THIS LOSES QUESTIONS: more windows means more boundaries, and
-   * reconciliation drops rows across them (measured on the embryology
-   * document — 10 pages/window found 64 questions, 3 pages/window found 57,
-   * with no gain in answers). Kept as a diagnostic knob, not a remedy; a
-   * short run should raise it. See CLAUDE.md's 2026-07-20 correction.
-   */
-  indexPagesPerCall: number
-  /**
-   * Pages sent per box-drawing request during conversion. 1 (the default)
-   * is today's most-accurate per-page pass; higher values spend fewer
-   * requests on big exams at some cost in box accuracy.
-   */
-  boxPagesPerCall: number
-  /**
-   * Questions the worker transcribes per request. Smaller chunks keep each
-   * response short so the weakest model does not abbreviate the later rows
-   * (dropping options); larger chunks spend fewer requests. 6 is the default
-   * — full transcription at a modest request count.
-   */
-  workerChunkSize: number
   /**
    * How matching questions are handled after extraction. Defaults to
    * 'split'. Costs one extra request per run, and only when a row's text
@@ -92,15 +68,6 @@ export interface CustomizationSettings {
   engineModels: Record<string, EngineModel>
 }
 
-export const INDEX_PAGES_MIN = 1
-export const INDEX_PAGES_MAX = 10
-
-export const BOX_PAGES_MIN = 1
-export const BOX_PAGES_MAX = 10
-
-export const WORKER_CHUNK_MIN = 3
-export const WORKER_CHUNK_MAX = 12
-
 const SETTINGS_KEY = 'customizationSettings'
 
 /**
@@ -114,10 +81,6 @@ export const DEFAULT_CUSTOMIZATION_SETTINGS: CustomizationSettings = {
   exportTarget: 'triviadox',
   workflowId: DEFAULT_WORKFLOW_ID,
   debugConsole: false,
-  boxCrops: true,
-  indexPagesPerCall: INDEX_PAGES_MAX,
-  boxPagesPerCall: BOX_PAGES_MIN,
-  workerChunkSize: 6,
   matchingMode: 'split',
   engineModels: { ...workflowFor(DEFAULT_WORKFLOW_ID).models.defaults },
 }
@@ -170,21 +133,6 @@ function narrowEngineModels(
   return result
 }
 
-/** An integer setting inside its range, or the default for anything else. */
-function counted(
-  value: unknown,
-  min: number,
-  max: number,
-  fallback: number,
-): number {
-  return typeof value === 'number' &&
-    Number.isInteger(value) &&
-    value >= min &&
-    value <= max
-    ? value
-    : fallback
-}
-
 function narrow(value: string | undefined): CustomizationSettings {
   if (value === undefined) return DEFAULT_CUSTOMIZATION_SETTINGS
   try {
@@ -209,28 +157,10 @@ function narrow(value: string | undefined): CustomizationSettings {
         typeof parsed.debugConsole === 'boolean'
           ? parsed.debugConsole
           : DEFAULT_CUSTOMIZATION_SETTINGS.debugConsole,
-      boxCrops:
-        typeof parsed.boxCrops === 'boolean'
-          ? parsed.boxCrops
-          : DEFAULT_CUSTOMIZATION_SETTINGS.boxCrops,
-      indexPagesPerCall: counted(
-        parsed.indexPagesPerCall,
-        INDEX_PAGES_MIN,
-        INDEX_PAGES_MAX,
-        DEFAULT_CUSTOMIZATION_SETTINGS.indexPagesPerCall,
-      ),
-      boxPagesPerCall: counted(
-        parsed.boxPagesPerCall,
-        BOX_PAGES_MIN,
-        BOX_PAGES_MAX,
-        DEFAULT_CUSTOMIZATION_SETTINGS.boxPagesPerCall,
-      ),
-      workerChunkSize: counted(
-        parsed.workerChunkSize,
-        WORKER_CHUNK_MIN,
-        WORKER_CHUNK_MAX,
-        DEFAULT_CUSTOMIZATION_SETTINGS.workerChunkSize,
-      ),
+      // A stored row from before these were workflow-owned still carries
+      // boxCrops / indexPagesPerCall / boxPagesPerCall / workerChunkSize.
+      // Reading around them is the migration: the keys are simply not copied
+      // out, so the next save drops them.
       matchingMode: MATCHING_MODES.includes(parsed.matchingMode as MatchingMode)
         ? (parsed.matchingMode as MatchingMode)
         : DEFAULT_CUSTOMIZATION_SETTINGS.matchingMode,

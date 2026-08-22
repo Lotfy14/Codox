@@ -18,7 +18,7 @@ import type { WorkflowDefinition } from '../types'
 export const GOLD_WORKFLOW: WorkflowDefinition = {
   id: 'gold',
   name: 'Gold',
-  version: '1.0.0',
+  version: '1.1.0',
   description: 'The verified Codox workflow. Best choice when accuracy matters.',
   status: 'verified',
 
@@ -61,7 +61,7 @@ export const GOLD_WORKFLOW: WorkflowDefinition = {
       {
         steps: ['box'] satisfies (keyof EngineModels)[],
         label: 'Crop',
-        hint: 'Draws optional Review question crops.',
+        hint: 'Draws Review question crops.',
       },
     ],
   },

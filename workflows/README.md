@@ -99,9 +99,15 @@ The version is not decoration: `benchmarks/results/` files are keyed by
 the number moved. Leaving it still silently re-labels the old measurements as
 describing the new code.
 
-A behavior change must also record what it measured in `benchmarks/results/`,
-naming the documents it ran on. One document is a data point, not a benchmark —
-say which it was.
+A change that can alter output must record what it measured in
+`benchmarks/results/`, naming the documents it ran on. One document is a data
+point, not a benchmark — say which it was.
+
+A change that provably cannot alter output — a knob removed at exactly its
+shipped default, a pure refactor — still increments the version, because the
+number is what keeps old results attached to the code they described. It
+records why no measurement was needed in the workflow's version history
+instead of adding an empty results file.
 
 ## Where a workflow's docs go
 
@@ -119,6 +125,11 @@ template:
 output contract, releasing, and the shared UI behaviour.
 
 ## Status
+
+**Gypsum** — `status: 'experimental'`, the IGCSE MCQ strategy. See
+[Gypsum/README.md](Gypsum/README.md). It aggressively preserves diagrams,
+graphs, tables, and graphical answer choices and remains experimental until it
+clears the three-paper gate in [Gypsum/ENGINE.md](Gypsum/ENGINE.md).
 
 **Gold** — `status: 'verified'`, the production strategy. See
 [Gold/README.md](Gold/README.md).

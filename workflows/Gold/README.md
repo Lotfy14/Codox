@@ -1,12 +1,24 @@
 # Gold
 
-**Version:** 1.0.0  
+**Version:** 1.1.0  
 **Status:** verified
 
 Gold is Codox's original Planner → Worker → Audit conversion workflow. It
 preserves the current production behavior exactly: full-page reading, focused
 review crops, independent inline-answer confirmation, deterministic validation,
 and the read-only audit gate.
+
+## Version history
+
+- **1.1.0** — pipeline shape moved out of Customize and into this workflow:
+  `INDEX_WINDOW_PAGES` (10), `BOX_PAGES_PER_CALL` (1) and `WORKER_CHUNK_ROWS`
+  (6) are now executor constants, and review crops are always drawn. Each
+  constant is exactly the value Customize shipped and always passed, so a run
+  on default settings is byte-identical and no benchmark was needed. A tutor
+  who had changed one of those four knobs converts differently from now on —
+  which is the whole reason the version moved. The removal also deleted the
+  no-crops figure-geometry path, which only the crops toggle could reach.
+- **1.0.0** — the migrated production pipeline.
 
 ## Ownership
 

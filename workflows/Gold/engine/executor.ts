@@ -44,6 +44,7 @@ import {
   PLANNER_MODEL,
   wasTruncated,
   type CallImage,
+  type WorkflowPromptProfile,
 } from './calls'
 import {
   buildBoxBatchRequest, buildBoxRequest, buildEvidenceRequest, buildFigureDetectRequest, buildIndexRequest,
@@ -95,10 +96,27 @@ import type {
   WorkerRow,
 } from './types'
 
+/**
+ * Gold's pipeline shape.
+ *
+ * These were Customize knobs until 2026-08-23. They are pipeline geometry —
+ * how wide an INDEX window is, how many pages one BOX call draws on, how many
+ * rows a worker request transcribes — and geometry belongs to the strategy
+ * that runs the pipeline, not to a shared settings screen every mineral has to
+ * render. Pyrite has no INDEX window and no BOX pass to size at all.
+ *
+ * WORKER_CHUNK_ROWS is 6, NOT the 10 the old internal fallback used. Customize
+ * shipped 6 and always passed it, so 6 is what every production run has
+ * actually transcribed at; pinning the fallback would have quietly changed
+ * every conversion. §1.9's "default 10" describes the migrated design, not
+ * what ships.
+ */
+const INDEX_WINDOW_PAGES = DEFAULT_WINDOW_PAGES
+const BOX_PAGES_PER_CALL = 1
+const WORKER_CHUNK_ROWS = 6
+
 export interface ExecutorOptions {
   controller?: GeminiController
-  /** Worker chunk size (§1.9 default 10). */
-  chunkSize?: number
   signal?: AbortSignal
   /**
    * Rendered-page DPI. Supplied by Gold's own render policy
@@ -123,20 +141,6 @@ export interface ExecutorOptions {
   examPageCount?: number
   answerKeyPageCount?: number
   /**
-   * Pages per INDEX window core (Customize's "Pages per index request",
-   * 1–10). Fewer pages means fewer question records per response, which is
-   * what keeps the model's per-question observations honest to the end of a
-   * long list. Defaults to `DEFAULT_WINDOW_PAGES`.
-   */
-  indexPagesPerCall?: number
-  /**
-   * Pages per BOX call (Customize's "Pages per box request", 1–10).
-   * 1 (default) keeps the per-page pass; higher spends fewer requests.
-   */
-  boxPagesPerCall?: number
-  /** Skip BOX/figure crop requests; worker extraction remains full-page. */
-  boxCrops?: boolean
-  /**
    * Customize's "Matching questions", default 'split'. Spends a request only
    * when a row's text actually mentions matching or pairing.
    */
@@ -148,6 +152,8 @@ export interface ExecutorOptions {
    * falls to `DEFAULT_ENGINE_MODELS`.
    */
   models?: Partial<EngineModels>
+  /** Workflow-owned prompt specialisation; omitted by Gold itself. */
+  promptProfile?: WorkflowPromptProfile
 }
 
 export type RunOutcome =
@@ -541,6 +547,7 @@ async function stepLegacyPlanAndValidate(
   controller: GeminiController,
   signal: AbortSignal | undefined,
   plannerModel = PLANNER_MODEL,
+  promptProfile?: WorkflowPromptProfile,
 ): Promise<
   { ok: true; blueprint: Blueprint } | { ok: false; reason: PlannerStop }
 > {
@@ -565,7 +572,7 @@ async function stepLegacyPlanAndValidate(
     // The planner numbers the images it is handed 1..n, so its page
     // references are window-relative; localizeWindow maps them back.
     const relative = new Set(window.context.map((_page, index) => index + 1))
-    return planOneWindow(runId, controller, images, relative, plannerModel, signal)
+    return planOneWindow(runId, controller, images, relative, plannerModel, signal, promptProfile)
   }
 
   const windows = planWindows(pageNumbers)
@@ -625,11 +632,12 @@ async function planOneWindow(
   pageNumbers: Set<number>,
   plannerModel: string,
   signal: AbortSignal | undefined,
+  promptProfile?: WorkflowPromptProfile,
 ): Promise<WindowOutcome> {
   const planner = await call(
     controller,
     runId,
-    buildPlannerRequest(images, plannerModel),
+    buildPlannerRequest(images, plannerModel, promptProfile),
     signal,
   )
   await putArtifact({ runId, kind: 'blueprint-raw', text: planner.text })
@@ -662,6 +670,7 @@ async function planOneWindow(
         planner.text,
         validation.errors,
         plannerModel,
+        promptProfile,
       ),
       signal,
     )
@@ -724,8 +733,9 @@ export function keepIndexObservedMarks(
  * checkpoint compatibility fallback, never as a new request format. */
 async function stepPlanAndValidate(
   runId: string, controller: GeminiController, signal: AbortSignal | undefined,
-  examPageCount?: number, answerKeyPageCount = 0, boxPagesPerCall = 1, boxCrops = true,
-  indexPagesPerCall = DEFAULT_WINDOW_PAGES, models: EngineModels = DEFAULT_ENGINE_MODELS,
+  examPageCount?: number, answerKeyPageCount = 0,
+  models: EngineModels = DEFAULT_ENGINE_MODELS,
+  promptProfile?: WorkflowPromptProfile,
 ): Promise<{ ok: true; blueprint: Blueprint } | { ok: false; reason: PlannerStop }> {
   const cached = await getArtifact(runId, 'blueprint-valid')
   if (cached?.json !== undefined) return { ok: true, blueprint: cached.json as Blueprint }
@@ -735,7 +745,7 @@ async function stepPlanAndValidate(
     .filter((page) => examPageCount === undefined || page <= examPageCount)
     .sort((a, b) => a - b)
   if (examPages.length === 0) return { ok: false, reason: 'planner_unparseable' }
-  const windows = planWindows(examPages, indexPagesPerCall)
+  const windows = planWindows(examPages, INDEX_WINDOW_PAGES)
   await updateRun(runId, { plannerModel: models.index, plannerWindowCount: windows.length, plannerWindowsDone: 0 })
   const indexed: LocalizedIndexWindow[] = []
   const issues: PlanningIssue[] = []
@@ -751,7 +761,7 @@ async function stepPlanAndValidate(
   const indexOutcomes = await mapConcurrent(windows, CALL_CONCURRENCY, async (window, index) => {
     const images = await pageImages(runId, window.context.map((page) => page - 1))
     const response = await timed(runId, `index w${index + 1}`, () => call(controller, runId, buildIndexRequest(
-      images, window.core.map((page) => window.context.indexOf(page) + 1), models.index,
+      images, window.core.map((page) => window.context.indexOf(page) + 1), models.index, promptProfile,
     ), signal))
     await putArtifact({ runId, kind: 'index-window', chunkIndex: index, text: response.text })
     indexWindowsDone += 1
@@ -835,7 +845,7 @@ async function stepPlanAndValidate(
         const windowId = windows.length + offset
         const images = await pageImages(runId, context.map((candidate) => candidate - 1))
         const response = await timed(runId, `index repair p${page}`, () => call(controller, runId, buildIndexRequest(
-          images, [context.indexOf(page) + 1], models.index,
+          images, [context.indexOf(page) + 1], models.index, promptProfile,
         ), signal))
         await putArtifact({ runId, kind: 'index-window', chunkIndex: windowId, text: response.text })
         const parsed = wasTruncated(response.finishReason) ? undefined : parseIndexWindow(response.text)
@@ -939,7 +949,7 @@ async function stepPlanAndValidate(
     // Makes existing interrupted runs and old test fixtures resumable; fresh
     // calls always use INDEX above. The legacy single-planner call is the
     // index-equivalent step, so it takes the index model.
-    return stepLegacyPlanAndValidate(runId, controller, signal, models.index)
+    return stepLegacyPlanAndValidate(runId, controller, signal, models.index, promptProfile)
   }
 
   // Kept as an observation, no longer a gate — see the `answer_present` note in
@@ -965,6 +975,7 @@ async function stepPlanAndValidate(
       await pageImages(runId, keyPages.map((page) => page - 1)),
       reconciled.questions.map((row) => ({ ref: row.ref, printedLabel: row.printedLabel, section: row.sectionKey })),
       models.evidence,
+      promptProfile,
     ), signal))
     const parsed = wasTruncated(response.finishReason) ? undefined : parseEvidenceMap(response.text)
     const observed = parsed?.ok ? parsed.value : defaultEvidence
@@ -993,6 +1004,7 @@ async function stepPlanAndValidate(
         await pageImages(runId, window.context.map((page) => page - 1)),
         reconciled.questions.filter((row) => window.core.includes(row.ownerPage)).map((row) => ({ ref: row.ref, ownerPage: row.ownerPage })),
         models.figure,
+        promptProfile,
       ), signal))
       await putArtifact({ runId, kind: 'figure-window', chunkIndex: index, text: response.text })
       if (wasTruncated(response.finishReason)) return []
@@ -1022,14 +1034,14 @@ async function stepPlanAndValidate(
     list.push(question); byPage.set(question.ownerPage, list)
   }
   const onPage = <T extends { page: number }>(value: T, page: number): T => ({ ...value, page })
-  // BOX batches of question-bearing pages (Customize's "Pages per box
+  // BOX batches of question-bearing pages (`BOX_PAGES_PER_CALL`; Gold pins
   // request"; 1 keeps today's per-page pass). A ref the model silently omits
   // becomes a blank review card downstream, so a batch keeps retrying the
   // refs the last pass dropped (BOX_ATTEMPTS total) before those refs are
   // flagged and left to the whole-page fallback. A full failure
   // (truncation/parse error) is retried the same way.
   const BOX_ATTEMPTS = 2
-  const batchSize = Math.max(1, Math.min(10, Math.floor(boxPagesPerCall)))
+  const batchSize = BOX_PAGES_PER_CALL
   const pageEntries = [...byPage.entries()]
   const batches: Array<typeof pageEntries> = []
   for (let start = 0; start < pageEntries.length; start += batchSize) {
@@ -1064,10 +1076,10 @@ async function stepPlanAndValidate(
         hasInlineEvidence: false
       }))
       const request = batchPages.length === 1
-        ? buildBoxRequest(images, tasks, models.box, hints)
+        ? buildBoxRequest(images, tasks, models.box, hints, promptProfile)
         : buildBoxBatchRequest(images, tasks.map((task, index) => ({
             ...task, page: batchPages.indexOf(refs[index].ownerPage) + 1,
-          })), models.box, hints)
+          })), models.box, hints, promptProfile)
       return call(controller, runId, request, signal)
     })
     const parsed = wasTruncated(response.finishReason) ? undefined : parseBoxResult(response.text)
@@ -1130,34 +1142,6 @@ async function stepPlanAndValidate(
   /** Figure geometry without question/option boxes. Called only for pages the
    * detector says actually contain a required figure, so text-only pages spend
    * no crop request when Review question crops are disabled. */
-  const runFigureGeometry = (detectedFigures: readonly FigureCandidate[]) => {
-    const byFigurePage = new Map<number, FigureCandidate[]>()
-    for (const figure of detectedFigures) {
-      const list = byFigurePage.get(figure.page) ?? []
-      list.push(figure)
-      byFigurePage.set(figure.page, list)
-    }
-    return mapConcurrent([...byFigurePage.entries()], CALL_CONCURRENCY, async ([page, figures]) => {
-      const hints = figures.map((figure) => ({
-        page: 1, anchor: figure.anchor, linked_refs: [...figure.linkedRefs],
-      }))
-      const response = await timed(runId, `figure crop p${page}`, async () =>
-        call(controller, runId, buildBoxRequest(
-          await pageImages(runId, [page - 1]), [], models.box, hints,
-        ), signal),
-      )
-      const parsed = wasTruncated(response.finishReason) ? undefined : parseBoxResult(response.text)
-      if (parsed === undefined || !parsed.ok) {
-        await logEvent({ scope: 'engine', level: 'warn', event: 'engine.figure.crop.fail', runId, page, reason: 'figure geometry response invalid' })
-        return { found: [] as BoxResult['questions'], figures: [] as BoxResult['figures'], pageIssues: [] as PlanningIssue[] }
-      }
-      return {
-        found: [] as BoxResult['questions'],
-        figures: parsed.value.figures.map((figure) => ({ ...figure, page })),
-        pageIssues: [] as PlanningIssue[],
-      }
-    })
-  }
   // Evidence is independent and still overlaps. BOX now consumes FIGURE
   // DETECT's findings, so those two are ordered rather than parallel: the cost
   // is one call's latency (figure detection is a call per window, BOX a call
@@ -1169,19 +1153,17 @@ async function stepPlanAndValidate(
     runEvidence(),
     runFigureDetect(),
   ])
-  const boxOutcomes = boxCrops
-    ? await runBoxBatches(detectedFigures)
-    : await runFigureGeometry(detectedFigures)
+  const boxOutcomes = await runBoxBatches(detectedFigures)
   const allBoxes: BoxResult = { questions: [], figures: [] }
   for (const outcome of boxOutcomes) {
-    if (boxCrops) allBoxes.questions.push(...outcome.found)
+    allBoxes.questions.push(...outcome.found)
     allBoxes.figures.push(...outcome.figures)
     issues.push(...outcome.pageIssues)
   }
   const boxedRefs = new Set(allBoxes.questions.map((q) => q.ref))
   const flaggedRefs = new Set(issues.flatMap((issue) => (issue.rowRef !== undefined ? [issue.rowRef] : [])))
   for (const question of reconciled.questions) {
-    if (boxCrops && !boxedRefs.has(question.ref) && !flaggedRefs.has(question.ref)) {
+    if (!boxedRefs.has(question.ref) && !flaggedRefs.has(question.ref)) {
       issues.push({ kind: 'unreadable_page', page: question.ownerPage, rowRef: question.ref, reason: 'no box region — row recovered from the full page; verify' })
     }
   }
@@ -1403,6 +1385,7 @@ async function repairUnderTranscribedRows(
   workerModel: string,
   signal: AbortSignal | undefined,
   skipIds: ReadonlySet<string> = new Set(),
+  promptProfile?: WorkflowPromptProfile,
 ): Promise<WorkerRow[]> {
   // Rows that already failed their own single-row requests during the chunk
   // split are not re-asked here — that attempt was just made.
@@ -1462,7 +1445,7 @@ async function repairUnderTranscribedRows(
       !focusedPageBreak && continuationFocus !== undefined ? 'The final image is the top of the next page, where this row\'s options continue. Include every visible continuation option in its original order; do not stop at the first page.' : '',
     ].filter(Boolean).join(' ')
     const response = await timed(runId, `worker repair ${id}`, () =>
-      call(controller, runId, buildWorkerRequest(reduced, images, workerModel, undefined, instructions === '' ? undefined : instructions), signal),
+      call(controller, runId, buildWorkerRequest(reduced, images, workerModel, undefined, instructions === '' ? undefined : instructions, promptProfile), signal),
     )
     if (wasTruncated(response.finishReason)) return
     const validation = validateWorkerChunk(response.text, [forWorker])
@@ -1498,6 +1481,7 @@ async function verifyInlineAnswers(
   controller: GeminiController,
   workerModel: string,
   signal: AbortSignal | undefined,
+  promptProfile?: WorkflowPromptProfile,
 ): Promise<WorkerRow[]> {
   const policy = blueprint.document_profile.answer_policy.type
   if (policy !== 'inline_marks' && policy !== 'mixed') return rows
@@ -1531,6 +1515,7 @@ async function verifyInlineAnswers(
       call(controller, runId, buildWorkerRequest(
         reduced, images, workerModel, undefined,
         'The final image is the only evidence crop for this row. Confirm the existing answer only when a visible mark belongs to this question. Return correct_index blank if there is no mark in this crop, if it belongs to another question, or if it cannot be read. Never answer from subject knowledge.',
+        promptProfile,
       ), signal),
     )
     if (wasTruncated(response.finishReason)) return
@@ -1548,6 +1533,7 @@ async function stepWorker(
   workerModel: string,
   chunkSize: number,
   signal: AbortSignal | undefined,
+  promptProfile?: WorkflowPromptProfile,
 ): Promise<{ ok: true; rows: WorkerRow[] } | { ok: false }> {
   const chunks = chunkPlannedRows(blueprint, chunkSize)
   const done = await getArtifacts(runId, 'chunk-response')
@@ -1598,7 +1584,7 @@ async function stepWorker(
         call(
           controller,
           runId,
-          buildWorkerRequest(reduced, images, workerModel, previousError),
+          buildWorkerRequest(reduced, images, workerModel, previousError, undefined, promptProfile),
           signal,
         ),
       )
@@ -1746,10 +1732,10 @@ async function stepWorker(
   }
 
   const repaired = await repairUnderTranscribedRows(
-    runId, blueprint, flatRows, controller, workerModel, signal, failedIds,
+    runId, blueprint, flatRows, controller, workerModel, signal, failedIds, promptProfile,
   )
   const rows = await verifyInlineAnswers(
-    runId, blueprint, repaired, controller, workerModel, signal,
+    runId, blueprint, repaired, controller, workerModel, signal, promptProfile,
   )
   return { ok: true, rows }
 }
@@ -1767,7 +1753,6 @@ export async function executeRun(
   options: ExecutorOptions = {},
 ): Promise<RunOutcome> {
   const controller = options.controller ?? geminiController
-  const chunkSize = options.chunkSize ?? 10
   const matchingMode = options.matchingMode ?? 'split'
   // Per-step primary models (Customize → Advanced); each unset step defaults to
   // the primary. The controller falls each back to its paired other model.
@@ -1791,7 +1776,7 @@ export async function executeRun(
     await updateRun(runId, { step: 'planner', stepStartedAt: Date.now() })
     const planned = await stepPlanAndValidate(
       runId, controller, signal, render.examPageCount, render.answerKeyPageCount,
-      options.boxPagesPerCall, options.boxCrops, options.indexPagesPerCall, models,
+      models, options.promptProfile,
     )
     if (!planned.ok) return stop(runId, 'planner', planned.reason)
     const blueprint = planned.blueprint
@@ -1813,8 +1798,9 @@ export async function executeRun(
       blueprint,
       controller,
       models.worker,
-      chunkSize,
+      WORKER_CHUNK_ROWS,
       signal,
+      options.promptProfile,
     )
     if (!worker.ok) return stop(runId, 'worker', 'worker_chunk_invalid')
 
@@ -1928,7 +1914,7 @@ export async function executeRun(
         call(
           controller,
           runId,
-          buildAuditRequest(blueprint, rows, auditImages, models.audit),
+          buildAuditRequest(blueprint, rows, auditImages, models.audit, options.promptProfile),
           signal,
         ),
       )

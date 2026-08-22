@@ -21,7 +21,8 @@ export const BOX_PROMPT = "You are the BOX stage of an exam-to-CSV pipeline.\n\n
 
 /**
  * Owner-approved 2026-07-17: multi-page BOX, used only when the user raises
- * "Pages per box request" above 1 in Customize. The single-page BOX_PROMPT
+ * `BOX_PAGES_PER_CALL` above 1. Unused while Gold pins it at 1, and one
+ * constant away from live. The single-page BOX_PROMPT
  * above is unchanged and remains the default path. Same rules; the only
  * additions are the per-ref image number and the page-field instruction.
  */

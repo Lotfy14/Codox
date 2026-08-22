@@ -302,24 +302,10 @@ export const customizeMessages = {
   debugLabel: 'Show debug console',
   debugHint:
     'Adds a timing panel to the Convert screen that shows each conversion step and how long it took — useful for finding what makes a run slow. Off by default; nothing is sent anywhere.',
-  indexPanelLabel: 'Index requests',
-  indexLabel: 'Pages per index request',
-  indexHint:
-    'How many pages each question-finding request covers. 10 is the default and the safest value. Lowering it splits the document into more overlapping pieces, and questions can be lost where those pieces meet — a run that came back short should try raising this, not lowering it. Lower it only when a page is being skipped entirely.',
   indexOption: (count: number) =>
     count === 10 ? '10 pages (default)' : count === 1 ? '1 page' : `${count} pages`,
-  boxPanelLabel: 'Box requests',
-  boxLabel: 'Pages per box request',
-  boxHint:
-    'How many pages each box-drawing request covers during conversion. 1 is the default and most accurate. Higher values spend fewer requests on big exams — useful against the daily free limit — but box accuracy can drop, so raise this only if you keep running out of quota.',
-  boxCropsLabel: 'Question crops',
-  boxCropsHint: 'Draws focused question and figure crops for Review. Turn this off to save requests; extraction still reads the full pages, but Review shows whole pages only.',
   boxOption: (count: number) =>
     count === 1 ? '1 page (default)' : `${count} pages`,
-  workerPanelLabel: 'Worker requests',
-  workerLabel: 'Questions per worker request',
-  workerHint:
-    'How many questions are transcribed in each request. Smaller batches keep every answer complete — the transcription model can drop options when a request grows long — while larger batches spend fewer requests. 6 is the default; lower it if some questions come back missing options.',
   workerOption: (count: number) =>
     count === 6 ? '6 questions (default)' : `${count} questions`,
   matchingPanelLabel: 'Matching questions',

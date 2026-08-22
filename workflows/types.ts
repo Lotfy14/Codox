@@ -73,11 +73,12 @@ export interface WorkflowRunOptions {
   /**
    * The tutor's Customize choices for this batch. Shared knobs are named;
    * `models` is keyed by this workflow's own step ids.
+   *
+   * Window sizes, batch sizes and crop passes are deliberately NOT here: they
+   * are pipeline shape, which belongs to the workflow that runs the pipeline.
+   * A shared option only makes sense when every mineral must honour it, and a
+   * second strategy has no INDEX window or BOX pass to size.
    */
-  indexPagesPerCall?: number
-  boxPagesPerCall?: number
-  boxCrops?: boolean
-  chunkSize?: number
   matchingMode?: 'skip' | 'split'
   models?: Readonly<Record<string, string>>
 }

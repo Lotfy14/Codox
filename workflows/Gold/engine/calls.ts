@@ -45,12 +45,35 @@ export interface CallImage {
   base64Data: string
 }
 
+/**
+ * Optional workflow-owned instructions layered onto Gold's request contracts.
+ * Gold passes no profile and therefore keeps its byte-for-byte prompt text;
+ * specialised workflows may reuse the proven executor without pretending that
+ * one subject/layout prompt is equally good for every exam family.
+ */
+export interface WorkflowPromptProfile {
+  planner?: string
+  index?: string
+  evidence?: string
+  figure?: string
+  box?: string
+  worker?: string
+  audit?: string
+}
+
+function withProfile(prompt: string, instruction: string | undefined): string {
+  return instruction === undefined || instruction.trim() === ''
+    ? prompt
+    : `${prompt}\n\nWORKFLOW-SPECIFIC INSTRUCTIONS:\n${instruction}`
+}
+
 export function buildPlannerRequest(
   pages: readonly CallImage[],
   plannerModel = PLANNER_MODEL,
+  profile?: WorkflowPromptProfile,
 ): VisionRequest {
   return {
-    prompt: PLANNER_PROMPT,
+    prompt: withProfile(PLANNER_PROMPT, profile?.planner),
     images: pages,
     modelId: plannerModel,
     fallbackModelId: otherEngineModel(plannerModel),
@@ -73,6 +96,7 @@ export function buildPlannerRepairRequest(
   invalidBlueprint: string,
   errors: readonly string[],
   plannerModel = PLANNER_MODEL,
+  profile?: WorkflowPromptProfile,
 ): VisionRequest {
   const repairContext = [
     '',
@@ -86,7 +110,7 @@ export function buildPlannerRepairRequest(
     invalidBlueprint,
   ].join('\n')
   return {
-    prompt: `${PLANNER_PROMPT}\n${repairContext}`,
+    prompt: `${withProfile(PLANNER_PROMPT, profile?.planner)}\n${repairContext}`,
     images: pages,
     modelId: plannerModel,
     fallbackModelId: otherEngineModel(plannerModel),
@@ -109,8 +133,9 @@ export function buildWorkerRequest(
   workerModel: string,
   previousError?: string,
   focusInstruction?: string,
+  profile?: WorkflowPromptProfile,
 ): VisionRequest {
-  const parts = [WORKER_PROMPT, '', 'CHUNK PACKAGE:', JSON.stringify(reduced)]
+  const parts = [withProfile(WORKER_PROMPT, profile?.worker), '', 'CHUNK PACKAGE:', JSON.stringify(reduced)]
   if (focusInstruction !== undefined) parts.push('', focusInstruction)
   if (previousError !== undefined) {
     parts.push(
@@ -143,9 +168,10 @@ export function buildAuditRequest(
   rows: readonly ExamQuestion[],
   images: readonly CallImage[],
   auditModel = AUDIT_MODEL,
+  profile?: WorkflowPromptProfile,
 ): VisionRequest {
   const prompt = [
-    AUDIT_PROMPT,
+    withProfile(AUDIT_PROMPT, profile?.audit),
     '',
     'BLUEPRINT:',
     JSON.stringify(blueprint),
@@ -218,8 +244,9 @@ export function buildIndexRequest(
   pages: readonly CallImage[],
   coreRelativePages: readonly number[],
   plannerModel = PLANNER_MODEL,
+  profile?: WorkflowPromptProfile,
 ): VisionRequest {
-  const prompt = INDEX_PROMPT + '\n\nCORE PAGES: ' + JSON.stringify(coreRelativePages)
+  const prompt = withProfile(INDEX_PROMPT, profile?.index) + '\n\nCORE PAGES: ' + JSON.stringify(coreRelativePages)
   return structuredPlannerRequest(prompt, pages, {
     type: 'OBJECT',
     properties: {
@@ -242,8 +269,9 @@ export function buildIndexRequest(
 export function buildEvidenceRequest(
   pages: readonly CallImage[], refs: readonly { ref: string; printedLabel: string; section: string }[],
   plannerModel = PLANNER_MODEL,
+  profile?: WorkflowPromptProfile,
 ): VisionRequest {
-  const prompt = EVIDENCE_PROMPT + '\n\nQUESTION REFERENCES:\n' + JSON.stringify(refs)
+  const prompt = withProfile(EVIDENCE_PROMPT, profile?.evidence) + '\n\nQUESTION REFERENCES:\n' + JSON.stringify(refs)
   return structuredPlannerRequest(prompt, pages, {
     type: 'OBJECT', properties: {
       type: { type: 'STRING', enum: ['no_answer_key','separate_key','inline_marks','mixed','uncertain'] },
@@ -259,8 +287,9 @@ export function buildEvidenceRequest(
 export function buildFigureDetectRequest(
   pages: readonly CallImage[], refs: readonly { ref: string; ownerPage: number }[],
   plannerModel = PLANNER_MODEL,
+  profile?: WorkflowPromptProfile,
 ): VisionRequest {
-  return structuredPlannerRequest(FIGURE_DETECT_PROMPT + '\n\nQUESTION REFERENCES:\n' + JSON.stringify(refs), pages, {
+  return structuredPlannerRequest(withProfile(FIGURE_DETECT_PROMPT, profile?.figure) + '\n\nQUESTION REFERENCES:\n' + JSON.stringify(refs), pages, {
     type: 'OBJECT', properties: {
       figures: { type: 'ARRAY', items: { type: 'OBJECT', properties: {
         page: { type: 'INTEGER' }, linked_refs: { type: 'ARRAY', items: { type: 'STRING' } }, anchor: { type: 'STRING' },
@@ -328,15 +357,16 @@ export function buildBoxRequest(
   refs: readonly BoxTaskRef[],
   plannerModel = PLANNER_MODEL,
   figureHints: readonly BoxFigureHint[] = [],
+  profile?: WorkflowPromptProfile,
 ): VisionRequest {
   return structuredPlannerRequest(
-    withFigureHints(BOX_PROMPT, figureHints) + '\n\nPAGE TASKS:\n' + JSON.stringify(refs),
+    withFigureHints(withProfile(BOX_PROMPT, profile?.box), figureHints) + '\n\nPAGE TASKS:\n' + JSON.stringify(refs),
     pages, BOX_RESPONSE_SCHEMA, plannerModel,
   )
 }
 
 /**
- * Several pages in one BOX call (Customize's "Pages per box request" > 1,
+ * Several pages in one BOX call (`BOX_PAGES_PER_CALL` > 1 in the executor,
  * owner-approved 2026-07-17). Each ref carries the 1-based image number of
  * the page it lives on; the response's figure pages are those same relative
  * numbers, mapped back to absolute pages by the executor.
@@ -346,9 +376,10 @@ export function buildBoxBatchRequest(
   refs: readonly (BoxTaskRef & { page: number })[],
   plannerModel = PLANNER_MODEL,
   figureHints: readonly BoxFigureHint[] = [],
+  profile?: WorkflowPromptProfile,
 ): VisionRequest {
   return structuredPlannerRequest(
-    withFigureHints(BOX_BATCH_PROMPT, figureHints) + '\n\nPAGE TASKS:\n' + JSON.stringify(refs),
+    withFigureHints(withProfile(BOX_BATCH_PROMPT, profile?.box), figureHints) + '\n\nPAGE TASKS:\n' + JSON.stringify(refs),
     pages, BOX_RESPONSE_SCHEMA, plannerModel,
   )
 }

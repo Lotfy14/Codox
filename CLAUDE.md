@@ -226,15 +226,17 @@ enumerates exam-page question slots without geometry; deterministic code
 reconciles identities and assembles the pinned Blueprint. Evidence and figures
 are observed separately, and an unresolved page is a visible non-fatal planning
 issue rather than a reason to discard clean rows. *(2026-07-17, owner-approved:)*
-a BOX_BATCH variant covers several pages per BOX call when the user raises
-Customize's "Pages per box request" above 1 — an opt-in accuracy-for-quota
-trade; 1 (the default) keeps the original single-page BOX prompt byte-identical.
+a BOX_BATCH variant covers several pages per BOX call when `BOX_PAGES_PER_CALL`
+is above 1 — an accuracy-for-quota trade; 1 keeps the original single-page BOX
+prompt byte-identical. This was Customize's "Pages per box request" until
+2026-08-23; see the knob removal below.
 Question regions are always stamped with the ref's code-known owner page; only
 figure pages come from the model, validated against the batch.
-*(2026-07-20, owner-approved:)* INDEX window size is Customize's **"Pages per
-index request"** (1–10), threaded to `planWindows`; the default stays
-`DEFAULT_WINDOW_PAGES` = 10, so engine behaviour is unchanged until a tutor
-lowers it. **Lowering it is measured to LOSE questions and fix nothing** — on
+*(2026-07-20, owner-approved; the knob removed 2026-08-23:)* INDEX window size
+was Customize's **"Pages per index request"** (1–10), threaded to `planWindows`;
+it is now pinned at `INDEX_WINDOW_PAGES` = `DEFAULT_WINDOW_PAGES` = 10, which
+is the value it always defaulted to. **Lowering it was measured to LOSE
+questions and fix nothing** — on
 the embryology document, 10 pages/window found 64 questions with 9 answered
 and 3 pages/window found 57 with 9 answered, because more window boundaries
 means more rows dropped in reconciliation (12 duplicate-label drops vs 7). The
@@ -274,8 +276,9 @@ Gated on INDEX having mostly worked (a run that emitted nothing still falls to
 the legacy path, never a call per page); a page still empty after its repair
 stays flagged `unreadable_page`; nothing is invented. The
 three pinned prompts and the output contract are untouched: repair reuses the
-INDEX prompt on a narrower page set. "Pages per index request" stays a
-diagnostic knob; the repair is the real remedy for a lost page.
+INDEX prompt on a narrower page set. The repair is the real remedy for a lost
+page — which is why "Pages per index request" was removed as a knob on
+2026-08-23 rather than kept as a diagnostic.
 
 *Worker output split + code-owned assembly (owner-approved 2026-07-15):* the
 worker no longer assembles the `question` string. It returns the shared case
@@ -644,12 +647,14 @@ binding rules and the reasoning behind them.
 
 **Any change to a workflow's behavior increments that workflow's `version`** —
 `workflow.ts` and its README's `**Version:**` line, in the same commit as the
-change — and records what it measured in `benchmarks/results/`. Prompt edits,
-merge and validation rules, window sizes and model defaults are all behavior;
-only edits that cannot change an output row (comments, docs, tests, renames)
-may leave it alone. Results files are keyed by workflow AND version, so a
-behavior change that leaves the number still re-labels the old measurements as
-describing the new code.
+change. Prompt edits, merge and validation rules, window sizes and model
+defaults are all behavior; only edits that cannot change an output row
+(comments, docs, tests, renames) may leave it alone. Results files are keyed by
+workflow AND version, so a behavior change that leaves the number still
+re-labels the old measurements as describing the new code. A change that CAN
+alter output also records what it measured in `benchmarks/results/`; one that
+provably cannot (a knob removed at its shipped default) says why in the
+workflow's version history instead.
 
 *Workflow split (2026-08-02):* the single conversion pipeline became a set of
 named strategies under `workflows/`. **Gold** is the original, verified one and

@@ -8,12 +8,6 @@ import { ChoiceGroup, GlassPanel, Select, Toggle } from '../design/components'
 import type { ChoiceOption, SelectOption } from '../design/components'
 import { customizeMessages } from '../copy/messages'
 import {
-  BOX_PAGES_MAX,
-  BOX_PAGES_MIN,
-  INDEX_PAGES_MAX,
-  INDEX_PAGES_MIN,
-  WORKER_CHUNK_MAX,
-  WORKER_CHUNK_MIN,
   saveCustomizationSettings,
   useCustomizationSettings,
   type ExportTarget,
@@ -58,30 +52,6 @@ const EXPORT_OPTIONS: readonly ChoiceOption<ExportTarget>[] = [
     hint: customizeMessages.exportZipHint,
   },
 ]
-
-const INDEX_PAGES_OPTIONS: readonly SelectOption<number>[] = Array.from(
-  { length: INDEX_PAGES_MAX - INDEX_PAGES_MIN + 1 },
-  (_item, index) => {
-    const count = INDEX_PAGES_MIN + index
-    return { id: count, label: customizeMessages.indexOption(count) }
-  },
-)
-
-const BOX_PAGES_OPTIONS: readonly SelectOption<number>[] = Array.from(
-  { length: BOX_PAGES_MAX - BOX_PAGES_MIN + 1 },
-  (_item, index) => {
-    const count = BOX_PAGES_MIN + index
-    return { id: count, label: customizeMessages.boxOption(count) }
-  },
-)
-
-const WORKER_CHUNK_OPTIONS: readonly SelectOption<number>[] = Array.from(
-  { length: WORKER_CHUNK_MAX - WORKER_CHUNK_MIN + 1 },
-  (_item, index) => {
-    const count = WORKER_CHUNK_MIN + index
-    return { id: count, label: customizeMessages.workerOption(count) }
-  },
-)
 
 const MATCHING_OPTIONS: readonly ChoiceOption<MatchingMode>[] = [
   {
@@ -201,74 +171,6 @@ export function Customizations() {
             }
             options={MATCHING_OPTIONS}
             value={settings.matchingMode}
-          />
-        </GlassPanel>
-        <GlassPanel
-          aria-label={customizeMessages.indexPanelLabel}
-          as="section"
-          padding="compact"
-        >
-          <Select<number>
-            description={customizeMessages.indexHint}
-            label={customizeMessages.indexLabel}
-            onChange={(key) => {
-              if (key === null) return
-              void saveCustomizationSettings({
-                ...settings,
-                indexPagesPerCall: key,
-              })
-            }}
-            options={INDEX_PAGES_OPTIONS}
-            value={settings.indexPagesPerCall}
-          />
-        </GlassPanel>
-        <GlassPanel
-          aria-label={customizeMessages.boxPanelLabel}
-          as="section"
-          padding="compact"
-        >
-          <Toggle
-            description={customizeMessages.boxCropsHint}
-            isSelected={settings.boxCrops}
-            label={customizeMessages.boxCropsLabel}
-            onChange={(boxCrops) => void saveCustomizationSettings({ ...settings, boxCrops })}
-          />
-        </GlassPanel>        <GlassPanel
-          aria-label={customizeMessages.boxPanelLabel}
-          as="section"
-          padding="compact"
-        >
-          <Select<number>
-            description={customizeMessages.boxHint}
-            label={customizeMessages.boxLabel}
-            onChange={(key) => {
-              if (key === null) return
-              void saveCustomizationSettings({
-                ...settings,
-                boxPagesPerCall: key,
-              })
-            }}
-            options={BOX_PAGES_OPTIONS}
-            value={settings.boxPagesPerCall}
-          />
-        </GlassPanel>
-        <GlassPanel
-          aria-label={customizeMessages.workerPanelLabel}
-          as="section"
-          padding="compact"
-        >
-          <Select<number>
-            description={customizeMessages.workerHint}
-            label={customizeMessages.workerLabel}
-            onChange={(key) => {
-              if (key === null) return
-              void saveCustomizationSettings({
-                ...settings,
-                workerChunkSize: key,
-              })
-            }}
-            options={WORKER_CHUNK_OPTIONS}
-            value={settings.workerChunkSize}
           />
         </GlassPanel>
         <GlassPanel

@@ -1,6 +1,5 @@
 /**
- * Click-through for the daily quota strip and the "Pages per box request"
- * Customize setting. Drives the real app at http://localhost:5173 (start
+ * Click-through for the daily quota strip. Drives the real app at http://localhost:5173 (start
  * `npx vite` first) with playwright-core + installed Edge. The fake key
  * never reaches a real conversion — its one validation call fails as
  * wrong-key, which is exactly what the strip-visibility check needs.
@@ -34,26 +33,6 @@ try {
   check(
     'quota strip hidden without a key',
     (await page.locator('.ds-quota-strip').count()) === 0,
-  )
-
-  // --- Customize: the box-request select renders with the default.
-  await page.locator('.ds-sidebar').getByRole('button', { name: 'Customize' }).click()
-  const boxSelect = page.getByRole('button', { name: /Pages per box request/ })
-  check('box select renders', await boxSelect.isVisible())
-  check(
-    'box select defaults to 1 page',
-    (await boxSelect.textContent())?.includes('1 page (default)') ?? false,
-  )
-  await boxSelect.click()
-  await page.getByRole('option', { name: '4 pages' }).click()
-  await page.screenshot({ path: `${OUT}customize-box-select.png` })
-  await page.reload()
-  await page.locator('.ds-sidebar').getByRole('button', { name: 'Customize' }).click()
-  check(
-    'box choice persists across reload',
-    (await page
-      .getByRole('button', { name: /Pages per box request/ })
-      .textContent())?.includes('4 pages') ?? false,
   )
 
   // --- Save a (fake) key: the strip appears with ONE BAR PER MODEL at 0 of 500.

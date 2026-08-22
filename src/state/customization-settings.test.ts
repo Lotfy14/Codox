@@ -25,10 +25,6 @@ describe('customization settings', () => {
       exportTarget: 'zip',
       workflowId: 'gold',
       debugConsole: true,
-      boxCrops: true,
-      indexPagesPerCall: 3,
-      boxPagesPerCall: 4,
-      workerChunkSize: 5,
       matchingMode: 'skip',
       engineModels: {
         index: 'gemini-3.5-flash-lite',
@@ -45,10 +41,6 @@ describe('customization settings', () => {
       exportTarget: 'zip',
       workflowId: 'gold',
       debugConsole: true,
-      boxCrops: true,
-      indexPagesPerCall: 3,
-      boxPagesPerCall: 4,
-      workerChunkSize: 5,
       matchingMode: 'skip',
       engineModels: {
         index: 'gemini-3.5-flash-lite',
@@ -91,9 +83,12 @@ describe('customization settings', () => {
         yearMode: 'guess',
         topicsMode: 'off',
         exportTarget: 'ftp',
+        // Pipeline-shape knobs an older install saved before they became
+        // workflow-owned. Narrowing must read around them, not choke.
         indexPagesPerCall: 0,
         boxPagesPerCall: 99,
         workerChunkSize: 99,
+        boxCrops: false,
         // An unrecognized model id (a typo, or a model removed from the menu)
         // must never reach the engine — it narrows back to the default.
         engineModels: { box: 'gemini-9-ultra' },
@@ -105,12 +100,6 @@ describe('customization settings', () => {
       exportTarget: DEFAULT_CUSTOMIZATION_SETTINGS.exportTarget,
       workflowId: DEFAULT_CUSTOMIZATION_SETTINGS.workflowId,
       debugConsole: DEFAULT_CUSTOMIZATION_SETTINGS.debugConsole,
-      boxCrops: DEFAULT_CUSTOMIZATION_SETTINGS.boxCrops,
-      // Out of range below the floor — a 0-page window would emit no windows
-      // at all, so it must never survive narrowing.
-      indexPagesPerCall: DEFAULT_CUSTOMIZATION_SETTINGS.indexPagesPerCall,
-      boxPagesPerCall: DEFAULT_CUSTOMIZATION_SETTINGS.boxPagesPerCall,
-      workerChunkSize: DEFAULT_CUSTOMIZATION_SETTINGS.workerChunkSize,
       // Absent from the stored row entirely — an install that predates the
       // setting migrates to the 'split' default rather than to a mode that
       // would silently drop the tutor's questions.
