@@ -39,6 +39,7 @@ type Outcome =
 
 type ParsedRow = {
   label: string
+  section: string
   sourcePages: number[]
   question: string
   options: string[]
@@ -48,7 +49,7 @@ type ParsedRow = {
   sourceBox: Box2d | null
 }
 
-type KeyAnswer = { label: string; correctIndex: string; needsReview: string }
+type KeyAnswer = { section: string; label: string; correctIndex: string; needsReview: string }
 
 class ProviderStop extends Error {
   readonly kind: 'wrong-key' | 'provider-error' | 'aborted'
@@ -75,6 +76,37 @@ function positivePages(value: unknown, maximum: number): number[] {
   ))]
 }
 
+/**
+ * The printed number without the punctuation that trails it.
+ *
+ * One window reads "15" off a page and the next reads "15)" off the same page.
+ * Nothing in the paper changed, so the two must key alike; before this, one
+ * question became two rows and a key entry matched neither.
+ */
+function normalizeLabel(value: unknown): string {
+  return text(value).replace(/^[([]+/, '').replace(/[).:-]+$/, '').trim()
+}
+
+/**
+ * Collapses a printed heading to a comparable token: "Section B" and "B" are
+ * the same section, and a paper without headings yields ''.
+ */
+function normalizeSection(value: unknown): string {
+  return text(value).toLowerCase().replace(/^section\s+/, '').replace(/[^a-z0-9]/g, '')
+}
+
+/**
+ * A printed key letter, and only a letter. A digit is refused rather than
+ * guessed at: a key that writes "3" beside a question may mean the third
+ * choice or the fourth, and nothing on the page says which base it counted
+ * from. A refused entry blanks the answer instead of shipping a coin flip.
+ */
+function letterIndex(value: string): string {
+  const letter = value.trim().toLowerCase().replace(/[^a-z]/g, '')
+  if (letter.length !== 1) return ''
+  return String(letter.charCodeAt(0) - 97)
+}
+
 function validIndex(value: string, optionCount: number): boolean {
   return value === '' || (/^\d+$/.test(value) && Number(value) < optionCount)
 }
@@ -96,7 +128,7 @@ function parseRows(value: unknown, maximumPage: number): ParsedRow[] | undefined
     if (!isRecord(raw)) continue
     const question = text(raw.question)
     const options = isStringArray(raw.options) ? raw.options.map(optionText).filter(Boolean) : []
-    const label = text(raw.label)
+    const label = normalizeLabel(raw.label)
     let needsReview = text(raw.needs_review)
     let correctIndex = text(raw.correct_index)
     if (question === '') needsReview ||= 'empty_question'
@@ -108,6 +140,7 @@ function parseRows(value: unknown, maximumPage: number): ParsedRow[] | undefined
     if (correctIndex === '') needsReview ||= 'no_visible_answer'
     rows.push({
       label,
+      section: normalizeSection(raw.section),
       sourcePages: positivePages(raw.source_pages, maximumPage),
       question,
       options,
@@ -124,24 +157,51 @@ function parseKey(value: unknown): KeyAnswer[] | undefined {
   if (!isRecord(value) || !Array.isArray(value.answers)) return undefined
   return value.answers.flatMap((raw) => {
     if (!isRecord(raw)) return []
-    const label = text(raw.label)
+    const label = normalizeLabel(raw.label)
     const correctIndex = text(raw.correct_index)
-    return label === '' ? [] : [{ label, correctIndex, needsReview: text(raw.needs_review) }]
+    return label === '' ? [] : [{ section: normalizeSection(raw.section), label, correctIndex, needsReview: text(raw.needs_review) }]
+  })
+}
+
+/**
+ * Answers a key page prints, read out of an ordinary extraction response.
+ *
+ * Some papers bind their answer key into the exam PDF itself, so the page is
+ * already rendered and already inside a window this run pays for. Reading its
+ * mappings costs no additional request; leaving them unread stranded 41 of 45
+ * answers on a page the model had in front of it.
+ */
+function parseKeyAnswers(value: unknown): KeyAnswer[] {
+  if (!isRecord(value) || !Array.isArray(value.key_answers)) return []
+  return value.key_answers.flatMap((raw) => {
+    if (!isRecord(raw)) return []
+    const label = normalizeLabel(raw.label)
+    if (label === '') return []
+    const correctIndex = letterIndex(text(raw.answer))
+    return [{
+      section: normalizeSection(raw.section),
+      label,
+      correctIndex,
+      needsReview: correctIndex === '' ? 'key_unclear' : '',
+    }]
   })
 }
 
 function requestPrompt(mode: 'exam' | 'key', firstPage: number, lastPage: number, coreLastPage = lastPage): string {
   if (mode === 'key') return [
-    'Read this answer-key page window. Return JSON only: {"answers":[{"label":"printed question number","correct_index":"zero-based option index or empty","needs_review":""}]}.',
+    'Read this answer-key page window. Return JSON only: {"answers":[{"section":"printed section heading or empty","label":"printed question number","correct_index":"zero-based option index or empty","needs_review":""}]}.',
+    'When the key groups answers under headings such as "Section A", return that heading in section for every entry beneath it. Papers restart numbering at each section, so the heading is what tells question 3 of one section from question 3 of another.',
     'Do not infer an answer. Return an empty correct_index and a reason when a mark is unclear. Do not return question text.',
     `The images are answer-key pages ${firstPage} through ${lastPage}.`,
   ].join('\n')
   return [
-    'Read these exam pages and return JSON only: {"rows":[{"label":"printed question number or empty","source_pages":[1],"question":"verbatim question text","options":["choice text"],"correct_index":"zero-based visible answer or empty","needs_review":"","continuation":false,"box_2d":[ymin,xmin,ymax,xmax]}]}.',
+    'Read these exam pages and return JSON only: {"rows":[{"label":"printed question number or empty","section":"printed section heading or empty","source_pages":[1],"question":"verbatim question text","options":["choice text"],"correct_index":"zero-based visible answer or empty","needs_review":"","continuation":false,"box_2d":[ymin,xmin,ymax,xmax]}],"key_answers":[{"section":"","label":"","answer":""}]}.',
     `Extract every question that starts on core pages ${firstPage} through ${coreLastPage}; page ${coreLastPage + 1} may be included only as a look-ahead for options that continue from a core page. Keep question text and choices verbatim. Never infer an answer from subject knowledge.`,
     'For EACH question, inspect every option row for answer evidence: especially a coloured highlighter stroke (including yellow), a tick, circle, underline, strike-through, or a letter written beside the option/question. A single clear highlight on an option IS visible answer evidence: return that option\'s zero-based correct_index. Do not copy the highlight into option text. If marks identify multiple options, are too faint, or are absent, leave correct_index empty and give a concise needs_review reason.',
     'Some papers place one large handwritten answer letter beside each question in an outer page margin rather than on an option. Read that ordered margin column from top to bottom and map each letter to the question aligned with it; it is visible answer evidence, not a subject-knowledge answer.',
     'For every normal question return box_2d as a tight normalized [ymin,xmin,ymax,xmax] box in 0–1000 page coordinates. Include its printed number, full stem, every option, and the nearby answer mark; use the image edges only when the question truly touches them. This box is for Review display only and does not change extraction.',
+    'When the paper prints section headings such as "Section A", return that heading in section for every question beneath it, and keep the printed number in label exactly as it appears. Numbering restarts at each section, so the heading is the only thing separating question 3 of one section from question 3 of another.',
+    'If a page in this window is an answer key rather than exam questions — a printed or handwritten list pairing question numbers with choice letters — do not emit questions from it. Return every pair it prints in key_answers, giving the section heading written above each group and the letter exactly as written. Read letters off the page only; never supply one from subject knowledge. Return an empty key_answers array when no page is a key.',
     'Use an empty correct_index and a concise needs_review reason for unclear text, continuations, diagrams, tables, or ambiguous answer marks.',
     'A question whose choices continue beyond this page must be retained and flagged options_cut_at_page_break. If this page begins with choices that complete a question from the preceding page, emit one row before normal questions with label and question empty, those continued choices in options, and continuation:true. Do not omit those choices or turn them into a new question.',
     `The images are exam pages ${firstPage} through ${lastPage}; source_pages uses these document page numbers.`,
@@ -216,21 +276,117 @@ async function imagesFor(runId: string, indexes: readonly number[]) {
   return images
 }
 
-/** Joins an option list that starts at the top of a page to its prior stem. */
-export function stitchContinuations(rows: readonly ParsedRow[]): ParsedRow[] {
-  const output: ParsedRow[] = []
+/**
+ * Carries a section heading forward onto the pages printed beneath it.
+ *
+ * A heading appears once, so only the window that renders that page can report
+ * it; every later window covering the same section answers with an empty
+ * section. Inheriting from the nearest earlier page that declared one rebuilds
+ * the boundary the paper actually prints, which is what lets a sectioned key
+ * attach without guessing. It only ever fills a blank — a row that read its
+ * own heading keeps it, so a genuine mid-document boundary still wins.
+ */
+export function fillSections(windows: readonly (readonly ParsedRow[])[]): ParsedRow[][] {
+  const declared = new Map<number, string>()
+  for (const rows of windows) {
+    for (const row of rows) {
+      const page = row.sourcePages[0]
+      if (row.section === '' || page === undefined || declared.has(page)) continue
+      declared.set(page, row.section)
+    }
+  }
+  const pages = [...declared.keys()].sort((first, second) => first - second)
+  const inherited = (page: number): string => {
+    let value = ''
+    for (const candidate of pages) {
+      if (candidate > page) break
+      value = declared.get(candidate) ?? value
+    }
+    return value
+  }
+  return windows.map((rows) => rows.map((row) => {
+    const page = row.sourcePages[0]
+    if (row.section !== '' || page === undefined) return row
+    return { ...row, section: inherited(page) }
+  }))
+}
+
+function modalOptionCount(rows: readonly ParsedRow[]): number | undefined {
+  const counts = new Map<number, number>()
   for (const row of rows) {
-    if (!row.continuation) {
-      output.push(row)
+    if (row.continuation || row.options.length < 2) continue
+    counts.set(row.options.length, (counts.get(row.options.length) ?? 0) + 1)
+  }
+  let modal: number | undefined
+  let best = 0
+  for (const [count, seen] of counts) if (seen > best) [best, modal] = [seen, count]
+  return modal
+}
+
+/** Whether `tail` already ends `options`, so appending it would double it. */
+function alreadyEnds(options: readonly string[], tail: readonly string[]): boolean {
+  if (tail.length === 0 || tail.length > options.length) return false
+  const offset = options.length - tail.length
+  return tail.every((option, index) => normalizedContent(option) === normalizedContent(options[offset + index] ?? ''))
+}
+
+/**
+ * Joins an option list printed at the top of a page to the stem it continues.
+ *
+ * Two rules keep it from welding choices onto an unrelated question, which is
+ * what it did on a real paper:
+ *
+ * 1. The choices are printed on the LAST page the row names. The model reports
+ *    the stem's page beside it — `[2,3]` for choices printed on page 3 — so
+ *    reading sourcePages[0] searched one page too early and hung a page-3
+ *    option list on a page-1 question.
+ * 2. Only a stem actually missing choices may receive them: one that declared
+ *    it runs onto this page, one flagged cut, or one that came back shorter
+ *    than the paper's usual choice count. Taking the nearest row instead built
+ *    8-option hybrids out of two complete questions while the real owner
+ *    stayed truncated anyway.
+ *
+ * Callers pass ONE request's rows. The prompt's "emit one row before normal
+ * questions" contract is per response, and reaching across responses let a
+ * page-7 option list attach to a question two windows back.
+ */
+export function stitchContinuations(
+  rows: readonly ParsedRow[],
+  modal = modalOptionCount(rows),
+): ParsedRow[] {
+  const output = rows.map((row) => ({ ...row }))
+  const absorbed = new Set<number>()
+  for (const [index, row] of output.entries()) {
+    if (!row.continuation) continue
+    const page = row.sourcePages.at(-1)
+    if (page === undefined) {
+      output[index] = { ...row, needsReview: row.needsReview || 'orphaned_page_continuation' }
       continue
     }
-    const page = row.sourcePages[0]
-    const priorIndex = page === undefined ? -1 : output.findLastIndex((candidate) =>
-      !candidate.continuation && candidate.sourcePages.includes(page - 1),
-    )
-    const prior = output[priorIndex]
-    if (prior === undefined) {
-      output.push({ ...row, needsReview: row.needsReview || 'orphaned_page_continuation' })
+    const owns = (candidate: ParsedRow): boolean =>
+      !candidate.continuation &&
+      candidate.sourcePages.includes(page - 1) &&
+      (candidate.sourcePages.includes(page) ||
+        candidate.needsReview.includes('cut') ||
+        (modal !== undefined && candidate.options.length < modal))
+    // The prompt puts the continuation BEFORE the page's own questions, so its
+    // stem is usually earlier in the response but can also be later — a stem
+    // that declared it runs onto this page is emitted in its own page order.
+    const before = output.slice(0, index).findLastIndex(owns)
+    const after = output.findIndex((candidate, at) => at > index && owns(candidate))
+    const priorIndex = before === -1 ? after : before
+    const prior = priorIndex === -1 ? undefined : output[priorIndex]
+    if (prior === undefined || priorIndex === -1) {
+      // A flagged fragment the tutor can see beats choices silently welded to
+      // whichever question happened to sit nearby.
+      output[index] = { ...row, needsReview: row.needsReview || 'orphaned_page_continuation' }
+      continue
+    }
+    absorbed.add(index)
+    if (alreadyEnds(prior.options, row.options)) {
+      // The stem already read across the break itself, so this row is the same
+      // choices a second time rather than more of them.
+      output[priorIndex] = { ...prior, sourcePages: [...new Set([...prior.sourcePages, ...row.sourcePages])] }
       continue
     }
     const optionOffset = prior.options.length
@@ -247,45 +403,113 @@ export function stitchContinuations(rows: readonly ParsedRow[]): ParsedRow[] {
       sourceBox: prior.sourceBox,
     }
   }
-  return output
+  return output.filter((_, index) => !absorbed.has(index))
 }
 
 function normalizedContent(value: string): string {
   return value.toLowerCase().replace(/\s+/g, ' ').trim()
 }
 
-export function dedupe(rows: readonly ParsedRow[]): ExamQuestion[] {
-  const output = new Map<string, ExamQuestion>()
-  const keyByLabel = new Map<string, string>()
-  const keyByContent = new Map<string, string>()
-  for (const [index, row] of rows.entries()) {
-    const candidate: ExamQuestion = {
-      // Keep the document's visible label when it exists. Gold does the same,
-      // and shared benchmark truth is intentionally keyed by that label.
-      id: row.label || `pyrite-${index + 1}`,
-      topic: '', subtopic: '', year: '', question: row.question, options: row.options,
-      correct_index: row.correctIndex, image_urls: [], needs_review: row.needsReview,
-      ...(row.sourcePages[0] === undefined ? {} : { source_page: row.sourcePages[0] }),
-      ...(row.sourceBox === null ? {} : { source_box: row.sourceBox }),
-    }
-    // Look-ahead images can make the next bundle report a question twice.
-    // Its label may be omitted or re-read differently, so labels alone cannot
-    // safely recognize the duplicate. Exact normalized content is stable while
-    // still allowing genuinely distinct questions with different choices.
-    const contentKey = `${normalizedContent(candidate.question)}\u0000${candidate.options.map(normalizedContent).join('\u0000')}`
-    const key = (candidate.id !== '' ? keyByLabel.get(candidate.id) : undefined) ??
-      keyByContent.get(contentKey) ??
-      (candidate.id !== '' ? `label:${candidate.id}` : `content:${contentKey}`)
-    const prior = output.get(key)
-    const candidateScore = candidate.question.length + candidate.options.join('').length + (candidate.correct_index === '' ? 0 : 1_000_000)
-    const priorScore = prior === undefined ? -1 : prior.question.length + prior.options.join('').length + (prior.correct_index === '' ? 0 : 1_000_000)
-    if (candidateScore > priorScore) {
-      output.set(key, candidate)
-    }
-    if (candidate.id !== '') keyByLabel.set(candidate.id, key)
-    keyByContent.set(contentKey, key)
+type Candidate = { label: string; section: string; contentKey: string; page: number | undefined }
+type Slot = Candidate & { row: ExamQuestion; score: number; index: number }
+
+/** Cores are two pages wide with a one-page look-ahead. */
+const PAGE_OVERLAP = 1
+
+/**
+ * Whether two observations are one question, or two questions that merely
+ * share a printed number.
+ *
+ * A printed label is unique only inside its own section. A paper that restarts
+ * at "1" for Section B gave 20 of its 45 questions a label Section A had
+ * already used, and a document-wide label key discarded every one of them —
+ * silently, the survivor picked by a text-length score. The section heading
+ * settles it whenever the model read one. Failing that the page distance does:
+ * a window overlap re-reads a question at most one page from where the
+ * neighbouring window put it, while a section restart is many pages away.
+ */
+function sameQuestion(slot: Slot, candidate: Candidate): boolean {
+  if (slot.section !== '' && candidate.section !== '' && slot.section !== candidate.section) return false
+  const labelMatch = candidate.label !== '' && slot.label === candidate.label
+  // Exact content still recognizes a re-read whose label was dropped or
+  // misread, while leaving genuinely distinct questions apart.
+  if (!labelMatch && slot.contentKey !== candidate.contentKey) return false
+  if (slot.page === undefined || candidate.page === undefined) return true
+  return Math.abs(slot.page - candidate.page) <= PAGE_OVERLAP
+}
+
+function examQuestion(row: ParsedRow): ExamQuestion {
+  return {
+    id: '',
+    topic: '', subtopic: '', year: '', question: row.question, options: row.options,
+    correct_index: row.correctIndex, image_urls: [], needs_review: row.needsReview,
+    ...(row.sourcePages[0] === undefined ? {} : { source_page: row.sourcePages[0] }),
+    ...(row.sourceBox === null ? {} : { source_box: row.sourceBox }),
   }
-  return [...output.values()]
+}
+
+export function dedupe(rows: readonly ParsedRow[]): ExamQuestion[] {
+  const slots: Slot[] = []
+  for (const [index, row] of rows.entries()) {
+    const candidate: Candidate = {
+      label: row.label,
+      section: row.section,
+      contentKey: `${normalizedContent(row.question)} ${row.options.map(normalizedContent).join(' ')}`,
+      page: row.sourcePages[0],
+    }
+    const score = row.question.length + row.options.join('').length + (row.correctIndex === '' ? 0 : 1_000_000)
+    const slot = slots.find((existing) => sameQuestion(existing, candidate))
+    if (slot === undefined) {
+      slots.push({ ...candidate, row: examQuestion(row), score, index })
+      continue
+    }
+    // A look-ahead re-read can carry the label or heading the first sighting
+    // missed. Adopting them keeps the slot recognizable to later windows
+    // without letting the weaker reading replace the row itself.
+    if (slot.label === '') slot.label = candidate.label
+    if (slot.section === '') slot.section = candidate.section
+    if (score > slot.score) {
+      slot.row = examQuestion(row)
+      slot.score = score
+    }
+  }
+  // Keep the document's visible label as the id: shared benchmark truth is
+  // keyed by it. Ids are unique per import, so a label a later section reuses
+  // takes a suffix rather than overwriting the first section's question.
+  const taken = new Set<string>()
+  return slots.map((slot) => {
+    const preferred = slot.label === '' ? `pyrite-${slot.index + 1}` : slot.label
+    let id = preferred
+    for (let n = 2; taken.has(id); n++) id = `${preferred}#${n}`
+    taken.add(id)
+    return { ...slot.row, id }
+  })
+}
+
+function answerSlot(section: string, label: string): string {
+  return `${section} ${label}`
+}
+
+/**
+ * Attaches a key answer to the row it names.
+ *
+ * The section matters here for the reason it matters in dedupe: a key listing
+ * "Section A 3: B" and "Section B 3: A" holds two answers for the label "3",
+ * and choosing between them by guess ships a wrong answer. An unresolved label
+ * is flagged, never assigned.
+ */
+function attachAnswer(row: ParsedRow, answers: ReadonlyMap<string, KeyAnswer>): ParsedRow {
+  if (answers.size === 0 || row.correctIndex !== '' || row.label === '') return row
+  let answer = answers.get(answerSlot(row.section, row.label))
+  if (answer === undefined) {
+    const matches = [...answers.values()].filter((entry) => entry.label === row.label)
+    if (matches.length !== 1) return matches.length === 0 ? row : { ...row, needsReview: 'key_ambiguous_label' }
+    answer = matches[0] as KeyAnswer
+  }
+  if (!validIndex(answer.correctIndex, row.options.length)) {
+    return { ...row, needsReview: answer.needsReview || 'key_unclear' }
+  }
+  return { ...row, correctIndex: answer.correctIndex, needsReview: answer.needsReview }
 }
 
 export async function executeRun(runId: string, pdfBytes: Uint8Array, options: ExecutorOptions = {}): Promise<Outcome> {
@@ -299,7 +523,7 @@ export async function executeRun(runId: string, pdfBytes: Uint8Array, options: E
       await updateRun(runId, { status: 'stopped', stopReason: 'render_failed' })
       return { status: 'stopped', runId, reason: 'render_failed' }
     }
-    const extracted: ParsedRow[] = []
+    const extracted: ParsedRow[][] = []
     const answers = new Map<string, KeyAnswer>()
     let requestCount = 0
     for (const mode of ['exam', 'key'] as const) {
@@ -317,6 +541,7 @@ export async function executeRun(runId: string, pdfBytes: Uint8Array, options: E
         let response = await call(controller, runId, requestPrompt(mode, start + 1, visibleLast, coreLast), images, model, options.signal)
         let parsed = response.finishReason === 'MAX_TOKENS' ? undefined : parseModelJson(response.text).value
         let rows = mode === 'exam' ? parseRows(parsed, examPages) : parseKey(parsed)
+        let keyAnswers = mode === 'exam' ? parseKeyAnswers(parsed) : []
         // A malformed or truncated JSON response used to be treated as an
         // empty page, silently dropping every question on it. One focused
         // retry costs an extra request only when the original result cannot
@@ -328,13 +553,14 @@ export async function executeRun(runId: string, pdfBytes: Uint8Array, options: E
           requests++
           parsed = response.finishReason === 'MAX_TOKENS' ? undefined : parseModelJson(response.text).value
           rows = mode === 'exam' ? parseRows(parsed, examPages) : parseKey(parsed)
+          keyAnswers = mode === 'exam' ? parseKeyAnswers(parsed) : []
           if (rows === undefined) {
             await putArtifact({ runId, kind: 'index-window', chunkIndex: offset + start, json: { workflow: 'pyrite', mode, response: response.text, invalid: true } })
-            return { start, coreLast, rows: undefined, requests }
+            return { start, coreLast, rows: undefined, keyAnswers, requests }
           }
         }
         await putArtifact({ runId, kind: 'index-window', chunkIndex: offset + start, json: { workflow: 'pyrite', mode, response: response.text } })
-        return { start, coreLast, rows, requests }
+        return { start, coreLast, rows, keyAnswers, requests }
         },
       )
       for (const result of pageResults) {
@@ -343,22 +569,20 @@ export async function executeRun(runId: string, pdfBytes: Uint8Array, options: E
           await updateRun(runId, { status: 'stopped', stopReason: 'extract_invalid' })
           return { status: 'stopped', runId, reason: 'extract_invalid' }
         }
-        if (mode === 'exam') extracted.push(...(result.rows as ParsedRow[]))
-        else for (const answer of result.rows as KeyAnswer[]) answers.set(answer.label, answer)
+        // An answer key bound into the exam PDF is read by the window that
+        // already renders it, so its mappings arrive on the extraction response
+        // and cost no request of their own.
+        for (const answer of result.keyAnswers) answers.set(answerSlot(answer.section, answer.label), answer)
+        if (mode === 'exam') extracted.push(result.rows as ParsedRow[])
+        else for (const answer of result.rows as KeyAnswer[]) answers.set(answerSlot(answer.section, answer.label), answer)
       }
     }
-    let rows = dedupe(stitchContinuations(extracted).map((row) => {
-      const answer = answers.get(row.label)
-      if (answer === undefined || row.correctIndex !== '') return row
-      if (!validIndex(answer.correctIndex, row.options.length)) {
-        return { ...row, needsReview: answer.needsReview || 'key_unclear' }
-      }
-      return {
-        ...row,
-        correctIndex: answer.correctIndex,
-        needsReview: answer.needsReview,
-      }
-    }))
+    // The paper's usual choice count is a whole-document fact, so it is
+    // measured once and handed to each window's stitch.
+    const byWindow = fillSections(extracted)
+    const modal = modalOptionCount(byWindow.flat())
+    const stitched = byWindow.flatMap((windowRows) => stitchContinuations(windowRows, modal))
+    let rows = dedupe(stitched.map((row) => attachAnswer(row, answers)))
     await putArtifact({ runId, kind: 'merged-rows', json: rows })
     const csv = emitCsv(rows)
     await putArtifact({ runId, kind: 'csv', text: csv })

@@ -14,15 +14,19 @@ the source page, and rows that appear to need a figure are explicitly flagged.
 
 ## Request budget
 
-Pyrite makes one extraction request for each window of up to four exam pages,
+Pyrite makes one extraction request for each window of up to two exam pages,
 plus one request for each window of a separate answer key when one is supplied.
 There is no planner, evidence, figure, box, worker repair, inline-answer
 confirmation, matching, or audit request.
 
 | Document | Pyrite target | Gold's strategy |
 |---|---:|---|
-| 20-page exam, no separate key | 5 requests | Multiple planning, crop, worker, and audit passes |
-| 20-page exam + 2-page key | 6 requests | Gold's full independent pipeline |
+| 20-page exam, no separate key | 10 requests | Multiple planning, crop, worker, and audit passes |
+| 20-page exam + 2-page key | 11 requests | Gold's full independent pipeline |
+
+An answer key bound into the exam PDF itself costs **nothing extra**: its page
+is already rendered and already inside a window, so the extraction request that
+covers it returns its mappings alongside that window's questions.
 
 The target is a budget, not a reason to omit data: when a window cannot be
 read safely, Pyrite keeps a flagged draft row or stops with an honest reason.
@@ -40,13 +44,15 @@ diagram capture, or unattended import safety matters. Use Gold for those.
 
 - Never invent a correct answer. If the answer is not plainly visible in the
   current exam window or supplied key window, emit `correct_index: ''` and a
-  review reason.
+  review reason. An answer read off a key page is evidence; an answer supplied
+  from subject knowledge is not, and is never requested.
 - Every returned row is deterministically validated: non-empty id and question,
   at least two options when options are present, and an answer index within the
   option range.
-- Windows overlap by one page. Deduplication uses the printed question label
-  when available and otherwise a normalized question prefix. A duplicate is
-  flagged rather than silently merged when the text conflicts.
+- Windows overlap by one page. Deduplication uses the printed section heading
+  and label when available, exact normalized content otherwise, and requires
+  the two sightings to be within one page of each other. Papers restart their
+  numbering at each section, so a label alone never identifies a question.
 - A response that is invalid or truncated is not retried. Its affected page is
   recorded for review, preserving Pyrite's bounded request count.
 - Since there is no audit pass, every completed Pyrite run is marked
