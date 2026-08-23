@@ -127,6 +127,17 @@ export async function clearArtifacts(
   await db.runArtifacts.bulkDelete(targets.map((row) => row.id))
 }
 
+/** Removes only the named crop outputs while preserving every other crop. */
+export async function clearCropArtifacts(
+  runId: string,
+  paths: ReadonlySet<string>,
+): Promise<void> {
+  if (paths.size === 0) return
+  const crops = await getArtifacts(runId, 'crop')
+  const targets = crops.filter((crop) => crop.path !== undefined && paths.has(crop.path))
+  await db.runArtifacts.bulkDelete(targets.map((crop) => crop.id))
+}
+
 export async function deleteRun(runId: string): Promise<void> {
   await db.transaction('rw', db.runs, db.runArtifacts, async () => {
     const artifacts = await db.runArtifacts.where('runId').equals(runId).toArray()

@@ -1,6 +1,6 @@
 # Gypsum
 
-**Version:** 0.1.0
+**Version:** 0.2.0
 **Status:** experimental
 
 Gypsum is Codox's IGCSE multiple-choice workflow. It exports MCQs only and is
@@ -18,6 +18,13 @@ crops the exact rendered JPEGs, reads attached mark schemes page by page, and
 performs a separate four-page audit pass with focused missing-visual repair.
 Its final blueprint records every crop as a shared Review asset and links it to
 the same rows that name the path in `image_urls`.
+
+After initial cropping, Gypsum sends each visual-bearing source page together
+with its actual crops to a dedicated Gemini image inspector. The inspector
+checks clipping, unrelated content, complete labels, and whether one question
+needs multiple separate images. Failed pages are recropped from a canonical
+replacement inventory and checked once more; a second failure keeps the run
+unsafe.
 
 ## Image policy
 

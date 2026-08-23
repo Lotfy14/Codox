@@ -22,10 +22,15 @@ artifact storage.
 5. Audit independent four-page windows against rows and the figure inventory.
    Missing visuals receive one focused detection/crop pass and are audited again.
    Model failures and deterministic count/crop failures make the run unsafe.
+6. For every page with linked visuals, inspect the full source page and the
+   actual JPEG crops together. A failed page returns the complete corrected
+   figure inventory, is recropped with a tight margin, and is inspected again.
+   Any remaining clipping, pollution, fusion, or missing image keeps the run
+   unsafe.
 
 ## Benchmark gate
 
-Before `status` may become `verified`, version 0.1.0 must be run on at least
+Before `status` may become `verified`, version 0.2.0 must be run on at least
 three official IGCSE MCQ papers with human-checked truth:
 
 1. Biology 0610/02 — biological drawings, micrographs, graphs, and tables.

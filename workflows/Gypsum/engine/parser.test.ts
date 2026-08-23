@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { validBox, pixelBox } from './boxes'
 import { emitCsv } from './csv'
 import { modelJson } from './json'
-import { dedupeCoreQuestions } from './executor'
+import { dedupeCoreQuestions, parseCropCheck, repairPreservesFigureCounts } from './executor'
 import { buildReviewBlueprint } from './blueprint'
 import type { PageExtraction } from './types'
 
@@ -43,5 +43,19 @@ describe('Gypsum-owned primitives', () => {
       output_path: 'images/gypsum-001.jpg', linked_row_ids: ['4'], page: 3,
     })
     expect(blueprint.planned_rows[0].image_urls).toEqual(['images/gypsum-001.jpg'])
+  })
+
+  it('keeps two independently boxed visuals linked to one question', () => {
+    const check = parseCropCheck({
+      pass: false,
+      figures: [
+        { linked_labels: ['19'], box_2d: [100, 100, 450, 700], kind: 'diagram', anchor: 'villus' },
+        { linked_labels: ['19'], box_2d: [560, 120, 900, 820], kind: 'table', anchor: 'answer table' },
+      ],
+      issues: ['The current crop fused and clipped two separate visuals.'],
+    }, 7, new Set(['19']))
+    expect(check?.figures).toHaveLength(2)
+    expect(check?.figures.every((figure) => figure.linkedLabels[0] === '19')).toBe(true)
+    expect(repairPreservesFigureCounts(check?.figures ?? [], [check!.figures[0]], new Set(['19']))).toBe(false)
   })
 })

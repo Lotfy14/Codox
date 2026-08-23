@@ -378,6 +378,7 @@ Examples:
         const blueprintArtifact = await db.runArtifacts.where('[runId+kind]').equals([runId, 'blueprint-valid']).first()
         const rawBlueprintArtifact = await db.runArtifacts.where('[runId+kind]').equals([runId, 'blueprint-raw']).first()
         const logs = await db.logs.where('runId').equals(runId).toArray()
+        const finalRun = await getRun(runId)
         const allArtifacts = await db.runArtifacts.where('runId').equals(runId).toArray()
         const serializedArtifacts = allArtifacts
           .filter(a => a.kind !== 'crop' && a.kind !== 'page-jpeg')
@@ -411,6 +412,7 @@ Examples:
           blueprint: blueprintArtifact ? blueprintArtifact.json : null,
           rawBlueprint: rawBlueprintArtifact ? rawBlueprintArtifact.text : null,
           logs: logs,
+          run: finalRun,
           artifacts: serializedArtifacts,
           pagesData: pagesData
         }
@@ -451,6 +453,9 @@ Examples:
     if (result.logs) {
       await fs.writeFile(path.join(debugPath, 'execution-logs.json'), JSON.stringify(result.logs, null, 2), 'utf8')
     }
+    if (result.run) {
+      await fs.writeFile(path.join(debugPath, 'run-report.json'), JSON.stringify(result.run, null, 2), 'utf8')
+    }
     if (result.artifacts && result.artifacts.length > 0) {
       const artifactsPath = path.join(debugPath, 'artifacts')
       await fs.mkdir(artifactsPath, { recursive: true })
@@ -479,7 +484,7 @@ Examples:
       console.log(`Crops successfully saved inside: ${path.join(bundlePath, 'images')}`)
     }
 
-    console.log(`\nConversion complete! Flagged rows for review: ${result.flaggedRows}. Safe to import: ${!result.notSafeToImport ? 'Yes' : 'No'}`)
+    console.log(`\nConversion complete! Flagged rows for review: ${result.flaggedRows}. Safe to import: ${!result.notSafeToImport ? 'Yes' : 'No'}. Gemini calls: ${result.run?.requestCount ?? 'unknown'}`)
   } finally {
     if (browser) {
       console.log('Closing headless browser...')

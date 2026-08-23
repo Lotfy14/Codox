@@ -56,3 +56,9 @@ export interface AuditResult {
   incompleteOptionLabels: string[]
   notes: string[]
 }
+
+export interface CropCheck {
+  pass: boolean
+  figures: ExtractedFigure[]
+  issues: string[]
+}

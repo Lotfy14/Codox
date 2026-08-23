@@ -4,15 +4,15 @@ import { otherEngineModel } from '../../../src/providers/gemini'
 import type { VisionResult } from '../../../src/providers/types'
 import { bitmapToJpeg, cropJpeg, decodeImageToBitmap, isImageMime } from '../../../src/pdf/images'
 import { processPdf } from '../../../src/pdf/pipeline'
-import { clearArtifacts, getArtifacts, getPageArtifact, putArtifact, recordRequestUsage, updateRun } from '../../../src/state/runs'
+import { clearArtifacts, clearCropArtifacts, getArtifacts, getCropByPath, getPageArtifact, putArtifact, recordRequestUsage, updateRun } from '../../../src/state/runs'
 import { logEvent } from '../../../src/state/diagnostics'
 import { validBox, pixelBox } from './boxes'
 import { buildReviewBlueprint } from './blueprint'
 import { emitCsv } from './csv'
 import { isRecord, modelJson, text } from './json'
-import { AUDIT_PROMPT, KEY_PROMPT, PAGE_PROMPT, VISUAL_REPAIR_PROMPT } from './prompts'
+import { AUDIT_PROMPT, CROP_CHECK_PROMPT, CROP_REPAIR_PROMPT, KEY_PROMPT, PAGE_PROMPT, VISUAL_REPAIR_PROMPT } from './prompts'
 import { DEFAULT_GYPSUM_MODELS, type GypsumModels } from './model-steps'
-import type { AuditResult, ExtractedFigure, ExtractedQuestion, GypsumCropLink, GypsumQuestion, PageExtraction, PrintedAnswer } from './types'
+import type { AuditResult, CropCheck, ExtractedFigure, ExtractedQuestion, GypsumCropLink, GypsumQuestion, PageExtraction, PrintedAnswer } from './types'
 
 const JPEG = 'image/jpeg'
 const CALL_CONCURRENCY = 4
@@ -36,6 +36,16 @@ const AUDIT_SCHEMA = { type: 'OBJECT', required: ['pass', 'missing_labels', 'dup
   missing_visual_labels: { type: 'ARRAY', items: { type: 'STRING' } }, incomplete_option_labels: { type: 'ARRAY', items: { type: 'STRING' } }, notes: { type: 'ARRAY', items: { type: 'STRING' } },
 } }
 const VISUAL_SCHEMA = { type: 'OBJECT', required: ['figures'], properties: { figures: { type: 'ARRAY', items: { type: 'OBJECT', required: ['box_2d', 'kind', 'anchor'], properties: { box_2d: BOX_SCHEMA, kind: { type: 'STRING' }, anchor: { type: 'STRING' } } } } } }
+const CROP_CHECK_SCHEMA = { type: 'OBJECT', required: ['pass', 'figures', 'issues'], properties: {
+  pass: { type: 'BOOLEAN' },
+  figures: { type: 'ARRAY', items: { type: 'OBJECT', required: ['linked_labels', 'box_2d', 'kind', 'anchor'], properties: {
+    linked_labels: { type: 'ARRAY', items: { type: 'STRING' } }, box_2d: BOX_SCHEMA, kind: { type: 'STRING' }, anchor: { type: 'STRING' },
+  } } },
+  issues: { type: 'ARRAY', items: { type: 'STRING' } },
+} }
+const CROP_REPAIR_SCHEMA = { type: 'OBJECT', required: ['figures'], properties: {
+  figures: CROP_CHECK_SCHEMA.properties.figures,
+} }
 
 export interface GypsumExecutorOptions {
   controller?: GeminiController
@@ -261,21 +271,29 @@ function yearFrom(texts: readonly string[]): string {
   return ''
 }
 
-async function cropFigures(runId: string, figures: readonly ExtractedFigure[], rows: GypsumQuestion[]) {
+async function cropFigures(runId: string, figures: readonly ExtractedFigure[], rows: GypsumQuestion[], padding = 24) {
   const byLabel = new Map(rows.map((row) => [row.id, row]))
   const failures: string[] = []
   const crops: GypsumCropLink[] = []
-  const pathOffset = (await getArtifacts(runId, 'crop')).length
-  for (const [index, figure] of figures.entries()) {
+  const existingPaths = new Set((await getArtifacts(runId, 'crop')).flatMap((crop) => crop.path === undefined ? [] : [crop.path]))
+  let pathNumber = 1
+  const nextPath = () => {
+    while (existingPaths.has(`images/gypsum-${String(pathNumber).padStart(3, '0')}.jpg`)) pathNumber += 1
+    const path = `images/gypsum-${String(pathNumber).padStart(3, '0')}.jpg`
+    existingPaths.add(path)
+    pathNumber += 1
+    return path
+  }
+  for (const figure of figures) {
     const source = await getPageArtifact(runId, figure.page - 1)
     if (source?.bytes === undefined || source.width === undefined || source.height === undefined) {
       failures.push(`page ${figure.page} unavailable for ${figure.anchor}`); continue
     }
     const linked = figure.linkedLabels.filter((id) => byLabel.has(id))
     if (linked.length === 0) continue
-    const path = `images/gypsum-${String(pathOffset + index + 1).padStart(3, '0')}.jpg`
+    const path = nextPath()
     try {
-      const cropped = await cropJpeg(new Blob([source.bytes as BlobPart], { type: JPEG }), pixelBox(figure.box, source.width, source.height, 24))
+      const cropped = await cropJpeg(new Blob([source.bytes as BlobPart], { type: JPEG }), pixelBox(figure.box, source.width, source.height, padding))
       await putArtifact({ runId, kind: 'crop', pageIndex: figure.page - 1, path, bytes: await blobToBytes(cropped) })
       for (const id of linked) (byLabel.get(id) as GypsumQuestion).image_urls.push(path)
       crops.push({ ...figure, linkedLabels: linked, path })
@@ -378,6 +396,154 @@ async function repairMissingVisuals(
   return repaired.flat()
 }
 
+export function parseCropCheck(value: unknown, page: number, allowedLabels: ReadonlySet<string>): CropCheck | undefined {
+  if (!isRecord(value) || typeof value.pass !== 'boolean' || !Array.isArray(value.figures)) return undefined
+  const figures = value.figures.flatMap((item): ExtractedFigure[] => {
+    if (!isRecord(item) || !validBox(item.box_2d) || !Array.isArray(item.linked_labels)) return []
+    const linkedLabels = [...new Set(item.linked_labels.map(label).filter((id) => id !== '' && allowedLabels.has(id)))]
+    if (linkedLabels.length === 0) return []
+    return [{ page, linkedLabels, box: item.box_2d, kind: text(item.kind) || 'other', anchor: text(item.anchor) }]
+  })
+  const issues = Array.isArray(value.issues) ? value.issues.map(text).filter(Boolean) : []
+  return { pass: value.pass && figures.length > 0, figures, issues }
+}
+
+export function repairPreservesFigureCounts(
+  required: readonly ExtractedFigure[],
+  proposed: readonly ExtractedFigure[],
+  labels: ReadonlySet<string>,
+): boolean {
+  for (const id of labels) {
+    const requiredCount = required.filter((figure) => figure.linkedLabels.includes(id)).length
+    const proposedCount = proposed.filter((figure) => figure.linkedLabels.includes(id)).length
+    if (proposedCount < requiredCount) return false
+  }
+  return true
+}
+
+async function verifyCropPages(
+  controller: GeminiController,
+  runId: string,
+  rows: readonly GypsumQuestion[],
+  crops: readonly GypsumCropLink[],
+  model: string,
+  signal?: AbortSignal,
+  onlyPages?: ReadonlySet<number>,
+  round = 0,
+): Promise<Array<{ page: number; check: CropCheck }>> {
+  const pages = [...new Set(crops.map((crop) => crop.page))]
+    .filter((page) => onlyPages === undefined || onlyPages.has(page))
+    .sort((first, second) => first - second)
+  return concurrentMap(pages, CALL_CONCURRENCY, async (page) => {
+    const source = await image(runId, page - 1)
+    const pageRows = rows.filter((row) => row.source_page === page)
+    const allowedLabels = new Set(pageRows.map((row) => row.id))
+    const pageCrops = crops.filter((crop) => crop.page === page)
+    if (source === undefined) {
+      return { page, check: { pass: false, figures: [], issues: ['source_page_unavailable'] } }
+    }
+    const attached: Array<{ image: { mimeType: string; base64Data: string }; path: string; labels: string[] }> = []
+    for (const crop of pageCrops) {
+      const artifact = await getCropByPath(runId, crop.path)
+      if (artifact?.bytes === undefined) continue
+      attached.push({ image: { mimeType: JPEG, base64Data: bytesToBase64(artifact.bytes) }, path: crop.path, labels: crop.linkedLabels })
+    }
+    const mapping = attached.map((crop, index) => ({ image: index + 2, path: crop.path, linked_labels: crop.labels }))
+    const raw = await call(
+      controller,
+      runId,
+      `${CROP_CHECK_PROMPT}\n\nSOURCE PAGE: ${page}\nCURRENT CROP IMAGE MAP:\n${JSON.stringify(mapping)}\n\nQUESTION ROWS ON THIS PAGE:\n${JSON.stringify(pageRows)}`,
+      [source, ...attached.map((crop) => crop.image)],
+      model,
+      signal,
+      16_384,
+      CROP_CHECK_SCHEMA,
+    )
+    await putArtifact({ runId, kind: 'figure-window', chunkIndex: round * 10_000 + page - 1, text: raw })
+    return {
+      page,
+      check: parseCropCheck(modelJson(raw), page, allowedLabels) ?? {
+        pass: false, figures: [], issues: ['crop_check_unparseable'],
+      },
+    }
+  })
+}
+
+async function proposeCropRepairs(
+  controller: GeminiController,
+  runId: string,
+  rows: readonly GypsumQuestion[],
+  crops: readonly GypsumCropLink[],
+  failedChecks: readonly { page: number; check: CropCheck }[],
+  model: string,
+  signal?: AbortSignal,
+): Promise<Array<{ page: number; check: CropCheck }>> {
+  const failed = failedChecks.filter(({ check }) => !check.pass)
+  return concurrentMap(failed, CALL_CONCURRENCY, async ({ page, check }) => {
+    const source = await image(runId, page - 1)
+    const pageRows = rows.filter((row) => row.source_page === page)
+    const allowedLabels = new Set(pageRows.map((row) => row.id))
+    if (source === undefined) {
+      return { page, check: { pass: false, figures: [], issues: ['source_page_unavailable_for_crop_repair'] } }
+    }
+    const inventory = crops.filter((crop) => crop.page === page).map((crop) => ({
+      path: crop.path, linked_labels: crop.linkedLabels, box_2d: crop.box, kind: crop.kind, anchor: crop.anchor,
+    }))
+    const raw = await call(
+      controller,
+      runId,
+      `${CROP_REPAIR_PROMPT}\n\nSOURCE PAGE: ${page}\nDEFECT REPORT:\n${JSON.stringify(check.issues)}\n\nINSPECTOR REQUIRED INVENTORY:\n${JSON.stringify(check.figures)}\n\nCURRENT INVENTORY:\n${JSON.stringify(inventory)}\n\nQUESTION ROWS:\n${JSON.stringify(pageRows)}`,
+      [source],
+      model,
+      signal,
+      16_384,
+      CROP_REPAIR_SCHEMA,
+    )
+    await putArtifact({ runId, kind: 'figure-window', chunkIndex: 5_000 + page - 1, text: raw })
+    const parsed = modelJson(raw)
+    const normalized = isRecord(parsed)
+      ? parseCropCheck({ pass: false, figures: parsed.figures, issues: check.issues }, page, allowedLabels)
+      : undefined
+    if (normalized !== undefined) {
+      const currentFigures = crops.filter((crop) => crop.page === page)
+      if (
+        !repairPreservesFigureCounts(check.figures, normalized.figures, allowedLabels) ||
+        !repairPreservesFigureCounts(currentFigures, normalized.figures, allowedLabels)
+      ) {
+        normalized.figures = []
+        normalized.issues.push('crop_repair_reduced_required_image_count')
+      }
+    }
+    return {
+      page,
+      check: normalized ?? { pass: false, figures: [], issues: [...check.issues, 'crop_repair_unparseable'] },
+    }
+  })
+}
+
+async function replaceFailedPageCrops(
+  runId: string,
+  rows: GypsumQuestion[],
+  crops: readonly GypsumCropLink[],
+  checks: readonly { page: number; check: CropCheck }[],
+) {
+  const failed = checks.filter(({ check }) => !check.pass && check.figures.length > 0)
+  const failedPages = new Set(failed.map(({ page }) => page))
+  const replacementFigures = failed.flatMap(({ check }) => check.figures)
+  const removed = crops.filter((crop) => failedPages.has(crop.page))
+  const removedPaths = new Set(removed.map((crop) => crop.path))
+  await clearCropArtifacts(runId, removedPaths)
+  for (const row of rows) row.image_urls = row.image_urls.filter((path) => !removedPaths.has(path))
+  const replacement = await cropFigures(runId, replacementFigures, rows, 8)
+  return {
+    failedPages,
+    crops: [...crops.filter((crop) => !failedPages.has(crop.page)), ...replacement.crops],
+    figures: replacementFigures,
+    failures: replacement.failures,
+    checkIssues: failed.flatMap(({ page, check }) => check.issues.map((issue) => `page_${page}:${issue}`)),
+  }
+}
+
 export async function executeRun(runId: string, pdfBytes: Uint8Array, options: GypsumExecutorOptions = {}): Promise<Outcome> {
   const controller = options.controller ?? geminiController
   const models = { ...DEFAULT_GYPSUM_MODELS, ...options.models }
@@ -412,7 +578,7 @@ export async function executeRun(runId: string, pdfBytes: Uint8Array, options: G
     const deduped = dedupeCoreQuestions(pages)
     extractionIssues.push(...deduped.issues)
     const extractedRows = deduped.questions
-    const figures = pages.flatMap((page) => page.figures)
+    let figures = pages.flatMap((page) => page.figures)
     const textArtifacts = await getArtifacts(runId, 'page-text')
     const examText = textArtifacts.filter((artifact) => (artifact.pageIndex ?? rendered.examPages) < rendered.examPages).map((artifact) => artifact.text ?? '')
     const visibleYear = yearFrom(examText)
@@ -435,7 +601,7 @@ export async function executeRun(runId: string, pdfBytes: Uint8Array, options: G
     await updateRun(runId, { step: 'crops', stepStartedAt: Date.now() })
     const firstCropPass = await cropFigures(runId, figures, rows)
     const cropFailures = [...firstCropPass.failures]
-    const cropLinks = [...firstCropPass.crops]
+    let cropLinks = [...firstCropPass.crops]
 
     await updateRun(runId, { step: 'audit', stepStartedAt: Date.now() })
     let audits = await audit(controller, runId, rendered.examPages, rows, figures, models.audit, options.signal)
@@ -450,13 +616,45 @@ export async function executeRun(runId: string, pdfBytes: Uint8Array, options: G
         audits = await audit(controller, runId, rendered.examPages, rows, figures, models.audit, options.signal)
       }
     }
+
+    await updateRun(runId, { step: 'crops', stepStartedAt: Date.now() })
+    const firstCropChecks = await verifyCropPages(controller, runId, rows, cropLinks, models.crop_check, options.signal)
+    const failedFirstChecks = firstCropChecks.filter(({ check }) => !check.pass)
+    const cropRepairs = await proposeCropRepairs(
+      controller, runId, rows, cropLinks, failedFirstChecks, models.crop_check, options.signal,
+    )
+    const cropQualityFailures: string[] = cropRepairs
+      .filter(({ check }) => check.figures.length === 0)
+      .flatMap(({ page, check }) => [
+        `crop_check_page_${page}:no_valid_replacement_inventory`,
+        ...check.issues.map((issue) => `crop_check_page_${page}:${issue}`),
+      ])
+    if (cropRepairs.some(({ check }) => check.figures.length > 0)) {
+      const replacement = await replaceFailedPageCrops(runId, rows, cropLinks, cropRepairs)
+      cropFailures.push(...replacement.failures)
+      cropLinks = replacement.crops
+      figures = [
+        ...figures.filter((figure) => !replacement.failedPages.has(figure.page)),
+        ...replacement.figures,
+      ]
+      const secondCropChecks = await verifyCropPages(
+        controller, runId, rows, cropLinks, models.crop_check, options.signal,
+        replacement.failedPages, 1,
+      )
+      cropQualityFailures.push(...secondCropChecks
+        .filter(({ check }) => !check.pass)
+        .flatMap(({ page, check }) => [
+          `crop_check_page_${page}:failed_after_repair`,
+          ...check.issues.map((issue) => `crop_check_page_${page}:${issue}`),
+        ]))
+    }
     const deterministic = deterministicIssues(rows, expectedCount(examText))
     const modelFailures = audits.filter((result) => !result.pass)
-    const notSafeToImport = extractionIssues.length > 0 || cropFailures.length > 0 || deterministic.missing.length > 0 || deterministic.duplicate.length > 0 || modelFailures.length > 0
+    const notSafeToImport = extractionIssues.length > 0 || cropFailures.length > 0 || cropQualityFailures.length > 0 || deterministic.missing.length > 0 || deterministic.duplicate.length > 0 || modelFailures.length > 0
     await putArtifact({ runId, kind: 'audit-report', json: {
       audit_pass: !notSafeToImport, risk_class: notSafeToImport ? 'not_safe_to_import' : 'safe_to_import',
       failed_rows: audits.flatMap((result) => [...result.missingVisualLabels, ...result.incompleteOptionLabels]),
-      global_failures: [...extractionIssues, ...cropFailures, ...deterministic.missing.map((id) => `missing_question:${id}`), ...deterministic.duplicate.map((id) => `duplicate_question:${id}`)],
+      global_failures: [...extractionIssues, ...cropFailures, ...cropQualityFailures, ...deterministic.missing.map((id) => `missing_question:${id}`), ...deterministic.duplicate.map((id) => `duplicate_question:${id}`)],
       answer_policy_violations: [], crop_failures: cropFailures, notes: audits.flatMap((result) => result.notes),
     } })
 
@@ -467,7 +665,7 @@ export async function executeRun(runId: string, pdfBytes: Uint8Array, options: G
     await putArtifact({ runId, kind: 'csv', text: csv })
     const flaggedRows = rows.filter((row) => row.needs_review !== '').length
     await updateRun(runId, { status: 'done', flaggedRows, notSafeToImport, auditUnavailable: false })
-    await logEvent({ scope: 'engine', level: notSafeToImport ? 'warn' : 'info', event: 'gypsum.done', runId, detail: { rows: rows.length, figures: figures.length, flaggedRows, cropFailures: cropFailures.length, auditFailures: modelFailures.length } })
+    await logEvent({ scope: 'engine', level: notSafeToImport ? 'warn' : 'info', event: 'gypsum.done', runId, detail: { rows: rows.length, figures: figures.length, flaggedRows, cropFailures: cropFailures.length, cropQualityFailures: cropQualityFailures.length, auditFailures: modelFailures.length } })
     return { status: 'done', runId, csv, flaggedRows, notSafeToImport }
   } catch (error) {
     if (error instanceof ProviderStop) {
