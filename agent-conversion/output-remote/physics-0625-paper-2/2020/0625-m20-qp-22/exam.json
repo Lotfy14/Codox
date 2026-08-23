@@ -1,7 +1,7 @@
 {
   "codoxAgentBundle": 1,
   "sourceFile": "0625_m20_qp_22.pdf",
-  "producedBy": "",
+  "producedBy": "claude-opus-5 (agent-conversion)",
   "pages": [
     {
       "index": 0,
@@ -165,7 +165,1621 @@
       "role": "answer-key"
     }
   ],
-  "figures": [],
+  "figures": [
+    {
+      "id": "fig-01",
+      "file": "images/fig-01.jpg",
+      "page": 2,
+      "box": [
+        100,
+        215,
+        335,
+        790
+      ]
+    },
+    {
+      "id": "fig-02",
+      "file": "images/fig-02.jpg",
+      "page": 2,
+      "box": [
+        450,
+        380,
+        592,
+        625
+      ]
+    },
+    {
+      "id": "fig-03",
+      "file": "images/fig-03.jpg",
+      "page": 3,
+      "box": [
+        470,
+        265,
+        610,
+        470
+      ]
+    },
+    {
+      "id": "fig-04",
+      "file": "images/fig-04.jpg",
+      "page": 3,
+      "box": [
+        455,
+        520,
+        610,
+        740
+      ]
+    },
+    {
+      "id": "fig-05",
+      "file": "images/fig-05.jpg",
+      "page": 3,
+      "box": [
+        645,
+        108,
+        782,
+        470
+      ]
+    },
+    {
+      "id": "fig-06",
+      "file": "images/fig-06.jpg",
+      "page": 4,
+      "box": [
+        112,
+        275,
+        362,
+        730
+      ]
+    },
+    {
+      "id": "fig-07",
+      "file": "images/fig-07.jpg",
+      "page": 4,
+      "box": [
+        412,
+        108,
+        548,
+        515
+      ]
+    },
+    {
+      "id": "fig-08",
+      "file": "images/fig-08.jpg",
+      "page": 5,
+      "box": [
+        115,
+        190,
+        240,
+        815
+      ]
+    },
+    {
+      "id": "fig-09",
+      "file": "images/fig-09.jpg",
+      "page": 5,
+      "box": [
+        418,
+        320,
+        582,
+        680
+      ]
+    },
+    {
+      "id": "fig-10",
+      "file": "images/fig-10.jpg",
+      "page": 6,
+      "box": [
+        145,
+        200,
+        368,
+        800
+      ]
+    },
+    {
+      "id": "fig-11",
+      "file": "images/fig-11.jpg",
+      "page": 6,
+      "box": [
+        682,
+        108,
+        830,
+        668
+      ]
+    },
+    {
+      "id": "fig-12",
+      "file": "images/fig-12.jpg",
+      "page": 7,
+      "box": [
+        200,
+        395,
+        328,
+        590
+      ]
+    },
+    {
+      "id": "fig-13",
+      "file": "images/fig-13.jpg",
+      "page": 8,
+      "box": [
+        112,
+        275,
+        282,
+        730
+      ]
+    },
+    {
+      "id": "fig-14",
+      "file": "images/fig-14.jpg",
+      "page": 8,
+      "box": [
+        318,
+        105,
+        662,
+        890
+      ]
+    },
+    {
+      "id": "fig-15",
+      "file": "images/fig-15.jpg",
+      "page": 9,
+      "box": [
+        118,
+        350,
+        280,
+        648
+      ]
+    },
+    {
+      "id": "fig-16",
+      "file": "images/fig-16.jpg",
+      "page": 9,
+      "box": [
+        462,
+        150,
+        512,
+        845
+      ]
+    },
+    {
+      "id": "fig-17",
+      "file": "images/fig-17.jpg",
+      "page": 10,
+      "box": [
+        100,
+        320,
+        256,
+        678
+      ]
+    },
+    {
+      "id": "fig-18",
+      "file": "images/fig-18.jpg",
+      "page": 10,
+      "box": [
+        350,
+        108,
+        487,
+        497
+      ]
+    },
+    {
+      "id": "fig-19",
+      "file": "images/fig-19.jpg",
+      "page": 11,
+      "box": [
+        566,
+        440,
+        686,
+        565
+      ]
+    },
+    {
+      "id": "fig-20",
+      "file": "images/fig-20.jpg",
+      "page": 11,
+      "box": [
+        765,
+        108,
+        918,
+        498
+      ]
+    },
+    {
+      "id": "fig-21",
+      "file": "images/fig-21.jpg",
+      "page": 12,
+      "box": [
+        105,
+        150,
+        274,
+        445
+      ]
+    },
+    {
+      "id": "fig-22",
+      "file": "images/fig-22.jpg",
+      "page": 12,
+      "box": [
+        105,
+        515,
+        274,
+        835
+      ]
+    },
+    {
+      "id": "fig-23",
+      "file": "images/fig-23.jpg",
+      "page": 12,
+      "box": [
+        310,
+        72,
+        424,
+        415
+      ]
+    },
+    {
+      "id": "fig-24",
+      "file": "images/fig-24.jpg",
+      "page": 12,
+      "box": [
+        310,
+        480,
+        424,
+        915
+      ]
+    },
+    {
+      "id": "fig-25",
+      "file": "images/fig-25.jpg",
+      "page": 13,
+      "box": [
+        115,
+        108,
+        616,
+        890
+      ]
+    },
+    {
+      "id": "fig-26",
+      "file": "images/fig-26.jpg",
+      "page": 14,
+      "box": [
+        312,
+        105,
+        460,
+        900
+      ]
+    },
+    {
+      "id": "fig-27",
+      "file": "images/fig-27.jpg",
+      "page": 14,
+      "box": [
+        542,
+        108,
+        694,
+        622
+      ]
+    },
+    {
+      "id": "fig-28",
+      "file": "images/fig-28.jpg",
+      "page": 15,
+      "box": [
+        195,
+        230,
+        348,
+        770
+      ]
+    },
+    {
+      "id": "fig-29",
+      "file": "images/fig-29.jpg",
+      "page": 15,
+      "box": [
+        390,
+        230,
+        542,
+        770
+      ]
+    },
+    {
+      "id": "fig-30",
+      "file": "images/fig-30.jpg",
+      "page": 15,
+      "box": [
+        572,
+        108,
+        708,
+        534
+      ]
+    },
+    {
+      "id": "fig-31",
+      "file": "images/fig-31.jpg",
+      "page": 16,
+      "box": [
+        103,
+        108,
+        298,
+        848
+      ]
+    },
+    {
+      "id": "fig-32",
+      "file": "images/fig-32.jpg",
+      "page": 16,
+      "box": [
+        395,
+        108,
+        530,
+        518
+      ]
+    },
+    {
+      "id": "fig-33",
+      "file": "images/fig-33.jpg",
+      "page": 16,
+      "box": [
+        625,
+        95,
+        818,
+        910
+      ]
+    },
+    {
+      "id": "fig-34",
+      "file": "images/fig-34.jpg",
+      "page": 17,
+      "box": [
+        118,
+        300,
+        268,
+        700
+      ]
+    },
+    {
+      "id": "fig-35",
+      "file": "images/fig-35.jpg",
+      "page": 17,
+      "box": [
+        338,
+        108,
+        482,
+        418
+      ]
+    },
+    {
+      "id": "fig-36",
+      "file": "images/fig-36.jpg",
+      "page": 17,
+      "box": [
+        548,
+        390,
+        720,
+        600
+      ]
+    },
+    {
+      "id": "fig-37",
+      "file": "images/fig-37.jpg",
+      "page": 18,
+      "box": [
+        100,
+        350,
+        140,
+        650
+      ]
+    },
+    {
+      "id": "fig-38",
+      "file": "images/fig-38.jpg",
+      "page": 18,
+      "box": [
+        175,
+        95,
+        286,
+        915
+      ]
+    },
+    {
+      "id": "fig-39",
+      "file": "images/fig-39.jpg",
+      "page": 18,
+      "box": [
+        335,
+        205,
+        510,
+        795
+      ]
+    },
+    {
+      "id": "fig-40",
+      "file": "images/fig-40.jpg",
+      "page": 19,
+      "box": [
+        132,
+        245,
+        462,
+        760
+      ]
+    },
+    {
+      "id": "fig-41",
+      "file": "images/fig-41.jpg",
+      "page": 20,
+      "box": [
+        116,
+        225,
+        243,
+        805
+      ]
+    },
+    {
+      "id": "fig-42",
+      "file": "images/fig-42.jpg",
+      "page": 20,
+      "box": [
+        420,
+        255,
+        772,
+        750
+      ]
+    }
+  ],
   "topics": [],
-  "questions": []
+  "questions": [
+    {
+      "id": "q001",
+      "question": "The diagram shows a rectangular metal sheet close to two rulers.\n\nWhat is the area of the metal sheet?",
+      "options": [
+        "700 cm²",
+        "875 cm²",
+        "900 cm²",
+        "1125 cm²"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 22 (answer-key), row 1: answer A"
+      },
+      "figures": [
+        "fig-01"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 2,
+      "box": [
+        70,
+        72,
+        390,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q002",
+      "question": "A ball falls from rest through the air towards the ground. The diagram shows two forces acting on the ball.\n\nAs the ball falls, the air resistance increases.\n\nWhich statement is correct?",
+      "options": [
+        "The acceleration of the ball decreases.",
+        "The acceleration of the ball increases.",
+        "The speed of the ball decreases.",
+        "The gravitational force on the ball decreases."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 22 (answer-key), row 2: answer A"
+      },
+      "figures": [
+        "fig-02"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 2,
+      "box": [
+        405,
+        72,
+        758,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q003",
+      "question": "A compressed spring projects a ball horizontally in a vacuum chamber.\n\nOn the Earth, the ball reaches the chamber floor 4.0 m in front of the spring.\n\nAn identical experiment is done on the Moon. The gravitational field strength is lower on the Moon than on the Earth.\n\nThe experimental results on the Moon are compared with those on the Earth.\n\nWhich statement is correct?",
+      "options": [
+        "The horizontal speed is greater on the Moon and the ball hits the floor 4.0 m in front of the spring.",
+        "The horizontal speed is greater on the Moon and the ball hits the floor more than 4.0 m in front of the spring.",
+        "The horizontal speed is the same on the Moon and the ball hits the floor 4.0 m in front of the spring.",
+        "The horizontal speed is the same on the Moon and the ball hits the floor more than 4.0 m in front of the spring."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 22 (answer-key), row 3: answer D"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 3,
+      "box": [
+        70,
+        72,
+        398,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q004",
+      "question": "Diagram 1 shows a piece of flexible material that contains many pockets of air. Diagram 2 shows the same piece of flexible material after it has been compressed so that its volume decreases.\n\nWhat happens to the mass and to the weight of the flexible material when it is compressed?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 22 (answer-key), row 4: answer D"
+      },
+      "figures": [
+        "fig-03",
+        "fig-04",
+        "fig-05"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 3,
+      "box": [
+        414,
+        72,
+        784,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q005",
+      "question": "The graph shows how the strength of the Earth’s gravitational field varies as the distance from the Earth’s surface increases.\n\nWhich row describes the effect that this has on the mass and on the weight of an object as it moves further away from the Earth’s surface?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 22 (answer-key), row 5: answer C"
+      },
+      "figures": [
+        "fig-06",
+        "fig-07"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 4,
+      "box": [
+        70,
+        72,
+        550,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q006",
+      "question": "A measuring cylinder contains 40 cm³ of water.\n\nA solid metal ball is dropped into the water and the water level rises to 56 cm³.\n\nThe mass of the ball is 80 g.\n\nWhat is the density of the metal from which the ball is made?",
+      "options": [
+        "0.20 g / cm³",
+        "1.4 g / cm³",
+        "2.0 g / cm³",
+        "5.0 g / cm³"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 22 (answer-key), row 6: answer D"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 4,
+      "box": [
+        563,
+        72,
+        712,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q007",
+      "question": "A car travels along a horizontal road at constant speed. Three horizontal forces act on the car. The diagram shows two of these forces.\n\nWhat is the size and the direction of the third horizontal force acting on the car?",
+      "options": [
+        "1200 N backwards",
+        "1200 N forwards",
+        "1800 N backwards",
+        "1800 N forwards"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 22 (answer-key), row 7: answer A"
+      },
+      "figures": [
+        "fig-08"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 5,
+      "box": [
+        70,
+        72,
+        375,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q008",
+      "question": "A car is driven round a bend in the road at a constant speed.\n\nWhat is the direction of the resultant force on the car when it is going round the bend?",
+      "options": [
+        "parallel to the motion and in the same direction as the motion",
+        "parallel to the motion and in the opposite direction to the motion",
+        "perpendicular to the motion and towards the inside of the bend",
+        "perpendicular to the motion and towards the outside of the bend"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 22 (answer-key), row 8: answer C"
+      },
+      "figures": [
+        "fig-09"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 5,
+      "box": [
+        388,
+        72,
+        720,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q009",
+      "question": "An athlete with mass 70 kg trains by performing press-ups with a load on his back. The diagram shows the perpendicular distances involved.\n\nThe centre of mass of the athlete is CM and the centre of mass of the load he is carrying is CL.\n\nThe mass of the load is 6.0 kg.\n\nWhat is the upward force exerted by his two arms?",
+      "options": [
+        "54 N",
+        "76 N",
+        "540 N",
+        "760 N"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 22 (answer-key), row 9: answer C"
+      },
+      "figures": [
+        "fig-10"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 6,
+      "box": [
+        70,
+        72,
+        458,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q010",
+      "question": "An air pistol fires a pellet forwards.\n\nWhat is the motion of the air pistol?",
+      "options": [
+        "The air pistol moves backwards with speed greater than the pellet.",
+        "The air pistol moves backwards with speed less than the pellet.",
+        "The air pistol moves forward with speed greater than the pellet.",
+        "The air pistol moves forward with speed less than the pellet."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 22 (answer-key), row 10: answer B"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 6,
+      "box": [
+        472,
+        72,
+        638,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q011",
+      "question": "Which row describes an advantage and a disadvantage of wind turbines?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 22 (answer-key), row 11: answer C"
+      },
+      "figures": [
+        "fig-11"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 6,
+      "box": [
+        652,
+        72,
+        824,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q012",
+      "question": "An electric motor provides 900 J of useful output energy. The efficiency of the motor is 60 %.\n\nHow much electrical energy is supplied to the motor?",
+      "options": [
+        "15 J",
+        "540 J",
+        "1500 J",
+        "5400 J"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 22 (answer-key), row 12: answer C"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 6,
+      "box": [
+        836,
+        72,
+        928,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q013",
+      "question": "A crane takes 2.0 minutes to lift a 500 kg load to the top of a building that is 12 m high.\n\nWhat is the useful power developed against gravity by the crane?",
+      "options": [
+        "21 W",
+        "50 W",
+        "500 W",
+        "30 000 W"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 22 (answer-key), row 13: answer C"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 7,
+      "box": [
+        70,
+        72,
+        158,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q014",
+      "question": "A skier is standing still on a flat area of snow.\n\nThe weight of the skier is 550 N. The total area of his skis in contact with the ground is 0.015 m².\n\nWhat is the pressure exerted on the ground by the skier?",
+      "options": [
+        "0.83 N / m²",
+        "8.3 N / m²",
+        "3700 N / m²",
+        "37 000 N / m²"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 22 (answer-key), row 14: answer D"
+      },
+      "figures": [
+        "fig-12"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 7,
+      "box": [
+        172,
+        72,
+        420,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q015",
+      "question": "A tall cylinder is partly filled with two liquids which do not mix. The two liquids have different densities. A student measures the pressure due to the liquids at different depths.\n\nWhich graph shows how the liquid pressure varies between positions P and Q?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 22 (answer-key), row 15: answer B"
+      },
+      "figures": [
+        "fig-13",
+        "fig-14"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 8,
+      "box": [
+        70,
+        72,
+        665,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q016",
+      "question": "When pollen grains in water are viewed through a microscope, they are seen to be in continuous, rapid random motion.\n\nWhat causes a pollen grain to move in this way?",
+      "options": [
+        "convection currents in the water",
+        "bombardment by a single molecule of water",
+        "uneven bombardment on different sides by water molecules",
+        "collision with another pollen grain due to their kinetic energies"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 22 (answer-key), row 16: answer C"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 8,
+      "box": [
+        677,
+        72,
+        860,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q017",
+      "question": "A student measures the mass of warm water in an open container over two minutes. The container is kept at a constant temperature. The results are in the table.\n\nWhy does the mass of the water change?",
+      "options": [
+        "The water evaporates.",
+        "The water freezes.",
+        "The water condenses.",
+        "The water boils."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 22 (answer-key), row 17: answer A"
+      },
+      "figures": [
+        "fig-15"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 9,
+      "box": [
+        70,
+        72,
+        417,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q018",
+      "question": "Which points are the fixed points of the liquid-in-glass thermometer shown?",
+      "options": [
+        "the beginning and end points of the column of liquid",
+        "the points marked –10 °C and 110 °C",
+        "the points marked 0 °C and 100 °C",
+        "the top and bottom points of the thermometer bulb"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 22 (answer-key), row 18: answer C"
+      },
+      "figures": [
+        "fig-16"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 9,
+      "box": [
+        430,
+        72,
+        620,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q019",
+      "question": "The specific heat capacities of aluminium, iron, ethanol and water are given.\n\n1 kg of each metal is put into 5 kg of each liquid.\n\nThe starting temperature of each metal is 60 °C. The starting temperature of each liquid is 10 °C.\n\nWhich example has the highest final temperature?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 22 (answer-key), row 19: answer A"
+      },
+      "figures": [
+        "fig-17",
+        "fig-18"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 10,
+      "box": [
+        70,
+        72,
+        489,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q020",
+      "question": "Metals are good thermal conductors.\n\nInsulators are poor thermal conductors.\n\nWhich description of the mechanism of thermal conductivity is correct?",
+      "options": [
+        "In insulators, conduction takes place by electron transfer and molecular vibrations.",
+        "In insulators, conduction takes place by electron transfer only.",
+        "In metals, conduction takes place by electron transfer and molecular vibrations.",
+        "In metals, conduction takes place by electron transfer only."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 22 (answer-key), row 20: answer C"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 10,
+      "box": [
+        501,
+        72,
+        698,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q021",
+      "question": "A teacher shows his class a polystyrene cup. The cup is made from thick plastic with lots of tiny air bubbles in it.\n\nHe asks the class why the cup is so good at keeping a hot drink warm. Three suggestions are made.\n\n1 It contains air which is a poor thermal conductor.\n2 The air is trapped in tiny bubbles so very little convection is possible.\n3 The plastic is a poor thermal conductor.\n\nWhich suggestions are correct?",
+      "options": [
+        "1 and 2 only",
+        "1 and 3 only",
+        "2 and 3 only",
+        "1, 2 and 3"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 22 (answer-key), row 21: answer D"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 11,
+      "box": [
+        70,
+        72,
+        300,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q022",
+      "question": "A boy jumps into an indoor swimming pool. He notices that the water appears to get colder as he goes deeper underwater. This is due to convection.\n\nWhich statement is correct?",
+      "options": [
+        "Cold water is more dense than warm water so it sinks to the bottom of the pool.",
+        "Warm water is more dense than cold water so it rises to the surface of the pool.",
+        "The molecules in cold water have more kinetic energy than the molecules in warm water so they move to the bottom of the pool faster.",
+        "The molecules in warm water are closer together than the molecules in cold water so they rise to the surface of the pool."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 22 (answer-key), row 22: answer A"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 11,
+      "box": [
+        314,
+        72,
+        526,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q023",
+      "question": "Four students A, B, C and D, investigate the diffraction of water waves through a gap.\n\nEach student uses a different gap size and a different wavelength for the water waves.\n\nWhich student produces the waves which have the most diffraction?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 22 (answer-key), row 23: answer A"
+      },
+      "figures": [
+        "fig-19",
+        "fig-20"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 11,
+      "box": [
+        539,
+        72,
+        920,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q024",
+      "question": "The diagrams show examples of wave motion.\n\nWhich waves are longitudinal?",
+      "options": [
+        "1 only",
+        "2 and 3 only",
+        "2, 3 and 4",
+        "2 and 4 only"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 22 (answer-key), row 24: answer D"
+      },
+      "figures": [
+        "fig-21",
+        "fig-22",
+        "fig-23",
+        "fig-24"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 12,
+      "box": [
+        70,
+        72,
+        489,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q025",
+      "question": "Which diagram shows how the light from a candle is reflected by a mirror, and shows the position of the image formed?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 22 (answer-key), row 25: answer A"
+      },
+      "figures": [
+        "fig-25"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 13,
+      "box": [
+        70,
+        72,
+        618,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q026",
+      "question": "A converging lens can be used as a magnifying glass.\n\nWhat will be the nature of the image?",
+      "options": [
+        "real, inverted, diminished",
+        "real, upright, enlarged",
+        "virtual, inverted, enlarged",
+        "virtual, upright, enlarged"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 22 (answer-key), row 26: answer D"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 13,
+      "box": [
+        630,
+        72,
+        796,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q027",
+      "question": "The wavelength of blue light changes from 4.7 × 10⁻⁷ m to 3.5 × 10⁻⁷ m as it passes from air to water.\n\nWhat is the speed of this light in water?",
+      "options": [
+        "7.4 × 10⁷ m / s",
+        "1.3 × 10⁸ m / s",
+        "2.2 × 10⁸ m / s",
+        "3.0 × 10⁸ m / s"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 22 (answer-key), row 27: answer C"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 14,
+      "box": [
+        68,
+        72,
+        255,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q028",
+      "question": "The diagram shows compressions and rarefactions in air as a sound wave moves from left to right.\n\nA quieter sound of the same frequency is made.\n\nWhat will happen to the number of particles in a region of rarefaction and in a region of compression?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 22 (answer-key), row 28: answer C"
+      },
+      "figures": [
+        "fig-26",
+        "fig-27"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 14,
+      "box": [
+        269,
+        72,
+        697,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q029",
+      "question": "The diagrams show three different metal rods P, Q and R, inside coils of wire.\n\nSmall iron nails are placed on a wooden bench under the rods.\n\nDiagram 1 shows the situation when there are electric currents in the wires.\n\nDiagram 2 shows the situation when the currents are switched off.\n\nWhich row correctly identifies the metal rods?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 23 (answer-key), row 29: answer A"
+      },
+      "figures": [
+        "fig-28",
+        "fig-29",
+        "fig-30"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 15,
+      "box": [
+        70,
+        72,
+        712,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q030",
+      "question": "Which row describes conventional current and electron flow in a circuit containing a cell?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 23 (answer-key), row 30: answer C"
+      },
+      "figures": [
+        "fig-31"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 16,
+      "box": [
+        70,
+        72,
+        300,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q031",
+      "question": "A student makes four resistors using different pieces of wire. The wires have different diameters and lengths. All the pieces of wire are made of the same material.\n\nWhich piece of wire will make the resistor with the largest resistance?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 23 (answer-key), row 31: answer B"
+      },
+      "figures": [
+        "fig-32"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 16,
+      "box": [
+        316,
+        72,
+        533,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q032",
+      "question": "A student is to determine the resistance of resistor R. She uses a circuit including a voltmeter and an ammeter.\n\nWhich circuit should be used?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 23 (answer-key), row 32: answer D"
+      },
+      "figures": [
+        "fig-33"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 16,
+      "box": [
+        546,
+        72,
+        818,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q033",
+      "question": "The diagram shows a battery connected to two resistors. Three ammeters M1, M2 and M3 are connected in the circuit.\n\nAmmeter M1 reads 1.0 A.\n\nWhat are the readings on M2 and on M3?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 23 (answer-key), row 33: answer D"
+      },
+      "figures": [
+        "fig-34",
+        "fig-35"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 17,
+      "box": [
+        70,
+        72,
+        484,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q034",
+      "question": "A cell is connected to a parallel combination of a 2.0 Ω resistor and a 4.0 Ω resistor. The current in the 4.0 Ω resistor is 1.0 A.\n\nWhat is the current in the cell?",
+      "options": [
+        "1.0 A",
+        "1.5 A",
+        "2.0 A",
+        "3.0 A"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 23 (answer-key), row 34: answer D"
+      },
+      "figures": [
+        "fig-36"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 17,
+      "box": [
+        500,
+        72,
+        783,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q035",
+      "question": "The two inputs of a NAND gate are joined together.\n\nWhich truth table represents the action of this gate?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 23 (answer-key), row 35: answer B"
+      },
+      "figures": [
+        "fig-37",
+        "fig-38"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 18,
+      "box": [
+        70,
+        72,
+        290,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q036",
+      "question": "The diagram shows a transformer that has an output voltage of 12 V.\n\nHow many turns of wire are in the secondary coil?",
+      "options": [
+        "12",
+        "20",
+        "50",
+        "20 000"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 23 (answer-key), row 36: answer C"
+      },
+      "figures": [
+        "fig-39"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 18,
+      "box": [
+        300,
+        72,
+        569,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q037",
+      "question": "The diagrams show different particles moving through a magnetic field.\n\nWhich particle experiences a magnetic force acting up out of the plane of the paper?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 23 (answer-key), row 37: answer C"
+      },
+      "figures": [
+        "fig-40"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 19,
+      "box": [
+        70,
+        72,
+        462,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q038",
+      "question": "When Rutherford bombarded thin gold foil with α-particles, he found that some α-particles were deflected through large angles.\n\nWhich statement explains this deflection?",
+      "options": [
+        "Most of the atom consists of empty space.",
+        "All of the positive charge and most of the mass of the gold atom are concentrated in a small volume.",
+        "Positive charge in the gold atom is spread evenly throughout the atom.",
+        "All of the negative charge is concentrated at its centre."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 23 (answer-key), row 38: answer B"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 19,
+      "box": [
+        474,
+        72,
+        671,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q039",
+      "question": "The diagram shows the path followed by α-particles as they pass between two charged plates. They are deflected downwards.\n\nWhat happens to β-particles passing through the same electric field?",
+      "options": [
+        "They are deflected downwards more than the α-particles.",
+        "They are deflected upwards.",
+        "They are not deflected at all.",
+        "They are deflected downwards by the same amount as the α-particles."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 23 (answer-key), row 39: answer B"
+      },
+      "figures": [
+        "fig-41"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 20,
+      "box": [
+        68,
+        72,
+        381,
+        935
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q040",
+      "question": "The graph shows the count rate from a radioactive source over a period of time.\n\nWhat is the half-life of the source?",
+      "options": [
+        "0.5 hour",
+        "1.0 hour",
+        "1.5 hours",
+        "3.0 hours"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 23 (answer-key), row 40: answer B"
+      },
+      "figures": [
+        "fig-42"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 20,
+      "box": [
+        394,
+        72,
+        833,
+        935
+      ],
+      "flag": ""
+    }
+  ]
 }
