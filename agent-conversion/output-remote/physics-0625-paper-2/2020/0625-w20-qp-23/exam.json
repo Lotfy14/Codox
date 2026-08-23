@@ -1,7 +1,7 @@
 {
   "codoxAgentBundle": 1,
   "sourceFile": "0625_w20_qp_23.pdf",
-  "producedBy": "",
+  "producedBy": "claude-opus-5 (agent-conversion)",
   "pages": [
     {
       "index": 0,
@@ -137,7 +137,1423 @@
       "role": "answer-key"
     }
   ],
-  "figures": [],
+  "figures": [
+    {
+      "id": "fig-01",
+      "file": "images/fig-01.jpg",
+      "page": 2,
+      "box": [
+        398,
+        285,
+        658,
+        715
+      ]
+    },
+    {
+      "id": "fig-02",
+      "file": "images/fig-02.jpg",
+      "page": 3,
+      "box": [
+        146,
+        112,
+        292,
+        576
+      ]
+    },
+    {
+      "id": "fig-03",
+      "file": "images/fig-03.jpg",
+      "page": 3,
+      "box": [
+        552,
+        235,
+        642,
+        775
+      ]
+    },
+    {
+      "id": "fig-04",
+      "file": "images/fig-04.jpg",
+      "page": 4,
+      "box": [
+        160,
+        285,
+        416,
+        725
+      ]
+    },
+    {
+      "id": "fig-05",
+      "file": "images/fig-05.jpg",
+      "page": 5,
+      "box": [
+        130,
+        112,
+        281,
+        790
+      ]
+    },
+    {
+      "id": "fig-06",
+      "file": "images/fig-06.jpg",
+      "page": 5,
+      "box": [
+        333,
+        405,
+        431,
+        600
+      ]
+    },
+    {
+      "id": "fig-07",
+      "file": "images/fig-07.jpg",
+      "page": 5,
+      "box": [
+        703,
+        288,
+        928,
+        725
+      ]
+    },
+    {
+      "id": "fig-08",
+      "file": "images/fig-08.jpg",
+      "page": 7,
+      "box": [
+        100,
+        318,
+        253,
+        688
+      ]
+    },
+    {
+      "id": "fig-09",
+      "file": "images/fig-09.jpg",
+      "page": 7,
+      "box": [
+        490,
+        305,
+        658,
+        692
+      ]
+    },
+    {
+      "id": "fig-10",
+      "file": "images/fig-10.jpg",
+      "page": 7,
+      "box": [
+        699,
+        112,
+        831,
+        534
+      ]
+    },
+    {
+      "id": "fig-11",
+      "file": "images/fig-11.jpg",
+      "page": 8,
+      "box": [
+        331,
+        112,
+        461,
+        690
+      ]
+    },
+    {
+      "id": "fig-12",
+      "file": "images/fig-12.jpg",
+      "page": 8,
+      "box": [
+        662,
+        95,
+        765,
+        905
+      ]
+    },
+    {
+      "id": "fig-13",
+      "file": "images/fig-13.jpg",
+      "page": 9,
+      "box": [
+        100,
+        283,
+        243,
+        722
+      ]
+    },
+    {
+      "id": "fig-14",
+      "file": "images/fig-14.jpg",
+      "page": 9,
+      "box": [
+        498,
+        310,
+        535,
+        690
+      ]
+    },
+    {
+      "id": "fig-15",
+      "file": "images/fig-15.jpg",
+      "page": 10,
+      "box": [
+        146,
+        112,
+        277,
+        440
+      ]
+    },
+    {
+      "id": "fig-16",
+      "file": "images/fig-16.jpg",
+      "page": 10,
+      "box": [
+        359,
+        112,
+        511,
+        845
+      ]
+    },
+    {
+      "id": "fig-17",
+      "file": "images/fig-17.jpg",
+      "page": 10,
+      "box": [
+        577,
+        330,
+        731,
+        680
+      ]
+    },
+    {
+      "id": "fig-18",
+      "file": "images/fig-18.jpg",
+      "page": 10,
+      "box": [
+        777,
+        112,
+        918,
+        595
+      ]
+    },
+    {
+      "id": "fig-19",
+      "file": "images/fig-19.jpg",
+      "page": 11,
+      "box": [
+        280,
+        335,
+        452,
+        665
+      ]
+    },
+    {
+      "id": "fig-20",
+      "file": "images/fig-20.jpg",
+      "page": 12,
+      "box": [
+        102,
+        360,
+        258,
+        638
+      ]
+    },
+    {
+      "id": "fig-21",
+      "file": "images/fig-21.jpg",
+      "page": 12,
+      "box": [
+        265,
+        188,
+        441,
+        808
+      ]
+    },
+    {
+      "id": "fig-22",
+      "file": "images/fig-22.jpg",
+      "page": 12,
+      "box": [
+        492,
+        210,
+        684,
+        780
+      ]
+    },
+    {
+      "id": "fig-23",
+      "file": "images/fig-23.jpg",
+      "page": 13,
+      "box": [
+        101,
+        340,
+        181,
+        665
+      ]
+    },
+    {
+      "id": "fig-24",
+      "file": "images/fig-24.jpg",
+      "page": 13,
+      "box": [
+        212,
+        112,
+        361,
+        588
+      ]
+    },
+    {
+      "id": "fig-25",
+      "file": "images/fig-25.jpg",
+      "page": 13,
+      "box": [
+        432,
+        378,
+        632,
+        628
+      ]
+    },
+    {
+      "id": "fig-26",
+      "file": "images/fig-26.jpg",
+      "page": 14,
+      "box": [
+        251,
+        112,
+        382,
+        432
+      ]
+    }
+  ],
   "topics": [],
-  "questions": []
+  "questions": [
+    {
+      "id": "q001",
+      "question": "A micrometer screw gauge reads 0.02 mm when the jaws are fully closed. It reads 0.56 mm when measuring the diameter of a metal wire.\n\nWhat is the diameter of the wire?",
+      "options": [
+        "0.36 mm",
+        "0.54 mm",
+        "0.56 mm",
+        "0.58 mm"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 18, Question 1 row: answer B"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 2,
+      "box": [
+        70,
+        70,
+        168,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q002",
+      "question": "Object P moves at a constant speed of 5 m / s repeatedly backwards and forwards in a straight line.\n\nObject Q moves at a constant speed of 5 m / s vertically downwards.\n\nObject R moves at a constant speed of 5 m / s in a circle.\n\nWhich objects are moving with uniform velocity?",
+      "options": [
+        "P only",
+        "Q only",
+        "R only",
+        "Q and R"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 18, Question 2 row: answer B"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 2,
+      "box": [
+        190,
+        70,
+        342,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q003",
+      "question": "The diagram shows a velocity–time graph for an object which is accelerating.\n\nWhat is the acceleration of the object?",
+      "options": [
+        "0.40 m / s²",
+        "2.5 m / s²",
+        "3.0 m / s²",
+        "100 m / s²"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 18, Question 3 row: answer B"
+      },
+      "figures": [
+        "fig-01"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 2,
+      "box": [
+        370,
+        70,
+        720,
+        760
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q004",
+      "question": "Which quantity is weight an example of?",
+      "options": [
+        "acceleration",
+        "force",
+        "mass",
+        "pressure"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 18, Question 4 row: answer B"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 2,
+      "box": [
+        745,
+        70,
+        882,
+        400
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q005",
+      "question": "An object of mass 1.0 kg is at rest on Earth. An identical object is at rest on a planet with a gravitational field strength of twice that on Earth.\n\nWhich row correctly compares the object on the planet to the object on Earth?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 18, Question 5 row: answer A"
+      },
+      "figures": [
+        "fig-02"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 3,
+      "box": [
+        70,
+        70,
+        294,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q006",
+      "question": "A square wooden raft floats on a lake. The density of the water in the lake is 1000 kg / m³.\n\nThe sides of the raft are 2.0 m long and the thickness of the raft is 0.20 m.\n\nThe mass of the raft is 700 kg.\n\nHow many barrels, each of mass 100 kg, could be placed on the raft before its surface sinks to the surface of the water?",
+      "options": [
+        "1",
+        "7",
+        "8",
+        "15"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 18, Question 6 row: answer A"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 3,
+      "box": [
+        318,
+        70,
+        476,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q007",
+      "question": "The diagram shows a car moving along a road.\n\nThe force due to the engine is 1500 N and the total drag force is 200 N.\n\nWhat is the motion of the car?",
+      "options": [
+        "constant speed",
+        "decreasing speed",
+        "increasing speed",
+        "reversing"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 18, Question 7 row: answer C"
+      },
+      "figures": [
+        "fig-03"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 3,
+      "box": [
+        498,
+        70,
+        772,
+        780
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q008",
+      "question": "The diagram shows a trolley used to transport a load of 400 N.\n\nA force F vertically downwards is needed to balance the trolley as shown.\n\nThe centre of mass of the trolley is vertically above the pivot.\n\nWhat is the value of F ?",
+      "options": [
+        "133 N",
+        "150 N",
+        "300 N",
+        "400 N"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 18, Question 8 row: answer B"
+      },
+      "figures": [
+        "fig-04"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 4,
+      "box": [
+        70,
+        70,
+        478,
+        760
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q009",
+      "question": "A ball of mass m falls vertically and hits a hard surface.\n\nIts speed on hitting the surface is v₁.\n\nIt rebounds vertically upwards with speed v₂.\n\nWhat is the change in momentum of the ball?",
+      "options": [
+        "mv₁",
+        "mv₂",
+        "m(v₁ + v₂)",
+        "m(v₂ – v₁)"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 18, Question 9 row: answer C"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 4,
+      "box": [
+        503,
+        70,
+        640,
+        760
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q010",
+      "question": "An object of mass 4.5 kg is travelling at 7.0 m / s.\n\nHow much kinetic energy does the object have?",
+      "options": [
+        "16 J",
+        "32 J",
+        "110 J",
+        "220 J"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 18, Question 10 row: answer C"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 4,
+      "box": [
+        668,
+        70,
+        743,
+        760
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q011",
+      "question": "A number of ways in which we use energy are listed.\n\nIn which is the ultimate source of energy not the Sun?",
+      "options": [
+        "Energy is provided by a horse to pull a cart.",
+        "Energy is provided by hydroelectric generators to heat a house.",
+        "Energy is provided by a nuclear power station.",
+        "Energy is provided by a windmill to pump water to a fountain."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 18, Question 11 row: answer C"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 4,
+      "box": [
+        772,
+        70,
+        883,
+        680
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q012",
+      "question": "To calculate the power produced by a force, the size of the force must be known.\n\nWhat else needs to be known to calculate the power?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 18, Question 12 row: answer A"
+      },
+      "figures": [
+        "fig-05"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 5,
+      "box": [
+        70,
+        70,
+        283,
+        795
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q013",
+      "question": "A student calculates the pressure due to the liquid at point X.\n\nThe student takes four measurements.\n\n1 density of the liquid\n2 temperature of the liquid\n3 depth of point X below the surface of the liquid\n4 surface area of the liquid\n\nWhich measurements must the student use in her pressure calculation?",
+      "options": [
+        "3 and 4",
+        "1 and 3",
+        "1 and 2",
+        "2 and 3"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 18, Question 13 row: answer B"
+      },
+      "figures": [
+        "fig-06"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 5,
+      "box": [
+        303,
+        70,
+        625,
+        760
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q014",
+      "question": "The diagram shows a mercury barometer.\n\nWhich height is used as a measurement of atmospheric pressure?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 18, Question 14 row: answer C"
+      },
+      "figures": [
+        "fig-07"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 5,
+      "box": [
+        648,
+        70,
+        930,
+        730
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q015",
+      "question": "A student splashes water on to her face. Here are three statements about the effects.\n\nP The water uses energy to evaporate.\nQ The water gains energy from the student.\nR The face of the student cools.\n\nWhich statements are correct?",
+      "options": [
+        "P and Q only",
+        "P and R only",
+        "Q and R only",
+        "P, Q and R"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 18, Question 15 row: answer D"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 6,
+      "box": [
+        70,
+        70,
+        235,
+        790
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q016",
+      "question": "Equal volumes of solids and liquids experience different changes of volume when they are heated through the same temperature range.\n\nWhat is the reason for this?",
+      "options": [
+        "The average increase in separation of the particles in a liquid is greater than the average increase in separation of those in a solid.",
+        "The average increase in separation of the particles in a liquid is less than the average increase in separation of those in a solid.",
+        "The particles in liquids expand by less than those in solids.",
+        "The particles in liquids expand by more than those in solids."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 18, Question 16 row: answer A"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 6,
+      "box": [
+        258,
+        70,
+        460,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q017",
+      "question": "Which physical property changes when temperature is measured with a liquid-in-glass thermometer?",
+      "options": [
+        "electromotive force",
+        "pressure",
+        "resistance",
+        "volume"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 18, Question 17 row: answer D"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 6,
+      "box": [
+        483,
+        70,
+        622,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q018",
+      "question": "The diagram shows steam being passed into water to raise the temperature of the water.\n\nThe specific latent heat of steam is 2200 J / g.\n\nThe specific heat capacity of water is 4.2 J / (g °C).\n\nThe mass of water being heated is 490 g.\n\nWhich mass of steam must be passed into the water to raise the water temperature from 19 °C to 100 °C?",
+      "options": [
+        "19 g",
+        "76 g",
+        "80 g",
+        "95 g"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 18, Question 18 row: answer B"
+      },
+      "figures": [
+        "fig-08"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 7,
+      "box": [
+        70,
+        70,
+        425,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q019",
+      "question": "The diagram shows the view of a room heated by a radiator. The arrowed line from X to Y is the path of the convection current in the air.\n\nWhich row about the air temperature and the air density at X and at Y is correct?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 18, Question 19 row: answer B"
+      },
+      "figures": [
+        "fig-09",
+        "fig-10"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 7,
+      "box": [
+        445,
+        70,
+        833,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q020",
+      "question": "A warm dark-coloured surface emits radiation. It is decided to increase the amount of radiation produced.\n\nThree suggestions are made.\n\n1 Make the surface hotter.\n2 Colour the surface white.\n3 Increase the area of the surface.\n\nWhich suggestions are correct?",
+      "options": [
+        "1 only",
+        "1 and 2 only",
+        "1 and 3 only",
+        "1, 2 and 3"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 18, Question 20 row: answer C"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 8,
+      "box": [
+        70,
+        70,
+        282,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q021",
+      "question": "Which row correctly describes light waves?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 18, Question 21 row: answer D"
+      },
+      "figures": [
+        "fig-11"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 8,
+      "box": [
+        303,
+        70,
+        463,
+        695
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q022",
+      "question": "A water wave has a speed of 2.0 m / s.\n\n4.0 complete waves pass a point every 10 seconds.\n\nWhat is the wavelength of the wave?",
+      "options": [
+        "0.50 m",
+        "0.80 m",
+        "5.0 m",
+        "8.0 m"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 18, Question 22 row: answer C"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 8,
+      "box": [
+        488,
+        70,
+        590,
+        760
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q023",
+      "question": "A driver sits in a car. She has a rear-view plane mirror 0.5 m in front of her. A bus is 7.5 m behind the driver.\n\nThe driver looks at the image of the bus in her mirror.\n\nHow far is the image away from her?",
+      "options": [
+        "1.0 m",
+        "7.5 m",
+        "8.0 m",
+        "8.5 m"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 18, Question 23 row: answer D"
+      },
+      "figures": [
+        "fig-12"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 8,
+      "box": [
+        620,
+        70,
+        865,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q024",
+      "question": "The diagram shows white light passing through a prism.\n\nWhich description of what happens as the light passes into the prism is correct?",
+      "options": [
+        "The speed of the red light is less than the speed of the violet light and the red light is the least refracted.",
+        "The speed of the red light is greater than the speed of the violet light and the red light is the least refracted.",
+        "The speed of the violet light is less than the speed of the red light and the violet light is the least refracted.",
+        "The speed of the violet light is greater than the speed of the red light and the violet light is the least refracted."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 18, Question 24 row: answer B"
+      },
+      "figures": [
+        "fig-13"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 9,
+      "box": [
+        70,
+        70,
+        435,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q025",
+      "question": "The diagram shows three types of electromagnetic radiation listed in a particular order. The electromagnetic radiation is travelling in a vacuum.\n\nWhich quantities increase in magnitude going from left to right across the list?",
+      "options": [
+        "frequency only",
+        "neither speed nor frequency",
+        "speed and frequency",
+        "speed only"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 18, Question 25 row: answer A"
+      },
+      "figures": [
+        "fig-14"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 9,
+      "box": [
+        460,
+        70,
+        672,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q026",
+      "question": "A sound wave travels through air.\n\nWhat name is given to a region in which the air molecules are further apart than normal?",
+      "options": [
+        "compression",
+        "contraction",
+        "rarefaction",
+        "vacuum"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 18, Question 26 row: answer C"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 9,
+      "box": [
+        698,
+        70,
+        860,
+        820
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q027",
+      "question": "A police car with its siren sounding is stationary in heavy traffic. A pedestrian notices that, although the loudness of the sound produced does not change, the pitch varies.\n\nWhich row describes the amplitude and the frequency of the sound?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 18, Question 27 row: answer B"
+      },
+      "figures": [
+        "fig-15"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 10,
+      "box": [
+        70,
+        70,
+        279,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q028",
+      "question": "A piece of steel is slightly magnetised. It is hit several times with a hammer.\n\nWhat effect will this have on the steel?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 18, Question 28 row: answer B"
+      },
+      "figures": [
+        "fig-16"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 10,
+      "box": [
+        303,
+        70,
+        513,
+        850
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q029",
+      "question": "A negatively charged cloud passes over a tall steel-framed building. A charge is induced on the building by the cloud because charges flow through the building.\n\nWhat charge is induced on the building and in which direction do the charge carriers move?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 19, Question 29 row: answer A"
+      },
+      "figures": [
+        "fig-17",
+        "fig-18"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 10,
+      "box": [
+        535,
+        70,
+        920,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q030",
+      "question": "Electromotive force (e.m.f.) is defined in terms of the energy supplied in driving which physical quantity around a complete circuit?",
+      "options": [
+        "charge",
+        "current",
+        "potential difference (p.d.)",
+        "power"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 19, Question 30 row: answer A"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 11,
+      "box": [
+        70,
+        70,
+        215,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q031",
+      "question": "A student uses four ammeters P, Q, R and S to measure the current in different parts of the circuit shown.\n\nWhich two ammeters read the largest current?",
+      "options": [
+        "P and Q",
+        "P and R",
+        "R and Q",
+        "R and S"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 19, Question 31 row: answer A"
+      },
+      "figures": [
+        "fig-19"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 11,
+      "box": [
+        237,
+        70,
+        510,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q032",
+      "question": "Three statements about a relay are given.\n\n1 A relay has a coil that becomes a temporary magnet when in operation.\n2 A large current in a relay coil is used to switch off a smaller current.\n3 A small current in a relay coil is used to switch on a larger current.\n\nWhich statements are correct?",
+      "options": [
+        "1 and 2 only",
+        "2 and 3 only",
+        "1 and 3 only",
+        "1, 2 and 3"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 19, Question 32 row: answer C"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 11,
+      "box": [
+        535,
+        70,
+        698,
+        760
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q033",
+      "question": "Which combination of logic gates gives the truth table shown?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 19, Question 33 row: answer B"
+      },
+      "figures": [
+        "fig-20",
+        "fig-21"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 12,
+      "box": [
+        70,
+        70,
+        443,
+        810
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q034",
+      "question": "Graph X shows the output from an a.c. generator.\n\nWhich changes can be made so that the generator produces graph Y?",
+      "options": [
+        "Decrease the magnetic field strength and decrease the speed of rotation only.",
+        "Increase the magnetic field strength and decrease the number of coils only.",
+        "Increase the number of coils only.",
+        "Increase the speed of rotation only."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 19, Question 34 row: answer D"
+      },
+      "figures": [
+        "fig-22"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 12,
+      "box": [
+        462,
+        70,
+        830,
+        830
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q035",
+      "question": "A transformer is needed to convert a supply of 240 V a.c. into 4800 V a.c..\n\nWhich pair of coils would be suitable for this transformer?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 19, Question 35 row: answer A"
+      },
+      "figures": [
+        "fig-23",
+        "fig-24"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 13,
+      "box": [
+        70,
+        70,
+        363,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q036",
+      "question": "The diagram shows a wire carrying a current in the direction shown. There is a magnetic field acting from left to right. The wire experiences a force acting out of the page.\n\nThe current is now reversed.\n\nIn which direction does the force on the wire now act?",
+      "options": [
+        "into the page",
+        "out of the page",
+        "to the left",
+        "to the right"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 19, Question 36 row: answer A"
+      },
+      "figures": [
+        "fig-25"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 13,
+      "box": [
+        387,
+        70,
+        788,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q037",
+      "question": "Which statement is correct for the nucleus of any atom?",
+      "options": [
+        "The nucleus contains electrons, neutrons and protons.",
+        "The nucleus contains the same number of protons as neutrons.",
+        "The nucleus has a total charge of zero.",
+        "The nucleus is very small compared with the size of the atom."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 19, Question 37 row: answer D"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 14,
+      "box": [
+        70,
+        70,
+        200,
+        690
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q038",
+      "question": "How many protons and how many neutrons are in a nucleus of ²³⁴₉₀Th?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 19, Question 38 row: answer A"
+      },
+      "figures": [
+        "fig-26"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 14,
+      "box": [
+        213,
+        70,
+        385,
+        730
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q039",
+      "question": "Which statement about γ-rays is correct?",
+      "options": [
+        "They are deflected by both electric and magnetic fields.",
+        "They are deflected by magnetic fields but not by electric fields.",
+        "They are deflected by electric fields but not by magnetic fields.",
+        "They are not deflected either by electric fields or by magnetic fields."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 19, Question 39 row: answer D"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 14,
+      "box": [
+        408,
+        70,
+        535,
+        760
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q040",
+      "question": "Which equation represents the β-decay of lead-209?",
+      "options": [
+        "²⁰⁹₈₂Pb + ⁰₋₁e → ²⁰⁹₈₃Bi",
+        "²⁰⁹₈₂Pb + ⁰₋₁e → ²⁰⁹₈₁Tl",
+        "²⁰⁹₈₂Pb → ²⁰⁹₈₃Bi + ⁰₋₁e",
+        "²⁰⁹₈₂Pb → ²⁰⁹₈₁Tl + ⁰₋₁e"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 19, Question 40 row: answer C"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 14,
+      "box": [
+        558,
+        70,
+        728,
+        620
+      ],
+      "flag": ""
+    }
+  ]
 }
