@@ -1,7 +1,7 @@
 {
   "codoxAgentBundle": 1,
   "sourceFile": "0625_s20_qp_23.pdf",
-  "producedBy": "",
+  "producedBy": "claude-opus-5 (agent-conversion)",
   "pages": [
     {
       "index": 0,
@@ -165,7 +165,1469 @@
       "role": "answer-key"
     }
   ],
-  "figures": [],
+  "figures": [
+    {
+      "id": "fig-01",
+      "file": "images/fig-01.jpg",
+      "page": 2,
+      "box": [
+        98,
+        330,
+        250,
+        670
+      ]
+    },
+    {
+      "id": "fig-02",
+      "file": "images/fig-02.jpg",
+      "page": 2,
+      "box": [
+        280,
+        135,
+        532,
+        860
+      ]
+    },
+    {
+      "id": "fig-03",
+      "file": "images/fig-03.jpg",
+      "page": 3,
+      "box": [
+        130,
+        170,
+        300,
+        835
+      ]
+    },
+    {
+      "id": "fig-04",
+      "file": "images/fig-04.jpg",
+      "page": 4,
+      "box": [
+        130,
+        108,
+        265,
+        415
+      ]
+    },
+    {
+      "id": "fig-05",
+      "file": "images/fig-05.jpg",
+      "page": 5,
+      "box": [
+        382,
+        170,
+        597,
+        830
+      ]
+    },
+    {
+      "id": "fig-06",
+      "file": "images/fig-06.jpg",
+      "page": 5,
+      "box": [
+        648,
+        112,
+        817,
+        600
+      ]
+    },
+    {
+      "id": "fig-07",
+      "file": "images/fig-07.jpg",
+      "page": 6,
+      "box": [
+        280,
+        300,
+        475,
+        700
+      ]
+    },
+    {
+      "id": "fig-08",
+      "file": "images/fig-08.jpg",
+      "page": 7,
+      "box": [
+        312,
+        112,
+        447,
+        475
+      ]
+    },
+    {
+      "id": "fig-09",
+      "file": "images/fig-09.jpg",
+      "page": 7,
+      "box": [
+        495,
+        235,
+        562,
+        765
+      ]
+    },
+    {
+      "id": "fig-10",
+      "file": "images/fig-10.jpg",
+      "page": 7,
+      "box": [
+        592,
+        112,
+        728,
+        790
+      ]
+    },
+    {
+      "id": "fig-11",
+      "file": "images/fig-11.jpg",
+      "page": 8,
+      "box": [
+        158,
+        122,
+        308,
+        870
+      ]
+    },
+    {
+      "id": "fig-12",
+      "file": "images/fig-12.jpg",
+      "page": 8,
+      "box": [
+        500,
+        340,
+        748,
+        665
+      ]
+    },
+    {
+      "id": "fig-13",
+      "file": "images/fig-13.jpg",
+      "page": 9,
+      "box": [
+        325,
+        245,
+        537,
+        755
+      ]
+    },
+    {
+      "id": "fig-14",
+      "file": "images/fig-14.jpg",
+      "page": 9,
+      "box": [
+        577,
+        112,
+        708,
+        495
+      ]
+    },
+    {
+      "id": "fig-15",
+      "file": "images/fig-15.jpg",
+      "page": 10,
+      "box": [
+        445,
+        305,
+        578,
+        695
+      ]
+    },
+    {
+      "id": "fig-16",
+      "file": "images/fig-16.jpg",
+      "page": 11,
+      "box": [
+        146,
+        345,
+        303,
+        655
+      ]
+    },
+    {
+      "id": "fig-17",
+      "file": "images/fig-17.jpg",
+      "page": 11,
+      "box": [
+        384,
+        112,
+        543,
+        558
+      ]
+    },
+    {
+      "id": "fig-18",
+      "file": "images/fig-18.jpg",
+      "page": 12,
+      "box": [
+        160,
+        170,
+        338,
+        475
+      ]
+    },
+    {
+      "id": "fig-19",
+      "file": "images/fig-19.jpg",
+      "page": 12,
+      "box": [
+        160,
+        525,
+        338,
+        830
+      ]
+    },
+    {
+      "id": "fig-20",
+      "file": "images/fig-20.jpg",
+      "page": 12,
+      "box": [
+        527,
+        283,
+        696,
+        720
+      ]
+    },
+    {
+      "id": "fig-21",
+      "file": "images/fig-21.jpg",
+      "page": 13,
+      "box": [
+        99,
+        358,
+        251,
+        652
+      ]
+    },
+    {
+      "id": "fig-22",
+      "file": "images/fig-22.jpg",
+      "page": 13,
+      "box": [
+        523,
+        93,
+        728,
+        918
+      ]
+    },
+    {
+      "id": "fig-23",
+      "file": "images/fig-23.jpg",
+      "page": 14,
+      "box": [
+        247,
+        310,
+        362,
+        690
+      ]
+    },
+    {
+      "id": "fig-24",
+      "file": "images/fig-24.jpg",
+      "page": 14,
+      "box": [
+        367,
+        372,
+        503,
+        632
+      ]
+    },
+    {
+      "id": "fig-25",
+      "file": "images/fig-25.jpg",
+      "page": 15,
+      "box": [
+        103,
+        100,
+        256,
+        475
+      ]
+    },
+    {
+      "id": "fig-26",
+      "file": "images/fig-26.jpg",
+      "page": 15,
+      "box": [
+        103,
+        532,
+        256,
+        902
+      ]
+    },
+    {
+      "id": "fig-27",
+      "file": "images/fig-27.jpg",
+      "page": 15,
+      "box": [
+        278,
+        320,
+        433,
+        686
+      ]
+    },
+    {
+      "id": "fig-28",
+      "file": "images/fig-28.jpg",
+      "page": 16,
+      "box": [
+        132,
+        320,
+        271,
+        680
+      ]
+    },
+    {
+      "id": "fig-29",
+      "file": "images/fig-29.jpg",
+      "page": 16,
+      "box": [
+        311,
+        168,
+        648,
+        828
+      ]
+    },
+    {
+      "id": "fig-30",
+      "file": "images/fig-30.jpg",
+      "page": 17,
+      "box": [
+        252,
+        310,
+        373,
+        698
+      ]
+    }
+  ],
   "topics": [],
-  "questions": []
+  "questions": [
+    {
+      "id": "q001",
+      "question": "Diagram 1 shows a solid, rectangular-sided block.\n\nDiagram 2 shows the same block from the front and from the side.\n\nMetre rules have been shown close to the edges of the block.\n\nWhat is the volume of the block?",
+      "options": [
+        "120 cm³",
+        "168 cm³",
+        "264 cm³",
+        "1155 cm³"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 22, Question 1 row: answer B"
+      },
+      "figures": [
+        "fig-01",
+        "fig-02"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 2,
+      "box": [
+        70,
+        70,
+        620,
+        770
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q002",
+      "question": "A student investigates the motion of a ball rolling down a slope.\n\nThe diagram shows the speed v of the ball at different times t.\n\nWhich statement describes the motion of the ball?",
+      "options": [
+        "The acceleration is not constant.",
+        "The acceleration is negative.",
+        "The speed is decreasing.",
+        "The velocity is constant."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 22, Question 2 row: answer A"
+      },
+      "figures": [
+        "fig-03"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 3,
+      "box": [
+        70,
+        70,
+        432,
+        860
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q003",
+      "question": "Which statement about acceleration is correct?",
+      "options": [
+        "It is related to the changing speed of an object.",
+        "It is the distance an object travels in one second.",
+        "It is the force acting on an object divided by the distance it travels in one second.",
+        "It is the force acting on an object when it is near to the Earth."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 22, Question 3 row: answer A"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 3,
+      "box": [
+        452,
+        70,
+        583,
+        845
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q004",
+      "question": "Which statement correctly describes the effects of placing a heavy load in a car?",
+      "options": [
+        "It is easier to accelerate the car and easier to bring the car to rest.",
+        "It is easier to accelerate the car but more difficult to bring the car to rest.",
+        "It is more difficult to accelerate the car and more difficult to bring the car to rest.",
+        "It is more difficult to accelerate the car but easier to bring the car to rest."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 22, Question 4 row: answer C"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 3,
+      "box": [
+        602,
+        70,
+        728,
+        845
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q005",
+      "question": "Which row gives the correct weight for the mass shown?\n\nThe value of g is 10 N / kg.",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 22, Question 5 row: answer A"
+      },
+      "figures": [
+        "fig-04"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 4,
+      "box": [
+        70,
+        70,
+        268,
+        600
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q006",
+      "question": "A rectangular gymnasium is 50 m long, 25 m wide and 8.0 m high.\n\nThe density of air is 1.2 kg / m³.\n\nWhat is the best estimate of the mass of air in the gymnasium?",
+      "options": [
+        "0.00012 kg",
+        "100 kg",
+        "8300 kg",
+        "12 000 kg"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 22, Question 6 row: answer D"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 4,
+      "box": [
+        286,
+        70,
+        398,
+        765
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q007",
+      "question": "Which moving object has a resultant force acting on it?",
+      "options": [
+        "a diver rising vertically through water at constant speed",
+        "an aircraft circling an airport at constant speed",
+        "a parachutist descending vertically at terminal velocity",
+        "a train going up a straight slope at constant speed"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 22, Question 7 row: answer B"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 4,
+      "box": [
+        419,
+        70,
+        546,
+        625
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q008",
+      "question": "Which quantity is not a vector?",
+      "options": [
+        "acceleration",
+        "temperature",
+        "velocity",
+        "weight"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 22, Question 8 row: answer B"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 4,
+      "box": [
+        569,
+        70,
+        696,
+        420
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q009",
+      "question": "A ball falls vertically to the floor and rebounds vertically upwards.\n\nJust before it hits the floor, its speed is 4.0 m / s.\n\nAs it rebounds, its speed is 3.0 m / s.\n\nThe mass of the ball is 0.50 kg.\n\nWhat is the change in momentum of the ball?",
+      "options": [
+        "0.50 kg m / s downwards",
+        "0.50 kg m / s upwards",
+        "3.5 kg m / s downwards",
+        "3.5 kg m / s upwards"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 22, Question 9 row: answer D"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 5,
+      "box": [
+        70,
+        70,
+        318,
+        660
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q010",
+      "question": "A mass bounces up and down on a steel spring. The diagram shows the mass and the spring at different points during the motion.\n\nAt which point does the mass have the least gravitational potential energy and at which point is the most elastic energy stored in the spring?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 22, Question 10 row: answer D"
+      },
+      "figures": [
+        "fig-05",
+        "fig-06"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 5,
+      "box": [
+        344,
+        70,
+        818,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q011",
+      "question": "The velocity v of an object increases as it falls towards the ground.\n\nWhich quantity is directly proportional to v²?",
+      "options": [
+        "the speed of the object",
+        "the gravitational potential energy of the object",
+        "the kinetic energy of the object",
+        "the momentum of the object"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 22, Question 11 row: answer C"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 6,
+      "box": [
+        70,
+        70,
+        230,
+        680
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q012",
+      "question": "The diagram shows a solid block resting on a bench. The dimensions of the block are shown.\n\nOn which labelled surface should the block rest to produce the smallest pressure on the bench?",
+      "options": [
+        "P",
+        "Q",
+        "R",
+        "P, Q and R produce the same pressure"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 22, Question 12 row: answer A"
+      },
+      "figures": [
+        "fig-07"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 6,
+      "box": [
+        254,
+        70,
+        603,
+        900
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q013",
+      "question": "A pipe full of water connects a water supply on a hill to a tap lower down the hill.\n\nThe length of the pipe is 500 m. The height of the supply above the tap is 100 m.\n\nThe density of the water is 1000 kg / m³. The effect of atmospheric pressure is negligible.\n\nWhat is the water pressure at the tap?",
+      "options": [
+        "100 000 Pa",
+        "500 000 Pa",
+        "1 000 000 Pa",
+        "5 000 000 Pa"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 22, Question 13 row: answer C"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 6,
+      "box": [
+        632,
+        70,
+        853,
+        850
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q014",
+      "question": "When a molecule rebounds from a wall, a force is exerted on the wall.\n\nWhat causes this force?",
+      "options": [
+        "the kinetic energy gained by the molecule",
+        "the kinetic energy lost by the molecule",
+        "the change of momentum of the molecule",
+        "the change of speed of the molecule"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 22, Question 14 row: answer C"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 7,
+      "box": [
+        70,
+        70,
+        230,
+        530
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q015",
+      "question": "The relationship between pressure p and volume V of a gas is given as pV = constant.\n\nUnder which conditions for the mass of a gas and for its temperature does the equation hold?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 22, Question 15 row: answer D"
+      },
+      "figures": [
+        "fig-08"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 7,
+      "box": [
+        252,
+        70,
+        448,
+        895
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q016",
+      "question": "The diagram shows a liquid-in-glass thermometer.\n\nWhich row gives the correct labels for the thermometer?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 22, Question 16 row: answer B"
+      },
+      "figures": [
+        "fig-09",
+        "fig-10"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 7,
+      "box": [
+        470,
+        70,
+        730,
+        800
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q017",
+      "question": "The diagrams show four blocks of steel. The blocks are all drawn to the same scale.\n\nThe same quantity of thermal energy is given to each block.\n\nWhich block shows the greatest rise in temperature?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 22, Question 17 row: answer A"
+      },
+      "figures": [
+        "fig-11"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 8,
+      "box": [
+        70,
+        70,
+        310,
+        870
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q018",
+      "question": "Why are metals better conductors of thermal energy than non-metals?",
+      "options": [
+        "They contain free electrons.",
+        "Their molecules are further apart.",
+        "Their molecules vibrate at a higher frequency.",
+        "They have smoother surfaces."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 22, Question 18 row: answer A"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 8,
+      "box": [
+        319,
+        70,
+        443,
+        560
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q019",
+      "question": "The diagram shows a vacuum flask used to keep a liquid warm.\n\nWhich methods of heat loss are reduced by the vacuum between the silvered walls?",
+      "options": [
+        "conduction only",
+        "conduction and convection only",
+        "convection and radiation only",
+        "conduction, convection and radiation"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 22, Question 19 row: answer B"
+      },
+      "figures": [
+        "fig-12"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 8,
+      "box": [
+        470,
+        70,
+        862,
+        830
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q020",
+      "question": "An earthquake-monitoring station records the arrival of 16 complete waves of an earthquake wave in 20 s.\n\nThe speed of the earthquake wave is 6.0 km / s.\n\nWhat is the wavelength of the earthquake wave?",
+      "options": [
+        "1.3 × 10⁻⁴ m",
+        "2.1 × 10⁻⁴ m",
+        "4.8 × 10³ m",
+        "7.5 × 10³ m"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 22, Question 20 row: answer D"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 9,
+      "box": [
+        70,
+        70,
+        278,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q021",
+      "question": "The diagram shows a wave.\n\nWhat are the amplitude and the wavelength of this wave?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 22, Question 21 row: answer B"
+      },
+      "figures": [
+        "fig-13",
+        "fig-14"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 9,
+      "box": [
+        303,
+        70,
+        710,
+        760
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q022",
+      "question": "Which statement is correct?",
+      "options": [
+        "The speed of light in glass is equal to the speed of light in a vacuum multiplied by the refractive index of glass.",
+        "The incident angle of a light ray at an air-glass surface is the angle between the ray and the glass surface.",
+        "The sine of the critical angle at an air-glass surface is equal to 1 / refractive index of glass.",
+        "The angle of refraction for light passing through an air-glass surface is proportional to the angle of incidence at that surface."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 22, Question 22 row: answer C"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 9,
+      "box": [
+        740,
+        70,
+        908,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q023",
+      "question": "Which statement about converging lenses is correct?",
+      "options": [
+        "A real image of an object projected onto a screen by a converging lens is always inverted.",
+        "The image formed by a converging lens is always upright.",
+        "The image formed by a converging lens when used as a magnifying glass is a real image.",
+        "Parallel rays entering a converging lens are focused at a distance greater than the focal length from the lens."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 22, Question 23 row: answer A"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 10,
+      "box": [
+        70,
+        70,
+        213,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q024",
+      "question": "An intruder alarm sensor detects that a person is warmer than his surroundings.\n\nWhich type of electromagnetic wave does the sensor detect?",
+      "options": [
+        "infrared",
+        "radio",
+        "ultraviolet",
+        "visible light"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 22, Question 24 row: answer A"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 10,
+      "box": [
+        236,
+        70,
+        398,
+        640
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q025",
+      "question": "Two people are standing outdoors on either side of a high wall.\n\nPerson 1 can hear person 2 talking although he cannot see her.\n\nWhich statement explains this?",
+      "options": [
+        "The sound waves have diffracted around the wall.",
+        "The sound waves have passed unaffected through the wall.",
+        "The sound waves have reflected around the wall.",
+        "The sound waves have refracted around the wall."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 22, Question 25 row: answer A"
+      },
+      "figures": [
+        "fig-15"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 10,
+      "box": [
+        420,
+        70,
+        730,
+        660
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q026",
+      "question": "Four nails A, B, C and D are tested to find which makes the strongest permanent magnet.\n\nOne of the nails is placed against a bar magnet and the number of paper clips which the nail can support is recorded.\n\nThe bar magnet is then removed and the number of paper clips remaining attached to the nail is recorded. Each nail is tested individually.\n\nWhich nail becomes the strongest permanent magnet?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 22, Question 26 row: answer C"
+      },
+      "figures": [
+        "fig-16",
+        "fig-17"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 11,
+      "box": [
+        70,
+        70,
+        545,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q027",
+      "question": "The diagrams show a magnetised steel rod inside a solenoid connected to a potentiometer.\n\nIn diagram 1, the potentiometer is connected to a d.c. power supply.\n\nIn diagram 2, the potentiometer is connected to an a.c. power supply.\n\nWhich action would demagnetise the piece of steel?",
+      "options": [
+        "In diagram 1, move the potentiometer slide from P to Q.",
+        "In diagram 1, move the potentiometer slide from Q to P.",
+        "In diagram 2, move the potentiometer slide from R to S.",
+        "In diagram 2, move the potentiometer slide from S to R."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 22, Question 27 row: answer D"
+      },
+      "figures": [
+        "fig-18",
+        "fig-19"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 12,
+      "box": [
+        70,
+        70,
+        472,
+        880
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q028",
+      "question": "The diagram shows a positively charged conducting sphere and a wire connected to earth.\n\nWhat happens when the wire is touched onto the sphere?",
+      "options": [
+        "Electrons flow from earth to the sphere.",
+        "Electrons flow from the sphere to earth.",
+        "Positive charges flow from earth to the sphere.",
+        "Positive charges flow from the sphere to earth."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 22, Question 28 row: answer A"
+      },
+      "figures": [
+        "fig-20"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 12,
+      "box": [
+        503,
+        70,
+        828,
+        880
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q029",
+      "question": "A student uses the circuit shown to determine the resistance of two identical resistors.\n\nThe voltmeter reading is 2.2 V and the ammeter reading is 0.25 A.\n\nWhat is the resistance of each resistor?",
+      "options": [
+        "0.275 Ω",
+        "0.55 Ω",
+        "4.4 Ω",
+        "8.8 Ω"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 23, Question 29 row: answer C"
+      },
+      "figures": [
+        "fig-21"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 13,
+      "box": [
+        70,
+        70,
+        340,
+        760
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q030",
+      "question": "There is a current of 2.0 A in a resistor of resistance 8.0 Ω.\n\nHow much power is dissipated in the resistor?",
+      "options": [
+        "0.25 W",
+        "4.0 W",
+        "16 W",
+        "32 W"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 23, Question 30 row: answer D"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 13,
+      "box": [
+        362,
+        70,
+        440,
+        760
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q031",
+      "question": "The lamps, the diodes and the batteries in the circuits are identical.\n\nIn which circuit does the ammeter give the greatest reading?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 23, Question 31 row: answer A"
+      },
+      "figures": [
+        "fig-22"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 13,
+      "box": [
+        468,
+        70,
+        730,
+        918
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q032",
+      "question": "Two resistors are connected in series with a power supply.\n\nWhich statement about the circuit is correct?",
+      "options": [
+        "The current from the supply is greater than the current in each resistor.",
+        "The current from the supply is equal to the current in each resistor.",
+        "The current from the supply is less than the current in each resistor.",
+        "The current from the supply is the sum of the currents in each resistor."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 23, Question 32 row: answer B"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 13,
+      "box": [
+        742,
+        70,
+        878,
+        760
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q033",
+      "question": "Which two logic gates each have a high output when both of their inputs are high?",
+      "options": [
+        "AND and OR",
+        "AND and NOR",
+        "NAND and NOR",
+        "NAND and OR"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 23, Question 33 row: answer A"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 14,
+      "box": [
+        70,
+        70,
+        200,
+        800
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q034",
+      "question": "The diagram shows a series of logic gates and part of its corresponding truth table.\n\nWhat are the missing values in row 2 of the truth table?",
+      "options": [
+        "0 1 0",
+        "0 1 1",
+        "1 0 0",
+        "1 1 1"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 23, Question 34 row: answer B"
+      },
+      "figures": [
+        "fig-23",
+        "fig-24"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 14,
+      "box": [
+        223,
+        70,
+        555,
+        800
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q035",
+      "question": "The graphs show how the currents in three circuits vary with time.\n\nIn which circuits is there a direct current?",
+      "options": [
+        "1 and 2",
+        "1 and 3",
+        "2 only",
+        "3 only"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 23, Question 35 row: answer B"
+      },
+      "figures": [
+        "fig-25",
+        "fig-26",
+        "fig-27"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 15,
+      "box": [
+        70,
+        70,
+        495,
+        905
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q036",
+      "question": "The coil of a simple a.c. generator rotates steadily in a uniform magnetic field.\n\nThe diagram shows the position of the coil at time t = 0.\n\nWhich graph shows the output voltage for one revolution of the coil?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 23, Question 36 row: answer A"
+      },
+      "figures": [
+        "fig-28",
+        "fig-29"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 16,
+      "box": [
+        70,
+        70,
+        650,
+        830
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q037",
+      "question": "What occurs during nuclear fusion?",
+      "options": [
+        "Two light atomic nuclei join together and emit energy.",
+        "Two light atomic nuclei join together and absorb energy.",
+        "A heavy atomic nucleus splits and emits energy.",
+        "A heavy atomic nucleus splits and absorbs energy."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 23, Question 37 row: answer A"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 16,
+      "box": [
+        670,
+        70,
+        798,
+        620
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q038",
+      "question": "A radioactive material has a half-life of 20 days.\n\nA sample of the material contains 8.0 × 10¹⁰ atoms.\n\nHow many atomic nuclei have decayed after 60 days?",
+      "options": [
+        "1.0 × 10¹⁰",
+        "4.0 × 10¹⁰",
+        "6.0 × 10¹⁰",
+        "7.0 × 10¹⁰"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 23, Question 38 row: answer D"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 17,
+      "box": [
+        70,
+        70,
+        185,
+        760
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q039",
+      "question": "A thin sheet of paper is placed between a radioactive source and a radiation detector. The count rate falls to a very low reading.\n\nFrom this result, which type of radiation is the source emitting?",
+      "options": [
+        "α-particles",
+        "β-particles",
+        "γ-rays",
+        "X-rays"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 23, Question 39 row: answer A"
+      },
+      "figures": [
+        "fig-30"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 17,
+      "box": [
+        210,
+        70,
+        510,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q040",
+      "question": "α-particles, β-particles and γ-rays are emitted by radioactive nuclei when they decay.\n\nWhich emissions can be deflected by an electric field?",
+      "options": [
+        "α-particles and β-particles only",
+        "β-particles and γ-rays only",
+        "γ-rays and α-particles only",
+        "α-particles, β-particles and γ-rays"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 23, Question 40 row: answer A"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2020",
+      "page": 17,
+      "box": [
+        540,
+        70,
+        700,
+        640
+      ],
+      "flag": ""
+    }
+  ]
 }
