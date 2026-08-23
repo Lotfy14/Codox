@@ -69,19 +69,16 @@ function slugify(name) {
   )
 }
 
-/** Every PDF under the input folder, one level of subfolders included. */
-async function collectPdfs(dir) {
+/** Every PDF under the input folder, arbitrarily nested subfolders included. */
+async function collectPdfs(dir, base = dir) {
   const found = []
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name)
     if (entry.isDirectory()) {
-      for (const nested of await readdir(full, { withFileTypes: true })) {
-        if (nested.isFile() && nested.name.toLowerCase().endsWith('.pdf')) {
-          found.push({ file: path.join(full, nested.name), parent: entry.name })
-        }
-      }
+      found.push(...(await collectPdfs(full, base)))
     } else if (entry.isFile() && entry.name.toLowerCase().endsWith('.pdf')) {
-      found.push({ file: full, parent: '' })
+      const parent = path.relative(base, path.dirname(full))
+      found.push({ file: full, parent })
     }
   }
   return found
