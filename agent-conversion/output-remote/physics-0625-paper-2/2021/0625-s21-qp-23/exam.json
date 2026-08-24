@@ -1,0 +1,171 @@
+{
+  "codoxAgentBundle": 1,
+  "sourceFile": "0625_s21_qp_23.pdf",
+  "producedBy": "",
+  "pages": [
+    {
+      "index": 0,
+      "file": "pages/page-001.jpg",
+      "width": 1652,
+      "height": 2338,
+      "role": "exam"
+    },
+    {
+      "index": 1,
+      "file": "pages/page-002.jpg",
+      "width": 1652,
+      "height": 2338,
+      "role": "exam"
+    },
+    {
+      "index": 2,
+      "file": "pages/page-003.jpg",
+      "width": 1652,
+      "height": 2338,
+      "role": "exam"
+    },
+    {
+      "index": 3,
+      "file": "pages/page-004.jpg",
+      "width": 1652,
+      "height": 2338,
+      "role": "exam"
+    },
+    {
+      "index": 4,
+      "file": "pages/page-005.jpg",
+      "width": 1652,
+      "height": 2338,
+      "role": "exam"
+    },
+    {
+      "index": 5,
+      "file": "pages/page-006.jpg",
+      "width": 1652,
+      "height": 2338,
+      "role": "exam"
+    },
+    {
+      "index": 6,
+      "file": "pages/page-007.jpg",
+      "width": 1652,
+      "height": 2338,
+      "role": "exam"
+    },
+    {
+      "index": 7,
+      "file": "pages/page-008.jpg",
+      "width": 1652,
+      "height": 2338,
+      "role": "exam"
+    },
+    {
+      "index": 8,
+      "file": "pages/page-009.jpg",
+      "width": 1652,
+      "height": 2338,
+      "role": "exam"
+    },
+    {
+      "index": 9,
+      "file": "pages/page-010.jpg",
+      "width": 1652,
+      "height": 2338,
+      "role": "exam"
+    },
+    {
+      "index": 10,
+      "file": "pages/page-011.jpg",
+      "width": 1652,
+      "height": 2338,
+      "role": "exam"
+    },
+    {
+      "index": 11,
+      "file": "pages/page-012.jpg",
+      "width": 1652,
+      "height": 2338,
+      "role": "exam"
+    },
+    {
+      "index": 12,
+      "file": "pages/page-013.jpg",
+      "width": 1652,
+      "height": 2338,
+      "role": "exam"
+    },
+    {
+      "index": 13,
+      "file": "pages/page-014.jpg",
+      "width": 1652,
+      "height": 2338,
+      "role": "exam"
+    },
+    {
+      "index": 14,
+      "file": "pages/page-015.jpg",
+      "width": 1652,
+      "height": 2338,
+      "role": "exam"
+    },
+    {
+      "index": 15,
+      "file": "pages/page-016.jpg",
+      "width": 1652,
+      "height": 2338,
+      "role": "exam"
+    },
+    {
+      "index": 16,
+      "file": "pages/page-017.jpg",
+      "width": 1652,
+      "height": 2338,
+      "role": "exam"
+    },
+    {
+      "index": 17,
+      "file": "pages/page-018.jpg",
+      "width": 1652,
+      "height": 2338,
+      "role": "exam"
+    },
+    {
+      "index": 18,
+      "file": "pages/page-019.jpg",
+      "width": 1652,
+      "height": 2338,
+      "role": "exam"
+    },
+    {
+      "index": 19,
+      "file": "pages/page-020.jpg",
+      "width": 1652,
+      "height": 2338,
+      "role": "exam"
+    },
+    {
+      "index": 20,
+      "file": "pages/page-021.jpg",
+      "width": 1652,
+      "height": 2338,
+      "role": "answer-key"
+    },
+    {
+      "index": 21,
+      "file": "pages/page-022.jpg",
+      "width": 1652,
+      "height": 2338,
+      "role": "answer-key"
+    },
+    {
+      "index": 22,
+      "file": "pages/page-023.jpg",
+      "width": 1652,
+      "height": 2338,
+      "role": "answer-key"
+    }
+  ],
+  "figures": [],
+  "topics": [],
+  "questions": []
+}
