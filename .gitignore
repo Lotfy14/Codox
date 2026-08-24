@@ -51,3 +51,8 @@ codox-diagnostics_*.json
 !.dev.vars.example
 .env*
 !.env.example
+
+# Agent-conversion scratch: box/figure crops an agent renders only to LOOK at
+# while checking a crop. Not part of the bundle contract (FORMAT.md), so they
+# never ship with the exam.
+agent-conversion/output-remote/**/preview/

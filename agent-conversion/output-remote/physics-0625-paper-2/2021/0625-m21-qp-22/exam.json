@@ -1,7 +1,7 @@
 {
   "codoxAgentBundle": 1,
   "sourceFile": "0625_m21_qp_22.pdf",
-  "producedBy": "",
+  "producedBy": "claude-opus-5",
   "pages": [
     {
       "index": 0,
@@ -137,7 +137,1471 @@
       "role": "answer-key"
     }
   ],
-  "figures": [],
+  "figures": [
+    {
+      "id": "fig-01",
+      "file": "images/fig-01.jpg",
+      "page": 3,
+      "box": [
+        95,
+        360,
+        235,
+        650
+      ]
+    },
+    {
+      "id": "fig-02",
+      "file": "images/fig-02.jpg",
+      "page": 3,
+      "box": [
+        425,
+        340,
+        620,
+        680
+      ]
+    },
+    {
+      "id": "fig-03",
+      "file": "images/fig-03.jpg",
+      "page": 4,
+      "box": [
+        103,
+        190,
+        250,
+        810
+      ]
+    },
+    {
+      "id": "fig-04",
+      "file": "images/fig-04.jpg",
+      "page": 4,
+      "box": [
+        284,
+        100,
+        430,
+        555
+      ]
+    },
+    {
+      "id": "fig-05",
+      "file": "images/fig-05.jpg",
+      "page": 5,
+      "box": [
+        100,
+        320,
+        412,
+        675
+      ]
+    },
+    {
+      "id": "fig-06",
+      "file": "images/fig-06.jpg",
+      "page": 5,
+      "box": [
+        596,
+        325,
+        732,
+        695
+      ]
+    },
+    {
+      "id": "fig-07",
+      "file": "images/fig-07.jpg",
+      "page": 6,
+      "box": [
+        115,
+        320,
+        240,
+        690
+      ]
+    },
+    {
+      "id": "fig-08",
+      "file": "images/fig-08.jpg",
+      "page": 7,
+      "box": [
+        103,
+        292,
+        438,
+        718
+      ]
+    },
+    {
+      "id": "fig-09",
+      "file": "images/fig-09.jpg",
+      "page": 7,
+      "box": [
+        572,
+        205,
+        713,
+        795
+      ]
+    },
+    {
+      "id": "fig-10",
+      "file": "images/fig-10.jpg",
+      "page": 7,
+      "box": [
+        758,
+        100,
+        920,
+        570
+      ]
+    },
+    {
+      "id": "fig-11",
+      "file": "images/fig-11.jpg",
+      "page": 9,
+      "box": [
+        140,
+        170,
+        265,
+        825
+      ]
+    },
+    {
+      "id": "fig-12",
+      "file": "images/fig-12.jpg",
+      "page": 9,
+      "box": [
+        303,
+        100,
+        462,
+        730
+      ]
+    },
+    {
+      "id": "fig-13",
+      "file": "images/fig-13.jpg",
+      "page": 9,
+      "box": [
+        500,
+        205,
+        717,
+        805
+      ]
+    },
+    {
+      "id": "fig-14",
+      "file": "images/fig-14.jpg",
+      "page": 10,
+      "box": [
+        118,
+        100,
+        275,
+        580
+      ]
+    },
+    {
+      "id": "fig-15",
+      "file": "images/fig-15.jpg",
+      "page": 10,
+      "box": [
+        315,
+        290,
+        412,
+        705
+      ]
+    },
+    {
+      "id": "fig-16",
+      "file": "images/fig-16.jpg",
+      "page": 10,
+      "box": [
+        448,
+        100,
+        585,
+        530
+      ]
+    },
+    {
+      "id": "fig-17",
+      "file": "images/fig-17.jpg",
+      "page": 10,
+      "box": [
+        708,
+        100,
+        865,
+        665
+      ]
+    },
+    {
+      "id": "fig-18",
+      "file": "images/fig-18.jpg",
+      "page": 11,
+      "box": [
+        385,
+        125,
+        555,
+        875
+      ]
+    },
+    {
+      "id": "fig-19",
+      "file": "images/fig-19.jpg",
+      "page": 11,
+      "box": [
+        592,
+        125,
+        778,
+        890
+      ]
+    },
+    {
+      "id": "fig-20",
+      "file": "images/fig-20.jpg",
+      "page": 12,
+      "box": [
+        115,
+        210,
+        285,
+        795
+      ]
+    },
+    {
+      "id": "fig-21",
+      "file": "images/fig-21.jpg",
+      "page": 12,
+      "box": [
+        348,
+        100,
+        505,
+        665
+      ]
+    },
+    {
+      "id": "fig-22",
+      "file": "images/fig-22.jpg",
+      "page": 12,
+      "box": [
+        548,
+        100,
+        707,
+        500
+      ]
+    },
+    {
+      "id": "fig-23",
+      "file": "images/fig-23.jpg",
+      "page": 13,
+      "box": [
+        113,
+        380,
+        222,
+        625
+      ]
+    },
+    {
+      "id": "fig-24",
+      "file": "images/fig-24.jpg",
+      "page": 13,
+      "box": [
+        325,
+        350,
+        492,
+        655
+      ]
+    },
+    {
+      "id": "fig-25",
+      "file": "images/fig-25.jpg",
+      "page": 13,
+      "box": [
+        532,
+        100,
+        678,
+        595
+      ]
+    },
+    {
+      "id": "fig-26",
+      "file": "images/fig-26.jpg",
+      "page": 14,
+      "box": [
+        98,
+        280,
+        226,
+        720
+      ]
+    },
+    {
+      "id": "fig-27",
+      "file": "images/fig-27.jpg",
+      "page": 14,
+      "box": [
+        258,
+        125,
+        425,
+        875
+      ]
+    },
+    {
+      "id": "fig-28",
+      "file": "images/fig-28.jpg",
+      "page": 14,
+      "box": [
+        475,
+        215,
+        661,
+        785
+      ]
+    },
+    {
+      "id": "fig-29",
+      "file": "images/fig-29.jpg",
+      "page": 15,
+      "box": [
+        115,
+        75,
+        478,
+        920
+      ]
+    },
+    {
+      "id": "fig-30",
+      "file": "images/fig-30.jpg",
+      "page": 16,
+      "box": [
+        118,
+        360,
+        300,
+        645
+      ]
+    }
+  ],
   "topics": [],
-  "questions": []
+  "questions": [
+    {
+      "id": "q001",
+      "question": "A student has a measuring cylinder containing water and also has a balance.\n\nWhich of these could she use to find the volume of a small metal sphere?\n\nShe has no other apparatus.",
+      "options": [
+        "either the measuring cylinder containing water or the balance",
+        "the measuring cylinder containing water only",
+        "the balance only",
+        "neither the measuring cylinder nor the balance"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 18, row 1: answer B"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 2,
+      "box": [
+        76,
+        70,
+        262,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q002",
+      "question": "A ball hits a bat with a velocity of 30 m/s, and leaves the bat travelling with a velocity of 20 m/s in the opposite direction. The ball is in contact with the bat for 0.10 s.\n\nWhat is the magnitude of the acceleration of the ball whilst it is in contact with the bat?",
+      "options": [
+        "1.0 m/s²",
+        "5.0 m/s²",
+        "100 m/s²",
+        "500 m/s²"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 18, row 2: answer D"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 2,
+      "box": [
+        287,
+        70,
+        382,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q003",
+      "question": "A train begins a journey from a station and travels 60 km in a time of 20 minutes.\n\nWhat is the average speed of the train?",
+      "options": [
+        "3.0 m/s",
+        "5.0 m/s",
+        "50 m/s",
+        "60 m/s"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 18, row 3: answer C"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 2,
+      "box": [
+        405,
+        70,
+        484,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q004",
+      "question": "Which statement about mass is correct?",
+      "options": [
+        "A mass of 10 kg weighs 1 N near the Earth’s surface.",
+        "Mass is a gravitational force.",
+        "Mass increases when the gravitational field strength increases.",
+        "The greater the mass of a body, the more it resists a change in its motion."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 18, row 4: answer D"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 2,
+      "box": [
+        508,
+        70,
+        634,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q005",
+      "question": "A small bottle has a mass of 20 g when empty. The volume of the bottle is 10 cm³.\n\nWhen full of liquid, the total mass is 150 g.\n\nWhat is the density of the liquid?",
+      "options": [
+        "0.50 g/cm³",
+        "2.0 g/cm³",
+        "13 g/cm³",
+        "15 g/cm³"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 18, row 5: answer C"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 2,
+      "box": [
+        652,
+        70,
+        768,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q006",
+      "question": "An object of mass 0.80 kg is moving in a straight line at a velocity of 2.0 m/s. A force is exerted on the object, in the direction of motion, for a period of 1.0 minute and the velocity of the object increases to 6.0 m/s.\n\nWhat force is exerted on the object?",
+      "options": [
+        "0.053 N",
+        "0.080 N",
+        "3.2 N",
+        "4.8 N"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 18, row 6: answer A"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 2,
+      "box": [
+        792,
+        70,
+        902,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q007",
+      "question": "An object moves at constant speed in the circular path shown.\n\nWhich statement about the acceleration of the object when it is at point P is correct?",
+      "options": [
+        "The acceleration is in the direction of arrow X.",
+        "The acceleration is in the direction of arrow Y.",
+        "The acceleration is in the direction of arrow Z.",
+        "The object is not accelerating."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 18, row 7: answer C"
+      },
+      "figures": [
+        "fig-01"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 3,
+      "box": [
+        76,
+        70,
+        360,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q008",
+      "question": "An object is pivoted at point P. A student ties a length of string to a peg on the object. He pulls the string with a force F.\n\nWhat is the moment of the force F about the point P?",
+      "options": [
+        "F × q",
+        "F × r",
+        "F × s",
+        "F × t"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 18, row 8: answer C"
+      },
+      "figures": [
+        "fig-02"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 3,
+      "box": [
+        386,
+        70,
+        685,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q009",
+      "question": "A gas molecule strikes the wall of a container. The molecule rebounds with the same speed.\n\nWhat happens to the kinetic energy and what happens to the momentum of the molecule?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 18, row 9: answer C"
+      },
+      "figures": [
+        "fig-03",
+        "fig-04"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 4,
+      "box": [
+        76,
+        70,
+        432,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q010",
+      "question": "A horizontal force pulls a box along a horizontal surface.\n\nThe box gains 30 J of kinetic energy and 10 J of thermal energy is produced by the friction between the box and the surface.\n\nHow much work is done by the force?",
+      "options": [
+        "10 J",
+        "20 J",
+        "30 J",
+        "40 J"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 18, row 10: answer D"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 4,
+      "box": [
+        444,
+        70,
+        568,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q011",
+      "question": "A crane is used to lift loads vertically.\n\nThe output power of the crane to lift a car is P.\n\nThe crane then lifts a lorry, which has 3.0 times the weight of the car, through 0.25 of the distance in 0.50 of the time.\n\nWhat is the output power of the crane now?",
+      "options": [
+        "3P/8",
+        "3P/2",
+        "8P/3",
+        "6P"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 18, row 11: answer B"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 4,
+      "box": [
+        592,
+        70,
+        762,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q012",
+      "question": "The diagram shows a manometer connected to a gas supply.\n\nWhat is the pressure of the gas supply?",
+      "options": [
+        "100 mm Hg above atmospheric pressure",
+        "100 mm Hg below atmospheric pressure",
+        "200 mm Hg above atmospheric pressure",
+        "200 mm Hg below atmospheric pressure"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 18, row 12: answer C"
+      },
+      "figures": [
+        "fig-05"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 5,
+      "box": [
+        76,
+        70,
+        545,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q013",
+      "question": "The diagram shows a box of dimensions 6.0 cm × 8.0 cm × 4.0 cm.\n\nThe box rests on a flat horizontal surface.\n\nOn which face must the box rest in order to exert the least pressure?",
+      "options": [
+        "face X",
+        "face Y",
+        "face Z",
+        "The pressure is the same for all the faces."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 18, row 13: answer A"
+      },
+      "figures": [
+        "fig-06"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 5,
+      "box": [
+        571,
+        70,
+        893,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q014",
+      "question": "Air in a sealed syringe is slowly compressed by moving the piston. The temperature of the air stays the same.\n\nWhich statement about the air is correct?",
+      "options": [
+        "The pressure of the air decreases because its molecules now travel more slowly.",
+        "The pressure of the air decreases because the area of the syringe walls is now smaller.",
+        "The pressure of the air increases because its molecules now hit the syringe walls more frequently.",
+        "The pressure of the air increases because its molecules now travel more quickly."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 18, row 14: answer C"
+      },
+      "figures": [
+        "fig-07"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 6,
+      "box": [
+        76,
+        70,
+        388,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q015",
+      "question": "In an experiment, smoke particles are suspended in air and viewed through a microscope.\n\nThe smoke particles move about with short random movements.\n\nWhich of the following statements is correct?",
+      "options": [
+        "Air particles have large masses compared to smoke particles and they move in one direction only.",
+        "Air particles have large masses compared to smoke particles and they move in random directions.",
+        "Air particles move at high speeds compared to smoke particles and they move in one direction only.",
+        "Air particles move at high speeds compared to smoke particles and they move in random directions."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 18, row 15: answer D"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 6,
+      "box": [
+        411,
+        70,
+        658,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q016",
+      "question": "The graph shows how the internal energy of 1.0 kg of a metal changes with temperature.\n\nWhat is the increase in the internal energy of a block of the same metal of mass 0.25 kg when its temperature rises from 40 °C to 50 °C?",
+      "options": [
+        "30 J",
+        "300 J",
+        "750 J",
+        "1200 J"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 18, row 16: answer C"
+      },
+      "figures": [
+        "fig-08"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 7,
+      "box": [
+        76,
+        70,
+        508,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q017",
+      "question": "A piece of melting ice at 0 °C and a beaker of boiling water are both in a laboratory. The laboratory is at 20 °C.\n\nWhat is happening to the temperature of the melting ice and what is happening to the temperature of the boiling water?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 18, row 17: answer A"
+      },
+      "figures": [
+        "fig-09",
+        "fig-10"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 7,
+      "box": [
+        533,
+        70,
+        922,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q018",
+      "question": "One end of a copper rod is heated.\n\nWhat is one method by which thermal energy is transferred in the copper rod?",
+      "options": [
+        "Free electrons transfer energy from the cooler end to the hotter end.",
+        "Free electrons transfer energy from the hotter end to the cooler end.",
+        "Molecules of copper move from the cooler end to the hotter end.",
+        "Molecules of copper move from the hotter end to the cooler end."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 18, row 18: answer B"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 8,
+      "box": [
+        76,
+        70,
+        232,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q019",
+      "question": "Which change will cause a decrease in the rate of radiation emitted by an object?",
+      "options": [
+        "changing the surface colour from white to black",
+        "changing the surface texture from dull to shiny",
+        "increasing the surface temperature",
+        "increasing the surface area"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 18, row 19: answer B"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 8,
+      "box": [
+        257,
+        70,
+        383,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q020",
+      "question": "What is the approximate wavelength in air of the highest frequency sound that can be heard by a normal healthy person?",
+      "options": [
+        "0.02 m",
+        "60 m",
+        "20 000 m",
+        "7 000 000 m"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 18, row 20: answer A"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 8,
+      "box": [
+        407,
+        70,
+        471,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q021",
+      "question": "What causes the change in direction when light travels from air into glass?",
+      "options": [
+        "The amplitude of the light changes.",
+        "The colour of the light changes.",
+        "The frequency of the light changes.",
+        "The speed of the light changes."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 18, row 21: answer D"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 8,
+      "box": [
+        495,
+        70,
+        621,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q022",
+      "question": "Light from a torch is incident on a plane mirror. The angle of incidence is 38°.\n\nWhat is the angle of reflection?",
+      "options": [
+        "38°",
+        "52°",
+        "76°",
+        "142°"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 18, row 22: answer A"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 8,
+      "box": [
+        646,
+        70,
+        726,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q023",
+      "question": "Two rays with an angle of incidence of 60° pass into dilute and concentrated sugar-water solutions. The refractions are shown.\n\nWhich row is correct?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 18, row 23: answer C"
+      },
+      "figures": [
+        "fig-11",
+        "fig-12"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 9,
+      "box": [
+        77,
+        70,
+        468,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q024",
+      "question": "A thin converging lens is used to produce a sharp image of a candle.\n\nVarious sharp images are produced on the screen by moving the lens and the screen backwards and forwards.\n\nWhich statement is always correct?",
+      "options": [
+        "The image is at the principal focus (focal point) of the lens.",
+        "The image is bigger than the object.",
+        "The image is closer to the lens than the object.",
+        "The image is inverted."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 18, row 24: answer D"
+      },
+      "figures": [
+        "fig-13"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 9,
+      "box": [
+        478,
+        70,
+        893,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q025",
+      "question": "Which row gives the approximate speeds at which ultraviolet waves travel in air and in a vacuum?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 18, row 25: answer D"
+      },
+      "figures": [
+        "fig-14"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 10,
+      "box": [
+        76,
+        70,
+        282,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q026",
+      "question": "The diagram represents a sound wave.\n\nWhat are the names of the parts of the sound wave labelled X and Y?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 18, row 26: answer B"
+      },
+      "figures": [
+        "fig-15",
+        "fig-16"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 10,
+      "box": [
+        293,
+        70,
+        590,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q027",
+      "question": "The speed of sound is different in different states of matter.\n\nThe speed of sound in liquid water is 1500 m/s.\n\nWhich row correctly compares the speed of sound in ice and the speed of sound in water vapour with the speed of sound in water?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 18, row 27: answer C"
+      },
+      "figures": [
+        "fig-17"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 10,
+      "box": [
+        606,
+        70,
+        870,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q028",
+      "question": "Three methods to demagnetise a magnet are suggested. The magnet is in an east-west direction.\n\n1 hitting the magnet repeatedly with a hammer\n2 heating the magnet until red hot\n3 withdrawing the magnet from a coil which has a direct current (d.c.) in it\n\nWhich methods demagnetise the magnet?",
+      "options": [
+        "1, 2 and 3",
+        "1 and 2 only",
+        "1 and 3 only",
+        "2 and 3 only"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 18, row 28: answer B"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 11,
+      "box": [
+        76,
+        70,
+        237,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q029",
+      "question": "Three cores of different metals P, Q and R are placed inside identical coils of wire.\n\nAt least one of the metals is non-magnetic.\n\nThe cores are held above some iron nails.\n\nThe three diagrams show what happens when there is a current in the coils.\n\nThe three diagrams below show what happens when the current is then switched off.\n\nWhich core metals are magnetic?",
+      "options": [
+        "P only",
+        "R only",
+        "P and Q",
+        "Q and R"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 19, row 29: answer D"
+      },
+      "figures": [
+        "fig-18",
+        "fig-19"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 11,
+      "box": [
+        261,
+        70,
+        832,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q030",
+      "question": "Two uncharged metal spheres X and Y rest on insulating stands and touch each other. A negatively charged plastic rod is brought near to sphere X.\n\nUsing the insulating stand, sphere Y is moved away from sphere X.\n\nWhat are the signs and the relative magnitudes of the charges induced on X and Y?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 19, row 30: answer C"
+      },
+      "figures": [
+        "fig-20",
+        "fig-21"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 12,
+      "box": [
+        76,
+        70,
+        508,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q031",
+      "question": "Which two changes to a metal wire both decrease its resistance?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 19, row 31: answer B"
+      },
+      "figures": [
+        "fig-22"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 12,
+      "box": [
+        524,
+        70,
+        712,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q032",
+      "question": "There is a current I in a resistor of resistance R for a time t. The potential difference across the resistor is V.\n\nWhich equation gives the energy E transferred by the resistor?",
+      "options": [
+        "E = IR",
+        "E = IV",
+        "E = IRt",
+        "E = IVt"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 19, row 32: answer D"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 12,
+      "box": [
+        727,
+        70,
+        822,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q033",
+      "question": "A resistor R is connected in parallel with an 8.0 Ω resistor. The resistance of this combination is 4.0 Ω.\n\nWhat is the resistance of resistor R?",
+      "options": [
+        "0.50 Ω",
+        "2.0 Ω",
+        "4.0 Ω",
+        "8.0 Ω"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 19, row 33: answer D"
+      },
+      "figures": [
+        "fig-23"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 13,
+      "box": [
+        77,
+        70,
+        274,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q034",
+      "question": "A student designs a circuit to use as a dimmer switch for a lamp.\n\nWhat happens to the brightness of the lamp and the potential difference (p.d.) across the lamp, when the slider is moved from X to Y?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 19, row 34: answer A"
+      },
+      "figures": [
+        "fig-24",
+        "fig-25"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 13,
+      "box": [
+        298,
+        70,
+        678,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q035",
+      "question": "The circuit shown contains two gates.\n\nWhich truth table describes the operation of the circuit?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 19, row 35: answer D"
+      },
+      "figures": [
+        "fig-26",
+        "fig-27"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 14,
+      "box": [
+        76,
+        70,
+        428,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q036",
+      "question": "The diagram shows an electromagnet near a coil of wire connected to a voltmeter. The reading on the voltmeter is zero.\n\nThe switch is closed. The electromagnet magnetises quickly.\n\nWhat happens to the reading on the voltmeter?",
+      "options": [
+        "It keeps increasing.",
+        "It quickly increases and stays at maximum.",
+        "It quickly increases and then decreases.",
+        "It stays on zero."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 19, row 36: answer C"
+      },
+      "figures": [
+        "fig-28"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 14,
+      "box": [
+        439,
+        70,
+        822,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q037",
+      "question": "Which graph shows the voltage output of an a.c. generator with the peaks and zeros correctly labelled?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 19, row 37: answer D"
+      },
+      "figures": [
+        "fig-29"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 15,
+      "box": [
+        76,
+        70,
+        482,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q038",
+      "question": "Three students are describing the structure of an atom.\n\nstudent 1    All the positively charged particles are in the nucleus.\nstudent 2    Positive electrons are in the nucleus.\nstudent 3    Negative electrons orbit around the nucleus.\n\nWhich students are making a correct statement?",
+      "options": [
+        "1, 2 and 3",
+        "1 and 2 only",
+        "1 and 3 only",
+        "2 and 3 only"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 19, row 38: answer C"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 15,
+      "box": [
+        495,
+        70,
+        655,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q039",
+      "question": "When alpha particles are incident on a thin metal foil, most of them pass through undeviated.\n\nWhat does this observation reveal about the nature of the atom?",
+      "options": [
+        "The atom has a dense nucleus.",
+        "The atom is mostly empty space.",
+        "The atom is very small.",
+        "The nucleus of the atom is positively charged."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 19, row 39: answer B"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 15,
+      "box": [
+        679,
+        70,
+        835,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q040",
+      "question": "A laboratory worker measures the count rate from a radioactive source. He records his results in a table.\n\nThe average background radiation in the laboratory is 8 counts per second.\n\nWhat is the half-life of the source?",
+      "options": [
+        "1.5 minutes",
+        "2.0 minutes",
+        "3.0 minutes",
+        "4.0 minutes"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 19, row 40: answer B"
+      },
+      "figures": [
+        "fig-30"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 16,
+      "box": [
+        76,
+        70,
+        459,
+        930
+      ],
+      "flag": ""
+    }
+  ]
 }
