@@ -1,7 +1,7 @@
 {
   "codoxAgentBundle": 1,
   "sourceFile": "0625_w21_qp_23.pdf",
-  "producedBy": "",
+  "producedBy": "claude-opus-5",
   "pages": [
     {
       "index": 0,
@@ -165,7 +165,1461 @@
       "role": "answer-key"
     }
   ],
-  "figures": [],
+  "figures": [
+    {
+      "id": "fig-01",
+      "file": "images/fig-01.jpg",
+      "page": 2,
+      "box": [
+        250,
+        290,
+        415,
+        700
+      ]
+    },
+    {
+      "id": "fig-02",
+      "file": "images/fig-02.jpg",
+      "page": 2,
+      "box": [
+        450,
+        90,
+        830,
+        930
+      ]
+    },
+    {
+      "id": "fig-03",
+      "file": "images/fig-03.jpg",
+      "page": 3,
+      "box": [
+        245,
+        105,
+        390,
+        600
+      ]
+    },
+    {
+      "id": "fig-04",
+      "file": "images/fig-04.jpg",
+      "page": 3,
+      "box": [
+        430,
+        280,
+        500,
+        720
+      ]
+    },
+    {
+      "id": "fig-05",
+      "file": "images/fig-05.jpg",
+      "page": 4,
+      "box": [
+        110,
+        380,
+        305,
+        630
+      ]
+    },
+    {
+      "id": "fig-06",
+      "file": "images/fig-06.jpg",
+      "page": 5,
+      "box": [
+        178,
+        110,
+        448,
+        890
+      ]
+    },
+    {
+      "id": "fig-07",
+      "file": "images/fig-07.jpg",
+      "page": 6,
+      "box": [
+        128,
+        190,
+        325,
+        800
+      ]
+    },
+    {
+      "id": "fig-08",
+      "file": "images/fig-08.jpg",
+      "page": 7,
+      "box": [
+        130,
+        175,
+        285,
+        830
+      ]
+    },
+    {
+      "id": "fig-09",
+      "file": "images/fig-09.jpg",
+      "page": 7,
+      "box": [
+        652,
+        105,
+        870,
+        710
+      ]
+    },
+    {
+      "id": "fig-10",
+      "file": "images/fig-10.jpg",
+      "page": 8,
+      "box": [
+        98,
+        290,
+        255,
+        720
+      ]
+    },
+    {
+      "id": "fig-11",
+      "file": "images/fig-11.jpg",
+      "page": 8,
+      "box": [
+        290,
+        105,
+        424,
+        685
+      ]
+    },
+    {
+      "id": "fig-12",
+      "file": "images/fig-12.jpg",
+      "page": 8,
+      "box": [
+        503,
+        245,
+        697,
+        755
+      ]
+    },
+    {
+      "id": "fig-13",
+      "file": "images/fig-13.jpg",
+      "page": 9,
+      "box": [
+        100,
+        105,
+        296,
+        720
+      ]
+    },
+    {
+      "id": "fig-14",
+      "file": "images/fig-14.jpg",
+      "page": 9,
+      "box": [
+        345,
+        290,
+        456,
+        710
+      ]
+    },
+    {
+      "id": "fig-15",
+      "file": "images/fig-15.jpg",
+      "page": 9,
+      "box": [
+        488,
+        150,
+        634,
+        400
+      ]
+    },
+    {
+      "id": "fig-16",
+      "file": "images/fig-16.jpg",
+      "page": 10,
+      "box": [
+        116,
+        305,
+        268,
+        700
+      ]
+    },
+    {
+      "id": "fig-17",
+      "file": "images/fig-17.jpg",
+      "page": 10,
+      "box": [
+        300,
+        105,
+        448,
+        455
+      ]
+    },
+    {
+      "id": "fig-18",
+      "file": "images/fig-18.jpg",
+      "page": 10,
+      "box": [
+        498,
+        250,
+        706,
+        745
+      ]
+    },
+    {
+      "id": "fig-19",
+      "file": "images/fig-19.jpg",
+      "page": 10,
+      "box": [
+        745,
+        150,
+        902,
+        850
+      ]
+    },
+    {
+      "id": "fig-20",
+      "file": "images/fig-20.jpg",
+      "page": 11,
+      "box": [
+        160,
+        105,
+        310,
+        780
+      ]
+    },
+    {
+      "id": "fig-21",
+      "file": "images/fig-21.jpg",
+      "page": 11,
+      "box": [
+        378,
+        105,
+        552,
+        545
+      ]
+    },
+    {
+      "id": "fig-22",
+      "file": "images/fig-22.jpg",
+      "page": 12,
+      "box": [
+        282,
+        105,
+        516,
+        685
+      ]
+    },
+    {
+      "id": "fig-23",
+      "file": "images/fig-23.jpg",
+      "page": 12,
+      "box": [
+        622,
+        330,
+        796,
+        670
+      ]
+    },
+    {
+      "id": "fig-24",
+      "file": "images/fig-24.jpg",
+      "page": 13,
+      "box": [
+        100,
+        80,
+        240,
+        915
+      ]
+    },
+    {
+      "id": "fig-25",
+      "file": "images/fig-25.jpg",
+      "page": 13,
+      "box": [
+        320,
+        210,
+        632,
+        790
+      ]
+    },
+    {
+      "id": "fig-26",
+      "file": "images/fig-26.jpg",
+      "page": 14,
+      "box": [
+        128,
+        360,
+        232,
+        640
+      ]
+    },
+    {
+      "id": "fig-27",
+      "file": "images/fig-27.jpg",
+      "page": 15,
+      "box": [
+        100,
+        85,
+        355,
+        915
+      ]
+    },
+    {
+      "id": "fig-28",
+      "file": "images/fig-28.jpg",
+      "page": 15,
+      "box": [
+        642,
+        110,
+        802,
+        560
+      ]
+    },
+    {
+      "id": "fig-29",
+      "file": "images/fig-29.jpg",
+      "page": 16,
+      "box": [
+        352,
+        75,
+        720,
+        925
+      ]
+    }
+  ],
   "topics": [],
-  "questions": []
+  "questions": [
+    {
+      "id": "q001",
+      "question": "For which purpose is a micrometer screw gauge suitable?",
+      "options": [
+        "measuring the current in a coil that is known to be about 3 × 10⁻⁶ A",
+        "measuring the diameter of a ball bearing that is known to be about 3 × 10⁻³ m",
+        "measuring the mass of a grain of sand that is known to be about 3 × 10⁻³ g",
+        "measuring the moment used to turn a screw that is known to be about 3 × 10⁻⁶ N m"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 22, Question 1 → Answer B"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 2,
+      "box": [
+        65,
+        70,
+        212,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q002",
+      "question": "The graph shows how the speed of a car varies with time at the start of a journey.\n\nWhich distance–time graph represents the motion of the car over the same time period?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 22, Question 2 → Answer A"
+      },
+      "figures": [
+        "fig-01",
+        "fig-02"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 2,
+      "box": [
+        222,
+        70,
+        835,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q003",
+      "question": "Which statement about mass and weight is correct?",
+      "options": [
+        "Mass is a property that causes change in motion.",
+        "Mass is caused by a gravitational field acting on a weight.",
+        "Weight is a property that resists change in motion.",
+        "Weight is caused by a gravitational field acting on a mass."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 22, Question 3 → Answer D"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 3,
+      "box": [
+        65,
+        70,
+        202,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q004",
+      "question": "Which substance in the table has the lowest density?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 22, Question 4 → Answer C"
+      },
+      "figures": [
+        "fig-03"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 3,
+      "box": [
+        218,
+        70,
+        392,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q005",
+      "question": "The diagram shows a uniform bar resting on two supports, P and Q.\n\nThe weight of the bar is 4.0 N.\n\nWhat is the force exerted on the bar by support P?",
+      "options": [
+        "0.80 N",
+        "2.0 N",
+        "3.2 N",
+        "4.0 N"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 22, Question 5 → Answer A"
+      },
+      "figures": [
+        "fig-04"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 3,
+      "box": [
+        405,
+        70,
+        588,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q006",
+      "question": "A spring, which obeys Hooke's law, has an unstretched length of 10 cm.\n\nA load of 20 N is suspended from the spring.\n\nThe new length of the spring is 36 cm.\n\nWhat is the spring constant k of the spring?",
+      "options": [
+        "0.56 N / cm",
+        "0.77 N / cm",
+        "1.3 N / cm",
+        "1.8 N / cm"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 22, Question 6 → Answer B"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 3,
+      "box": [
+        598,
+        70,
+        758,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q007",
+      "question": "A cricket ball has a mass of 0.16 kg. The ball travels at 30 m / s. The ball is hit by a bat with a force of 10 800 N. After being hit, the ball moves off at 30 m / s in the opposite direction.\n\nFor how long was the ball in contact with the bat?",
+      "options": [
+        "0.0004 s",
+        "0.00089 s",
+        "0.0044 s",
+        "0.015 s"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 22, Question 7 → Answer B"
+      },
+      "figures": [
+        "fig-05"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 4,
+      "box": [
+        66,
+        70,
+        362,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q008",
+      "question": "Electrical energy may be obtained from nuclear fission.\n\nIn which order is the energy transferred in this process?",
+      "options": [
+        "nuclear fuel → generator → reactor and boiler → turbines",
+        "nuclear fuel → generator → turbines → reactor and boiler",
+        "nuclear fuel → reactor and boiler → generator → turbines",
+        "nuclear fuel → reactor and boiler → turbines → generator"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 22, Question 8 → Answer D"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 4,
+      "box": [
+        378,
+        70,
+        546,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q009",
+      "question": "Which energy resource has the Sun as its only source of energy?",
+      "options": [
+        "geothermal",
+        "nuclear",
+        "oil",
+        "tidal"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 22, Question 9 → Answer C"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 4,
+      "box": [
+        562,
+        70,
+        700,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q010",
+      "question": "A man, attached to an elastic cord, jumps from a platform. He falls 60 m before starting to rise. The length of the unextended cord is 30 m.\n\nThe diagrams show four successive stages in his fall.\n\nIn which position is elastic (strain) energy and kinetic energy present?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 22, Question 10 → Answer C"
+      },
+      "figures": [
+        "fig-06"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 5,
+      "box": [
+        68,
+        70,
+        452,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q011",
+      "question": "The diagram shows three glass containers.\n\nAll three contain water filled to the same vertical height h.\n\nThe base area of P is equal to the base area of R.\n\nThe base area of Q is larger than the other two.\n\nStudents are asked to compare the water pressure at the bottom of each container.\n\nStudent 1 says that the pressure at base R is more than the pressure at base P.\nStudent 2 says that the pressure at base Q is less than the pressure at base P.\nStudent 3 says that the pressures at all three bases are the same.\n\nWhich students are correct?",
+      "options": [
+        "none are correct",
+        "1 only",
+        "2 only",
+        "3 only"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 22, Question 11 → Answer D"
+      },
+      "figures": [
+        "fig-07"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 6,
+      "box": [
+        68,
+        70,
+        632,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q012",
+      "question": "A liquid is evaporating. The liquid is not boiling.\n\nWhich statement about the liquid is correct at an instant in time?",
+      "options": [
+        "Any molecule can escape, and from any part of the liquid.",
+        "Any molecule can escape, but only from the liquid's surface.",
+        "Only molecules with enough energy can escape, and only from the liquid's surface.",
+        "Only molecules with enough energy can escape, but from any part of the liquid."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 22, Question 12 → Answer C"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 6,
+      "box": [
+        648,
+        70,
+        802,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q013",
+      "question": "The same mass of a gas is trapped in four identical cylinders by a piston that can move.\n\nThe diagrams show the samples of gas in different conditions of volume and temperature.\n\nWhich list gives the pressure of the gas in order from lowest to highest?",
+      "options": [
+        "1 → 2 → 3 → 4",
+        "1 → 3 → 2 → 4",
+        "4 → 2 → 3 → 1",
+        "4 → 3 → 2 → 1"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 22, Question 13 → Answer B"
+      },
+      "figures": [
+        "fig-08"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 7,
+      "box": [
+        68,
+        70,
+        428,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q014",
+      "question": "An aluminium block has a mass of 200 g.\n\nThe specific heat capacity of aluminium is 900 J / (kg °C).\n\nHow much energy is needed to increase the temperature of the block from 20 °C to 110 °C?",
+      "options": [
+        "2.0 J",
+        "2000 J",
+        "16 200 J",
+        "16 200 000 J"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 22, Question 14 → Answer C"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 7,
+      "box": [
+        441,
+        70,
+        564,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q015",
+      "question": "A solid and a gas are each given the same increase in temperature. The gas is kept at a constant pressure.\n\nWhich row is correct?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 22, Question 15 → Answer B"
+      },
+      "figures": [
+        "fig-09"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 7,
+      "box": [
+        578,
+        70,
+        874,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q016",
+      "question": "The diagram shows a pan used for cooking food.\n\nWhich row is correct for the materials used to make the base and the handle of the pan?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 22, Question 16 → Answer B"
+      },
+      "figures": [
+        "fig-10",
+        "fig-11"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 8,
+      "box": [
+        68,
+        70,
+        428,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q017",
+      "question": "In the diagram, the mountaineer can hear the stream although he cannot see it. When he is closer to the gully, he can both hear and see the stream. When he is further from the gully, he can neither hear nor see the stream.\n\nWhich statement is not correct?",
+      "options": [
+        "As he approaches the gully edge, he hears first the short wavelength, higher frequencies and then the long wavelength, lower frequencies.",
+        "As he approaches the gully edge, the sound becomes louder.",
+        "He hears the stream because some of the sound is diffracted.",
+        "He hears the stream because some of the sound is reflected from the opposite wall of the gully."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 22, Question 17 → Answer A"
+      },
+      "figures": [
+        "fig-12"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 8,
+      "box": [
+        443,
+        70,
+        866,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q018",
+      "question": "Which row correctly defines the frequency and the speed of a wave?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 22, Question 18 → Answer C"
+      },
+      "figures": [
+        "fig-13"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 9,
+      "box": [
+        68,
+        70,
+        298,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q019",
+      "question": "A ray of light travels from air into a glass block.\n\nThree suggestions as to how the refractive index of glass n may be calculated are listed.\n\nWhich suggestions are correct?",
+      "options": [
+        "1, 2 and 3",
+        "1 and 2 only",
+        "1 and 3 only",
+        "2 and 3 only"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 22, Question 19 → Answer B"
+      },
+      "figures": [
+        "fig-14",
+        "fig-15"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 9,
+      "box": [
+        314,
+        70,
+        696,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q020",
+      "question": "The diagram shows a ray of light in air incident on a glass block. Some of the light is refracted and some of the light is reflected. Two angles, p and q, are marked on the diagram.\n\nWhich row gives the angle of incidence and states whether total internal reflection occurs?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 22, Question 20 → Answer C"
+      },
+      "figures": [
+        "fig-16",
+        "fig-17"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 10,
+      "box": [
+        68,
+        70,
+        452,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q021",
+      "question": "A photographer sees his image as shown.\n\nWhat could X be?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 22, Question 21 → Answer A"
+      },
+      "figures": [
+        "fig-18",
+        "fig-19"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 10,
+      "box": [
+        466,
+        70,
+        908,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q022",
+      "question": "The Sun emits infrared radiation and light.\n\nLight from the Sun reaches the Earth in 8 minutes.\n\nWhich row gives correct information about the infrared radiation?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 22, Question 22 → Answer A"
+      },
+      "figures": [
+        "fig-20"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 11,
+      "box": [
+        68,
+        70,
+        314,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q023",
+      "question": "Which row gives the typical values of the speed of sound at room temperature in the materials stated?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 22, Question 23 → Answer A"
+      },
+      "figures": [
+        "fig-21"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 11,
+      "box": [
+        328,
+        70,
+        556,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q024",
+      "question": "What is ultrasound?",
+      "options": [
+        "sound waves that are so loud that they damage human hearing",
+        "sound waves that are too high-pitched for humans to hear",
+        "sound waves that are too low-pitched for humans to hear",
+        "sound waves that are too quiet for humans to hear"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 22, Question 24 → Answer B"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 11,
+      "box": [
+        570,
+        70,
+        706,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q025",
+      "question": "A stationary, charged particle is in a field.\n\nWhich fields can cause there to be a force on this particle due to its charge?\n\n1 gravitational field\n2 magnetic field\n3 electric field",
+      "options": [
+        "1 and 2",
+        "1 only",
+        "2 and 3",
+        "3 only"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 22, Question 25 → Answer D"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 11,
+      "box": [
+        723,
+        70,
+        892,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q026",
+      "question": "An electric current in a copper wire is due to the flow of charge.\n\nWhich particles are moving along the wire?",
+      "options": [
+        "α-particles",
+        "copper nuclei",
+        "electrons",
+        "protons"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 22, Question 26 → Answer C"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 12,
+      "box": [
+        68,
+        70,
+        236,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q027",
+      "question": "Which row is correct?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 22, Question 27 → Answer A"
+      },
+      "figures": [
+        "fig-22"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 12,
+      "box": [
+        248,
+        70,
+        520,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q028",
+      "question": "The diagram shows a circuit containing two resistors of resistance 1.0 Ω and 2.0 Ω.\n\nA voltmeter is connected across the 1.0 Ω resistor by connecting P to X.\n\nThe reading on the voltmeter is 6.0 V.\n\nP is moved to point Y in the circuit.\n\nWhat is the new reading on the voltmeter?",
+      "options": [
+        "3.0 V",
+        "6.0 V",
+        "12 V",
+        "18 V"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 22, Question 28 → Answer D"
+      },
+      "figures": [
+        "fig-23"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 12,
+      "box": [
+        534,
+        70,
+        876,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q029",
+      "question": "Which graph shows the current–voltage characteristic for a filament lamp?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 23, Question 29 → Answer D"
+      },
+      "figures": [
+        "fig-24"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 13,
+      "box": [
+        68,
+        70,
+        244,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q030",
+      "question": "The diagrams show pairs of circuits containing logic gates.\n\nIn which diagram does the lower circuit of the pair behave differently from the upper circuit?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 23, Question 30 → Answer D"
+      },
+      "figures": [
+        "fig-25"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 13,
+      "box": [
+        260,
+        70,
+        636,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q031",
+      "question": "Two 3.0 Ω resistors and one 6.0 Ω resistor are connected in series with a cell.\n\nWhich statement is correct?",
+      "options": [
+        "The current in the cell is equal to the current in the resistors.",
+        "The current in the cell is greater than the current in the resistors.",
+        "The potential difference (p.d.) across each resistor is equal to the p.d. across the cell.",
+        "The potential differences across each resistor are equal."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 23, Question 31 → Answer A"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 13,
+      "box": [
+        648,
+        70,
+        806,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q032",
+      "question": "Two resistors, with resistances R₁ and R₂, are connected in parallel.\n\nThe resistance R₁ is greater than the resistance R₂.\n\nWhat is the resistance of the parallel combination?",
+      "options": [
+        "less than either R₁ or R₂",
+        "equal to R₁",
+        "equal to R₂",
+        "the average of R₁ and R₂"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 23, Question 32 → Answer A"
+      },
+      "figures": [
+        "fig-26"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 14,
+      "box": [
+        68,
+        70,
+        364,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q033",
+      "question": "Circuit breakers and fuses are devices used to protect a circuit from overloading.\n\nWhich statement correctly describes the difference between a circuit breaker and a fuse?",
+      "options": [
+        "Circuit breakers can be reset if they operate but fuses need to be replaced.",
+        "Circuit breakers need to be replaced if they operate but fuses can be reset.",
+        "Circuit breakers can be used in an a.c. circuit but fuses cannot.",
+        "Circuit breakers cannot be used in an a.c. circuit but fuses can."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 23, Question 33 → Answer A"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 14,
+      "box": [
+        380,
+        70,
+        544,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q034",
+      "question": "Electrical energy is transferred by transmission lines at high voltage.\n\nWhich statement explains why a high voltage is used?",
+      "options": [
+        "The voltage is alternating.",
+        "The transmission lines have a larger resistance.",
+        "The transmission lines carry greater power.",
+        "There is a smaller current in the transmission lines for the same power."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 3,
+        "evidence": "mark scheme page 23, Question 34 → Answer D"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 14,
+      "box": [
+        560,
+        70,
+        706,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q035",
+      "question": "Which diagram shows the magnetic field around a straight, current-carrying wire?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 23, Question 35 → Answer A"
+      },
+      "figures": [
+        "fig-27"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 15,
+      "box": [
+        68,
+        70,
+        358,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q036",
+      "question": "The coil in a d.c. motor is connected to a split-ring commutator.\n\nWhat is the purpose of the split-ring commutator?",
+      "options": [
+        "to ensure that the coil continues to rotate in the same direction",
+        "to ensure that the size of the current in the coil remains constant",
+        "to ensure that the size of the turning effect on the coil remains constant",
+        "to ensure that the turning effect on the coil changes direction"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 23, Question 36 → Answer A"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 15,
+      "box": [
+        370,
+        70,
+        532,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q037",
+      "question": "The nucleus of an americium atom contains 146 neutrons and 95 protons. It decays by emitting an α-particle.\n\nHow many neutrons and how many protons remain in the nucleus when this form of americium decays?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 2,
+        "evidence": "mark scheme page 23, Question 37 → Answer C"
+      },
+      "figures": [
+        "fig-28"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 15,
+      "box": [
+        548,
+        70,
+        806,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q038",
+      "question": "The half-life for lead-202 is 52 500 years.\n\nA sample of lead-202 produces 800 counts / s.\n\nHow long will it take for the count rate to drop to 100 counts / s?",
+      "options": [
+        "105 000 years",
+        "157 500 years",
+        "210 000 years",
+        "420 000 years"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 23, Question 38 → Answer B"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 16,
+      "box": [
+        68,
+        70,
+        262,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q039",
+      "question": "Oxygen-15 is used in hospitals.\n\nThe count rate from a detector placed close to a sample of oxygen-15 was recorded over a period of 15 min. The background count rate is 20 counts / min.\n\nWhat is the half-life of this sample of oxygen-15?",
+      "options": [
+        "2.0 min",
+        "2.4 min",
+        "2.8 min",
+        "7.5 min"
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 0,
+        "evidence": "mark scheme page 23, Question 39 → Answer A"
+      },
+      "figures": [
+        "fig-29"
+      ],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 16,
+      "box": [
+        278,
+        70,
+        782,
+        930
+      ],
+      "flag": ""
+    },
+    {
+      "id": "q040",
+      "question": "Of the three types of ionising radiation, α, β and γ, why does α-emission cause the most ionisation?",
+      "options": [
+        "α-particles have the smallest mass.",
+        "α-particles have the greatest mass.",
+        "α-particles move with the greatest speed.",
+        "α-particles travel the greatest distance in matter."
+      ],
+      "answer": {
+        "source": "extracted",
+        "index": 1,
+        "evidence": "mark scheme page 23, Question 40 → Answer B"
+      },
+      "figures": [],
+      "topic": "",
+      "subtopic": "",
+      "year": "2021",
+      "page": 17,
+      "box": [
+        68,
+        70,
+        222,
+        930
+      ],
+      "flag": ""
+    }
+  ]
 }
