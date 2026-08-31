@@ -77,6 +77,38 @@ function positivePages(value: unknown, maximum: number): number[] {
 }
 
 /**
+ * The document pages a window's response is talking about.
+ *
+ * The prompt names the window's absolute page range, but roughly one response
+ * in three numbers its rows against the IMAGES it was handed instead: a window
+ * over pages 13-15 comes back saying 1, 2, 3. Nothing checked it, and the
+ * damage was silent rather than loud. `sameQuestion` recognizes a re-read only
+ * when the two sightings sit within one page of each other, so every question
+ * on a renumbered window looked like a section restarting its numbering twelve
+ * pages away: it became a second row with a `#2` id, and 20 of one 130-question
+ * paper's rows shipped twice. Worse, the split kept the WEAKER reading as the
+ * primary row — the sighting that could not see the continuation page held
+ * invented choices and no answer, while the sighting that read both pages
+ * correctly sat beside it under a suffixed id no export would prefer.
+ *
+ * A window starting at page 1 numbers alike either way, so only a later window
+ * can be renumbered, and only when EVERY page it named fits inside its own
+ * image count. A response naming any page beyond that span is describing
+ * document pages and is left exactly as it is — including a straddling
+ * question that legitimately names the page before the window.
+ */
+function windowPages(value: unknown, firstPage: number, lastPage: number, maximum: number): number[] {
+  const pages = positivePages(value, maximum)
+  if (pages.length === 0) return pages
+  if (pages.every((page) => page >= firstPage && page <= lastPage)) return pages
+  const span = lastPage - firstPage + 1
+  if (firstPage > 1 && pages.every((page) => page <= span)) {
+    return [...new Set(pages.map((page) => firstPage + page - 1))]
+  }
+  return pages
+}
+
+/**
  * The printed number without the punctuation that trails it.
  *
  * One window reads "15" off a page and the next reads "15)" off the same page.
@@ -121,7 +153,7 @@ function optionText(value: string): string {
   return value.trim().replace(/^[A-Za-z][.)\-:]\s*/, '').trim()
 }
 
-function parseRows(value: unknown, maximumPage: number): ParsedRow[] | undefined {
+export function parseRows(value: unknown, maximumPage: number, firstPage = 1, lastPage = maximumPage): ParsedRow[] | undefined {
   if (!isRecord(value) || !Array.isArray(value.rows)) return undefined
   const rows: ParsedRow[] = []
   for (const raw of value.rows) {
@@ -141,7 +173,7 @@ function parseRows(value: unknown, maximumPage: number): ParsedRow[] | undefined
     rows.push({
       label,
       section: normalizeSection(raw.section),
-      sourcePages: positivePages(raw.source_pages, maximumPage),
+      sourcePages: windowPages(raw.source_pages, firstPage, lastPage, maximumPage),
       question,
       options,
       correctIndex,
@@ -311,16 +343,33 @@ export function fillSections(windows: readonly (readonly ParsedRow[])[]): Parsed
   }))
 }
 
-function modalOptionCount(rows: readonly ParsedRow[]): number | undefined {
+/**
+ * The paper's own usual number of choices, or undefined when it never stated
+ * one clearly enough to judge a row against.
+ *
+ * The threshold matters because this number now decides whether a stem may
+ * receive a continuation. Measured over a whole document it is solid — 149 of
+ * one paper's 155 rows printed four choices. Measured over a handful of rows
+ * it is noise: three rows of a two-choice window make "2" the norm, and a
+ * genuinely cut question showing 2 of its 4 choices then reads as complete.
+ * So a mode is only reported from a real sample that actually agrees, matching
+ * the convention `scripts/grade-run.mjs` mirrors; below that the caller falls
+ * back to the model's own account of what it saw.
+ */
+const MIN_ROWS_FOR_OPTION_MODE = 4
+export function modalOptionCount(rows: readonly ParsedRow[]): number | undefined {
   const counts = new Map<number, number>()
+  let measured = 0
   for (const row of rows) {
     if (row.continuation || row.options.length < 2) continue
     counts.set(row.options.length, (counts.get(row.options.length) ?? 0) + 1)
+    measured++
   }
+  if (measured < MIN_ROWS_FOR_OPTION_MODE) return undefined
   let modal: number | undefined
   let best = 0
   for (const [count, seen] of counts) if (seen > best) [best, modal] = [seen, count]
-  return modal
+  return best * 2 >= measured ? modal : undefined
 }
 
 /** Whether `tail` already ends `options`, so appending it would double it. */
@@ -363,12 +412,20 @@ export function stitchContinuations(
       output[index] = { ...row, needsReview: row.needsReview || 'orphaned_page_continuation' }
       continue
     }
+    // A stem that already carries the paper's usual number of choices is
+    // complete, whatever the model said about it. Accepting its own "cut" flag
+    // as evidence welded question 115's four choices onto question 114, which
+    // had all four of its own: an 8-option hybrid whose answer index pointed
+    // into the wrong half, and the merge then stripped the very flag that had
+    // admitted it, so the row shipped unflagged with a confident wrong answer.
+    // The flag is the model's guess; the choice count is the paper's own fact,
+    // so the count decides whenever the paper stated one.
+    const missingChoices = (candidate: ParsedRow): boolean =>
+      modal === undefined ? candidate.needsReview.includes('cut') : candidate.options.length < modal
     const owns = (candidate: ParsedRow): boolean =>
       !candidate.continuation &&
       candidate.sourcePages.includes(page - 1) &&
-      (candidate.sourcePages.includes(page) ||
-        candidate.needsReview.includes('cut') ||
-        (modal !== undefined && candidate.options.length < modal))
+      (candidate.sourcePages.includes(page) || missingChoices(candidate))
     // The prompt puts the continuation BEFORE the page's own questions, so its
     // stem is usually earlier in the response but can also be later — a stem
     // that declared it runs onto this page is emitted in its own page order.
@@ -401,6 +458,65 @@ export function stitchContinuations(
       correctIndex,
       needsReview: reasons[0] ?? (correctIndex === '' ? 'no_visible_answer' : ''),
       sourceBox: prior.sourceBox,
+    }
+  }
+  return output.filter((_, index) => !absorbed.has(index))
+}
+
+/**
+ * Reunites a continuation with a stem that a DIFFERENT window read.
+ *
+ * `stitchContinuations` deliberately works inside one response, because
+ * reaching across responses by proximity once hung a page-7 option list on a
+ * question two windows back. But a continuation's owner is genuinely often in
+ * the neighbouring window: the choices at the top of page 3 belong to a stem on
+ * page 2, and the window whose core starts at page 3 never sees that stem. Those
+ * fragments shipped as empty-question rows carrying an answer the real question
+ * then lacked — question 14's answer sat on a fragment while question 14 itself
+ * went to Review blank.
+ *
+ * This pass is safe where proximity was not, because it never guesses and never
+ * lengthens a question: it matches only a stem whose choices ALREADY END with
+ * the fragment's, exactly, on an adjacent page. That identity — not nearness —
+ * is the evidence. All it may then do is take the answer the fragment read, at
+ * the offset where those choices sit, and drop the fragment as the duplicate it
+ * is. A fragment that matches nothing stays a flagged row for the tutor.
+ */
+export function absorbOrphanContinuations(
+  rows: readonly ParsedRow[],
+  modal = modalOptionCount(rows),
+): ParsedRow[] {
+  const output = rows.map((row) => ({ ...row }))
+  const absorbed = new Set<number>()
+  for (const [index, row] of output.entries()) {
+    if (!row.continuation) continue
+    const page = row.sourcePages.at(-1)
+    if (page === undefined || row.options.length === 0) continue
+    const ownerIndex = output.findIndex((candidate) =>
+      !candidate.continuation &&
+      (candidate.sourcePages.includes(page) || candidate.sourcePages.includes(page - 1)) &&
+      alreadyEnds(candidate.options, row.options))
+    if (ownerIndex === -1) continue
+    const owner = output[ownerIndex]
+    if (owner === undefined) continue
+    absorbed.add(index)
+    const offset = owner.options.length - row.options.length
+    const adopted = owner.correctIndex === '' && row.correctIndex !== ''
+      ? String(offset + Number(row.correctIndex))
+      : owner.correctIndex
+    // The stem demonstrably holds every choice the fragment carried, so a
+    // "cut" or "no answer" reason left over from the reading that could not
+    // see this page is stale. It is cleared only when the paper's own choice
+    // count agrees the row is whole.
+    const whole = modal !== undefined && owner.options.length >= modal
+    const stale = /cut|no.?visible.?answer|incomplete.?options/i
+    output[ownerIndex] = {
+      ...owner,
+      sourcePages: [...new Set([...owner.sourcePages, ...row.sourcePages])],
+      correctIndex: adopted,
+      needsReview: whole && stale.test(owner.needsReview)
+        ? (adopted === '' ? 'no_visible_answer' : '')
+        : owner.needsReview,
     }
   }
   return output.filter((_, index) => !absorbed.has(index))
@@ -540,7 +656,7 @@ export async function executeRun(runId: string, pdfBytes: Uint8Array, options: E
         let requests = 1
         let response = await call(controller, runId, requestPrompt(mode, start + 1, visibleLast, coreLast), images, model, options.signal)
         let parsed = response.finishReason === 'MAX_TOKENS' ? undefined : parseModelJson(response.text).value
-        let rows = mode === 'exam' ? parseRows(parsed, examPages) : parseKey(parsed)
+        let rows = mode === 'exam' ? parseRows(parsed, examPages, start + 1, visibleLast) : parseKey(parsed)
         let keyAnswers = mode === 'exam' ? parseKeyAnswers(parsed) : []
         // A malformed or truncated JSON response used to be treated as an
         // empty page, silently dropping every question on it. One focused
@@ -552,7 +668,7 @@ export async function executeRun(runId: string, pdfBytes: Uint8Array, options: E
           response = await call(controller, runId, retryPrompt, images, model, options.signal)
           requests++
           parsed = response.finishReason === 'MAX_TOKENS' ? undefined : parseModelJson(response.text).value
-          rows = mode === 'exam' ? parseRows(parsed, examPages) : parseKey(parsed)
+          rows = mode === 'exam' ? parseRows(parsed, examPages, start + 1, visibleLast) : parseKey(parsed)
           keyAnswers = mode === 'exam' ? parseKeyAnswers(parsed) : []
           if (rows === undefined) {
             await putArtifact({ runId, kind: 'index-window', chunkIndex: offset + start, json: { workflow: 'pyrite', mode, response: response.text, invalid: true } })
@@ -581,7 +697,10 @@ export async function executeRun(runId: string, pdfBytes: Uint8Array, options: E
     // measured once and handed to each window's stitch.
     const byWindow = fillSections(extracted)
     const modal = modalOptionCount(byWindow.flat())
-    const stitched = byWindow.flatMap((windowRows) => stitchContinuations(windowRows, modal))
+    const stitched = absorbOrphanContinuations(
+      byWindow.flatMap((windowRows) => stitchContinuations(windowRows, modal)),
+      modal,
+    )
     let rows = dedupe(stitched.map((row) => attachAnswer(row, answers)))
     await putArtifact({ runId, kind: 'merged-rows', json: rows })
     const csv = emitCsv(rows)

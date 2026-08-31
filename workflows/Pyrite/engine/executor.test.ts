@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dedupe, fillSections, stitchContinuations } from './executor'
+import { absorbOrphanContinuations, dedupe, fillSections, modalOptionCount, parseRows, stitchContinuations } from './executor'
 
 type Row = Parameters<typeof dedupe>[0][number]
 
@@ -135,5 +135,92 @@ describe('Pyrite section headings', () => {
     ]])
 
     expect(filled[0]?.map((entry) => entry.section)).toEqual(['a', 'b'])
+  })
+})
+
+describe('Pyrite window page numbering', () => {
+  // Roughly one response in three numbers its rows against the images it was
+  // handed rather than the document pages the prompt named, which turned every
+  // question on a renumbered window into a duplicate `#2` row.
+  it('renumbers a response that counted from its own first image', () => {
+    const rows = parseRows({
+      rows: [{ label: '87', question: 'Fatty casts in urine?', options: ['A', 'B'], source_pages: [1] }],
+    }, 18, 13, 15)
+
+    expect(rows?.[0]?.sourcePages).toEqual([13])
+  })
+
+  it('leaves a response that already used document pages alone', () => {
+    const rows = parseRows({
+      rows: [{ label: '101', question: 'Inhaled drugs?', options: ['A', 'B'], source_pages: [15, 16] }],
+    }, 18, 15, 17)
+
+    expect(rows?.[0]?.sourcePages).toEqual([15, 16])
+  })
+
+  it('keeps a straddling question that names the page before its window', () => {
+    const rows = parseRows({
+      rows: [{ label: '86', question: 'Oliguria is?', options: ['A', 'B'], source_pages: [12, 13] }],
+    }, 18, 13, 15)
+
+    expect(rows?.[0]?.sourcePages).toEqual([12, 13])
+  })
+})
+
+describe('Pyrite cross-window continuations', () => {
+  const full = ['Morphia', 'Diazepam', 'NSAID', 'nitroglycerine']
+
+  it('takes the answer a neighbouring window read off the continued choices', () => {
+    // The stem is on page 2 and its choices on page 3. The window whose core
+    // starts at page 3 never sees the stem, so its continuation row shipped as
+    // an empty-question fragment holding the answer question 14 then lacked.
+    const rows = absorbOrphanContinuations([
+      row({ label: '14', sourcePages: [2], question: 'Drug of choice?', options: full, needsReview: 'options cut at page break' }),
+      row({ label: '15', sourcePages: [3], options: ['A', 'B', 'C', 'D'] }),
+      row({ label: '16', sourcePages: [3], options: ['A', 'B', 'C', 'D'] }),
+      row({ label: '17', sourcePages: [3], options: ['A', 'B', 'C', 'D'] }),
+      row({ label: '', sourcePages: [3], question: '', options: full, correctIndex: '0', continuation: true }),
+    ])
+
+    expect(rows).toHaveLength(4)
+    expect(rows[0]).toMatchObject({ label: '14', correctIndex: '0', needsReview: '' })
+  })
+
+  it('offsets an answer read off only the choices that continued', () => {
+    const rows = absorbOrphanContinuations([
+      row({ label: '100', sourcePages: [14], options: ['Conscious level', 'Dehydration', 'Hyperthermia', 'Air hunger'] }),
+      row({ label: '101', sourcePages: [15], options: ['A', 'B', 'C', 'D'] }),
+      row({ label: '102', sourcePages: [15], options: ['A', 'B', 'C', 'D'] }),
+      row({ label: '103', sourcePages: [15], options: ['A', 'B', 'C', 'D'] }),
+      row({ label: '', sourcePages: [15], question: '', options: ['Hyperthermia', 'Air hunger'], correctIndex: '0', continuation: true }),
+    ])
+
+    expect(rows[0]).toMatchObject({ label: '100', correctIndex: '2' })
+  })
+
+  it('keeps a fragment whose choices match no stem', () => {
+    const rows = absorbOrphanContinuations([
+      row({ label: '5', sourcePages: [2], options: ['A', 'B', 'C', 'D'] }),
+      row({ label: '6', sourcePages: [3], options: ['A', 'B', 'C', 'D'] }),
+      row({ label: '7', sourcePages: [3], options: ['A', 'B', 'C', 'D'] }),
+      row({ label: '8', sourcePages: [3], options: ['A', 'B', 'C', 'D'] }),
+      row({ label: '', sourcePages: [3], question: '', options: ['Nothing', 'Like it'], correctIndex: '0', continuation: true }),
+    ])
+
+    expect(rows).toHaveLength(5)
+    expect(rows[4]).toMatchObject({ continuation: true })
+  })
+})
+
+describe('Pyrite option-count norm', () => {
+  it('refuses a mode drawn from too few rows to mean anything', () => {
+    expect(modalOptionCount([row({ options: ['A', 'B'] }), row({ options: ['A', 'B'] })])).toBeUndefined()
+  })
+
+  it('reports the paper\'s norm once enough rows agree', () => {
+    const four = ['A', 'B', 'C', 'D']
+    expect(modalOptionCount([
+      row({ options: four }), row({ options: four }), row({ options: four }), row({ options: ['A', 'B'] }),
+    ])).toBe(4)
   })
 })

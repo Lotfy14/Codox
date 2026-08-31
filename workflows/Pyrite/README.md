@@ -1,6 +1,6 @@
 # Pyrite
 
-**Version:** 0.2.0  
+**Version:** 0.3.0  
 **Status:** experimental
 
 Pyrite is Codox's low-request conversion workflow. It is intended for clear,
@@ -42,6 +42,12 @@ diagram capture, or unattended import safety matters. Use Gold for those.
 
 ## Version history
 
+- **0.3.0** — window page numbers normalized against the window's own range,
+  continuations refused by a stem that already carries the paper's usual choice
+  count, an orphaned continuation reunited with a stem another window read, and
+  an option-count norm that is only trusted from a real sample. No new request:
+  every rule reads data the run already had. Measured in
+  `benchmarks/results/pyrite-0.3.0-november-2013-im-mcq.json`.
 - **0.2.0** — section-scoped deduplication, normalized printed labels, carried
   section headings, a continuation that only feeds a stem missing choices, and
   answers read from a key page bound into the exam PDF at no extra request.
@@ -61,6 +67,9 @@ diagram capture, or unattended import safety matters. Use Gold for those.
   and label when available, exact normalized content otherwise, and requires
   the two sightings to be within one page of each other. Papers restart their
   numbering at each section, so a label alone never identifies a question.
+  Because that page test decides the match, a response that numbered its rows
+  against the images it was handed rather than the document is renumbered
+  before anything compares two sightings.
 - A response that is invalid or truncated is not retried. Its affected page is
   recorded for review, preserving Pyrite's bounded request count.
 - Since there is no audit pass, every completed Pyrite run is marked

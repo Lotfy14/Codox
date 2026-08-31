@@ -5,7 +5,7 @@ import { DEFAULT_PYRITE_MODELS, PYRITE_STEPS, type PyriteModels } from './engine
 export const PYRITE_WORKFLOW: WorkflowDefinition = {
   id: 'pyrite',
   name: 'Pyrite',
-  version: '0.2.0',
+  version: '0.3.0',
   description: 'Fast draft conversion with far fewer requests. Every result is sent to Review.',
   status: 'experimental',
   // Pyrite needs to work on phone-scanned papers that sometimes advertise a

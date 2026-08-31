@@ -51,6 +51,18 @@ Every rule below is deterministic and costs no request. Each was written
 against a real failure on `IM MCQ Exams 2024-193.pdf`, a 45-question paper in
 two sections with its answer key bound in as the last page.
 
+**Page numbers are checked against the window that produced them.** The prompt
+names the window's absolute page range, but roughly one response in three
+numbers its rows against the images it was handed instead — a window over pages
+13-15 comes back saying 1, 2, 3. Nothing checked, and the damage was silent:
+deduplication recognizes a re-read only when two sightings sit within one page,
+so every question on a renumbered window read as a section restarting twelve
+pages away and shipped twice. It also kept the *weaker* reading as the primary
+row, because the better one now sat under a suffixed id. A window starting at
+page 1 numbers alike either way, so only a later window is renumbered, and only
+when every page it named fits inside its own image count; a response naming any
+page beyond that span is describing document pages and is left alone.
+
 **Labels are normalized.** One window reads `15` off a page and the next reads
 `15)` off the same page. Trailing punctuation is stripped so the two key alike;
 without it one question became two rows and a key entry matched neither.
@@ -70,10 +82,32 @@ neighbouring window's reading, while a section restart is many pages away. The
 first section keeps the plain label as its id; a later reuse takes a `#2`
 suffix, because ids are unique per import.
 
+**A stem that already carries the paper's usual choice count is complete.** The
+model's own `options_cut_at_page_break` flag is its guess; the choice count is
+the paper's fact. Trusting the flag welded question 115's four choices onto
+question 114, which had all four of its own — an eight-option hybrid whose
+answer index pointed into the wrong half, and merging then stripped the very
+flag that had admitted it, so the row shipped unflagged with a confident wrong
+answer. The count decides whenever the paper stated one clearly enough to
+judge against: a mode is only trusted from at least four measured rows that
+actually agree, since three rows of a two-choice window would otherwise make a
+genuinely cut question look whole.
+
+**An orphaned continuation is reunited with a stem another window read.** The
+per-response rule below is deliberate, but a continuation's owner is genuinely
+often in the neighbouring window — choices at the top of page 3 belong to a stem
+on page 2, which the window whose core starts at page 3 never sees. Those
+fragments shipped as empty-question rows carrying an answer the real question
+then lacked. This pass is safe where proximity was not because it matches only a
+stem whose choices *already end* with the fragment's, exactly, on an adjacent
+page: identity, not nearness. It may then take only the answer, at the offset
+where those choices sit, and drop the fragment as the duplicate it is. It never
+lengthens a question, and a fragment matching nothing stays flagged for Review.
+
 **A continuation attaches only to a stem that is missing choices.** The choices
 are printed on the *last* page the row names — the model reports the stem's
-page beside it — and the owner must either declare that it runs onto that page,
-be flagged cut, or have come back shorter than the paper's usual choice count.
+page beside it — and the owner must either declare that it runs onto that page
+or be genuinely short of choices by the rule above.
 The search covers one response's rows in both directions, since the prompt
 emits the continuation before that page's own questions. An option list the
 stem already carries is dropped rather than doubled, and a continuation with no
