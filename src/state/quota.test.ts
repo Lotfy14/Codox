@@ -110,3 +110,16 @@ describe('daily quota tally', () => {
     expect(await getDailyQuotaUsed(OLDER)).toBe(0)
   })
 })
+
+describe('per-model daily limits', () => {
+  it('uses 500 for Flash-Lite, the measured 20 for full Flash, and what a 429 said once known', async () => {
+    const { dailyLimitFor, learnDailyLimit } = await import('./quota')
+    expect(dailyLimitFor('gemini-3.1-flash-lite')).toBe(500)
+    expect(dailyLimitFor('gemini-3.5-flash')).toBe(20)
+    await learnDailyLimit('gemini-3.5-flash', 50)
+    await learnDailyLimit('gemini-3.5-flash', -1)
+    const stored = JSON.parse((await db.meta.get('dailyQuotaLimits'))!.value) as Record<string, number>
+    expect(dailyLimitFor('gemini-3.5-flash', stored)).toBe(50)
+    expect(dailyLimitFor('gemini-3.6-flash', stored)).toBe(20)
+  })
+})

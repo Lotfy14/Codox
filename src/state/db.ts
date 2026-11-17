@@ -1,4 +1,5 @@
 import Dexie, { type Table } from 'dexie'
+import type { KfJob } from '../keyfacts/state'
 import type {
   GeminiCredential,
   JobState,
@@ -33,6 +34,7 @@ export class CodoxDatabase extends Dexie {
   runArtifacts!: Table<RunArtifact, string>
   logs!: Table<LogEvent, number>
   handles!: Table<HandleEntry, string>
+  kfJobs!: Table<KfJob, string>
 
   constructor() {
     super('codox')
@@ -103,6 +105,19 @@ export class CodoxDatabase extends Dexie {
       runArtifacts: 'id, runId, [runId+kind], [runId+kind+pageIndex]',
       logs: '++seq, t, scope, runId',
       handles: 'key',
+    })
+    // Key facts area (2026-11-17): one row per Connect to Triviadox, saved
+    // after every Gemini request so a paused or closed run resumes. Additive.
+    this.version(9).stores({
+      jobs: 'id, kind',
+      meta: 'key',
+      credentials: 'id',
+      files: 'id, jobId',
+      runs: 'id, jobId, pdfId',
+      runArtifacts: 'id, runId, [runId+kind], [runId+kind+pageIndex]',
+      logs: '++seq, t, scope, runId',
+      handles: 'key',
+      kfJobs: 'id, kind',
     })
   }
 }

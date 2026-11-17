@@ -43,6 +43,12 @@ export interface ProviderFailure {
   offline?: boolean
   /** HTTP status when a response was received. Never contains the key. */
   httpStatus?: number
+  /**
+   * For a 429: the allowance Google says was used up (QuotaFailure
+   * `quotaValue`, e.g. 20 requests a day on the free Flash models). Lets the
+   * quota bars learn a model's real limit instead of trusting a constant.
+   */
+  quotaLimit?: number
   /** Coarse provider detail only; never contains response text or the key. */
   code?: ProviderFailureCode
 }
@@ -119,6 +125,8 @@ export interface VisionSuccess {
   finishReason?: string
   /** Present when the response carried `usageMetadata` (quota-burn count). */
   usage?: VisionUsage
+  /** The model that answered (the request's `modelId`), after any runtime fallback. */
+  model?: string
 }
 
 export type VisionResult = VisionSuccess | ProviderFailure

@@ -168,3 +168,75 @@ export function useDailyQuota(): DailyModelQuota[] {
     limit: DAILY_FREE_REQUESTS_PER_MODEL,
   }))
 }
+
+// ── per-model limits (Key facts area) ─────────────────────────────────────────
+
+/**
+ * Known free-tier daily allowances that differ from the Flash-Lite 500
+ * (measured 2026-11-17: Google's 429 named `quotaValue: 20` for both full
+ * Flash models). Google changes these without notice, so a 429 that names a
+ * limit overrides this table for that model (`learnDailyLimit`).
+ */
+export const KNOWN_DAILY_LIMITS: Readonly<Record<string, number>> = {
+  'gemini-3.5-flash': 20,
+  'gemini-3.6-flash': 20,
+}
+
+const LIMITS_KEY = 'dailyQuotaLimits'
+
+function parseLimits(value: string | undefined): Record<string, number> {
+  if (value === undefined) return {}
+  try {
+    const parsed = JSON.parse(value) as Record<string, unknown>
+    const out: Record<string, number> = {}
+    for (const [model, raw] of Object.entries(parsed)) {
+      const n = toCount(raw)
+      if (n !== undefined && n > 0) out[model] = n
+    }
+    return out
+  } catch {
+    return {}
+  }
+}
+
+/** A model's daily allowance: what Google last told us, else the known table, else 500. */
+export function dailyLimitFor(model: string, learned: Record<string, number> = {}): number {
+  return learned[model] ?? KNOWN_DAILY_LIMITS[model] ?? DAILY_FREE_REQUESTS_PER_MODEL
+}
+
+/** Records the allowance a 429 named for `model`. Never throws. */
+export async function learnDailyLimit(model: string, limit: number): Promise<void> {
+  if (!Number.isInteger(limit) || limit <= 0) return
+  try {
+    await db.transaction('rw', db.meta, async () => {
+      const learned = parseLimits((await db.meta.get(LIMITS_KEY))?.value)
+      if (learned[model] === limit) return
+      learned[model] = limit
+      await db.meta.put({ key: LIMITS_KEY, value: JSON.stringify(learned) })
+    })
+  } catch {
+    // Informational only.
+  }
+}
+
+export interface ModelQuota {
+  model: string
+  used: number
+  limit: number
+}
+
+/** Live used/limit for any models (the Key facts area's mode pair). */
+export function useModelQuota(models: readonly string[]): ModelQuota[] {
+  const stored = useLiveQuery(async () => parseStored((await db.meta.get(QUOTA_KEY))?.value), [])
+  const learned = useLiveQuery(async () => parseLimits((await db.meta.get(LIMITS_KEY))?.value), [])
+  const [day, setDay] = useState(() => utcDayOf(Date.now()))
+  useEffect(() => {
+    const timer = setInterval(() => setDay(utcDayOf(Date.now())), 60_000)
+    return () => clearInterval(timer)
+  }, [])
+  return models.map((model) => ({
+    model,
+    used: countFor(stored, model, day),
+    limit: dailyLimitFor(model, learned ?? {}),
+  }))
+}

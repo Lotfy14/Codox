@@ -34,6 +34,43 @@ disagree, this file wins.
   2026-07-22 — primary → known-good model under the **same** one key — does not
   touch it. See the model-fallback note under "Engine semantics are pinned".)
 
+## Key facts area (2026-11-17)
+
+Codox also writes **key facts and flashcards for questions already on
+Triviadox**, not only converts PDFs. Code: `src/triviadox/` (site, pairing, job
+API), `src/keyfacts/` (models, prompts, runner, saved state),
+`src/screens/KeyFacts.tsx`. The Triviadox side is `src/lib/codox-jobs.ts` there.
+
+- **Codox now reads from Triviadox.** Connect opens
+  `<site>/codox/connect?kind=facts|cards#pair=…&k=…&t=…`. The manager signs in
+  there, picks subtopics, and the site stores the job with only sha-256 of the
+  secret. Codox polls `/api/codox/pair` with `Authorization: Bearer <secret>`.
+  That secret is the only Triviadox credential Codox ever holds: one job, 48 h,
+  one submit. It never goes to Gemini, and the Gemini key never goes to
+  Triviadox. Both hard rules still hold.
+- **The prompts come from Triviadox in each job.** The key-fact prompt is
+  Triviadox's own production prompt, and the flashcard prompt holds the owner's
+  card rules. Codox owns only the user-message layout and the reply parsers
+  (`src/keyfacts/prompts.ts`), which must stay in step with Triviadox's
+  generator.
+- **Every subtopic's existing facts go in every request** (owner rule): a
+  question must never get a new fact when one already covers it. Before export
+  Codox re-reads the subtopics and reconciles against facts added meanwhile;
+  Triviadox's `codox_apply_job` checks everything again.
+- **Model pairs are per feature.** Normal is `gemini-3.1-flash-lite` →
+  `gemini-3.5-flash-lite`; Pro is `gemini-3.5-flash` → `gemini-3.6-flash`. Both
+  are passed per request as `modelId`/`fallbackModelId`; the conversion
+  engine's two-model pair is untouched. These are models under the same one
+  key, never a second key or provider. When Pro runs dry the run pauses like
+  any quota pause and offers **Continue in Normal**; it never switches by itself.
+- **The free Flash models allow only 20 requests a day** (Google's 429 named
+  `quotaValue: 20`, measured 2026-11-17). `quota.ts` keeps a per-model limit and
+  learns a new one from any 429 that names it.
+- **Which site**: Diagnostics → Triviadox site (live or beta). Beta wins even on
+  a local dev server, so a change can be tested against beta.triviadox.com.
+- `kfJobs` (Dexie v9) holds a job until it is sent or discarded. It is not in
+  backups: a job lasts 48 hours and can always be made again from the site.
+
 ## How answers flow (description, not doctrine)
 
 Where `correct_index` comes from, as the code actually works today. Change it

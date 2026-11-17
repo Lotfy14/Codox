@@ -25,13 +25,15 @@ export interface ParsedGeminiError {
   quotaIds: string[]
   /** RetryInfo retryDelay, converted to seconds. */
   retryDelaySeconds?: number
+  /** The smallest QuotaFailure `quotaValue` (the allowance that ran out), when numeric. */
+  quotaValue?: number
 }
 
 interface GeminiErrorDetail {
   '@type'?: string
   reason?: string
   retryDelay?: string
-  violations?: Array<{ quotaId?: string }>
+  violations?: Array<{ quotaId?: string; quotaValue?: string | number }>
 }
 
 /**
@@ -68,6 +70,10 @@ export function parseGeminiErrorBody(body: unknown): ParsedGeminiError {
       for (const violation of detail.violations) {
         if (typeof violation?.quotaId === 'string') {
           parsed.quotaIds.push(violation.quotaId)
+        }
+        const value = Number(violation?.quotaValue)
+        if (Number.isInteger(value) && value > 0) {
+          parsed.quotaValue = Math.min(parsed.quotaValue ?? value, value)
         }
       }
     }
@@ -128,7 +134,8 @@ export function classifyGeminiHttpFailure(
               ? 'temporarily-unavailable'
               : undefined
 
-  return { ok: false, kind, httpStatus, retryAfterSeconds, code }
+  const quotaLimit = httpStatus === 429 ? parsed.quotaValue : undefined
+  return { ok: false, kind, httpStatus, retryAfterSeconds, code, ...(quotaLimit !== undefined ? { quotaLimit } : {}) }
 }
 
 /**

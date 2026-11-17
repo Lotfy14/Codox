@@ -199,3 +199,21 @@ describe('parseRetryAfterHeader', () => {
     expect(parseRetryAfterHeader('-5')).toBeUndefined()
   })
 })
+
+describe('daily limit from a 429', () => {
+  it('carries the quotaValue Google names on the failure', () => {
+    const body = {
+      error: {
+        status: 'RESOURCE_EXHAUSTED',
+        details: [{
+          '@type': 'type.googleapis.com/google.rpc.QuotaFailure',
+          violations: [{ quotaId: 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', quotaValue: '20' }],
+        }],
+      },
+    }
+    const failure = classifyGeminiHttpFailure(429, parseGeminiErrorBody(body))
+    expect(failure.kind).toBe('quota-exhausted')
+    expect(failure.quotaLimit).toBe(20)
+    expect(classifyGeminiHttpFailure(503, parseGeminiErrorBody(body)).quotaLimit).toBeUndefined()
+  })
+})

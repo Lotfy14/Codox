@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { fileSave } from 'browser-fs-access'
-import { Button, Toggle } from '../design/components'
+import { Button, ChoiceGroup, Toggle } from '../design/components'
+import type { ChoiceOption } from '../design/components'
+import { getTriviadoxSite, setTriviadoxSite, type TriviadoxSite } from '../triviadox/site'
+import { keyFactsMessages } from '../copy/messages'
 import { diagnosticsMessages } from '../copy/messages'
 import { clearEvents, exportEventsBlob, listEvents } from '../state/diagnostics'
 import { db } from '../state/db'
@@ -22,6 +25,26 @@ const ENCODER_LABELS: Record<EncoderId, string> = {
   wasm: 'MozJPEG / WASM',
 }
 import type { LogEvent } from '../state/types'
+
+const SITE_OPTIONS: readonly ChoiceOption<TriviadoxSite>[] = [
+  { value: 'production', label: keyFactsMessages.siteProduction, hint: keyFactsMessages.siteProductionHint },
+  { value: 'beta', label: keyFactsMessages.siteBeta, hint: keyFactsMessages.siteBetaHint },
+]
+
+/** Which Triviadox site Export and the Key facts area talk to (src/triviadox/site.ts). */
+function TriviadoxSiteChoice() {
+  const [site, setSite] = useState<TriviadoxSite>(getTriviadoxSite)
+  return (
+    <section className="ds-diagnostics__day">
+      <ChoiceGroup
+        legend={keyFactsMessages.siteLegend}
+        onChange={(next) => { setTriviadoxSite(next); setSite(next) }}
+        options={SITE_OPTIONS}
+        value={site}
+      />
+    </section>
+  )
+}
 
 interface RunGroup {
   key: string
@@ -153,6 +176,7 @@ export function DiagnosticsContent() {
 
   return (
     <div className="ds-stack ds-diagnostics">
+      <TriviadoxSiteChoice />
       {/* DIAGNOSTIC (2026-07-19): remove with src/pdf/encoder-bench.ts once the
           Android encoder choice is settled. */}
       <section className="ds-diagnostics__day">

@@ -384,6 +384,7 @@ export function createGeminiAdapter(
         text: extractText(body),
         finishReason: extractFinishReason(body),
         usage: extractUsage(body),
+        model,
       }
     },
   }

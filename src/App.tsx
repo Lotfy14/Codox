@@ -22,6 +22,7 @@ import { DiagnosticsContent } from './screens/DiagnosticsContent'
 import { Folders } from './screens/Folders'
 import { HelpContent } from './screens/HelpContent'
 import { History } from './screens/History'
+import { KeyFacts } from './screens/KeyFacts'
 import { KeysPanel } from './screens/KeysPanel'
 import {
   dismissApiCoachmark,
@@ -82,6 +83,16 @@ function NavIcon({ kind }: { kind: AppTab }) {
         <path d="M4 4h10l6 6v10H4z" />
         <path d="M14 4v6h6" />
         <path d="M9 15l2 2 4-4" />
+      </svg>
+    )
+  }
+  if (kind === 'keyfacts') {
+    return (
+      <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24">
+        <rect height="12" rx="2" width="16" x="4" y="6" />
+        <path d="M8 10h8" />
+        <path d="M8 14h5" />
+        <path d="M7 3h10" />
       </svg>
     )
   }
@@ -146,6 +157,7 @@ function RailIcon({ kind }: { kind: 'api' | 'help' | 'diagnostics' }) {
 
 const workspaceItems: readonly TabNavItem<AppTab>[] = [
   { id: 'convert', icon: <NavIcon kind="convert" />, label: appMessages.navConvert },
+  { id: 'keyfacts', icon: <NavIcon kind="keyfacts" />, label: appMessages.navKeyFacts },
   { id: 'customize', icon: <NavIcon kind="customize" />, label: appMessages.navCustomize },
   { id: 'folders', icon: <NavIcon kind="folders" />, label: appMessages.navFolders },
   { id: 'history', icon: <NavIcon kind="history" />, label: appMessages.navHistory },
@@ -251,6 +263,8 @@ function App() {
         <main className="ds-work">
           {activeTab === 'convert' ? (
             <Convert onRequestApiKey={openApi} />
+          ) : activeTab === 'keyfacts' ? (
+            <KeyFacts onRequestApiKey={openApi} />
           ) : activeTab === 'customize' ? (
             <Customizations />
           ) : activeTab === 'folders' ? (

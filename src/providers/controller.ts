@@ -2,7 +2,7 @@ import {
   getGeminiCredential,
   recordKeyValidation,
 } from '../state/credentials'
-import { recordDailyRequest } from '../state/quota'
+import { learnDailyLimit, recordDailyRequest } from '../state/quota'
 import {
   DEFAULT_GEMINI_VISION_MODEL,
   FALLBACK_GEMINI_VISION_MODEL,
@@ -425,6 +425,9 @@ export class GeminiController {
             pairedModel,
             result.kind === 'quota-exhausted',
           )
+          if (result.kind === 'quota-exhausted' && result.quotaLimit !== undefined) {
+            await learnDailyLimit(model, result.quotaLimit)
+          }
           if (isPrimaryAttempt) return result
           const waitSeconds =
             result.retryAfterSeconds ??

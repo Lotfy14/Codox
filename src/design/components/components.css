@@ -3420,3 +3420,65 @@
 .ds-debug__row--total .ds-debug__time {
   color: var(--color-text);
 }
+
+/* ── Key facts area (src/screens/KeyFacts.tsx) ─────────────────────────────── */
+.ds-kf-grid {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  align-items: start;
+}
+.ds-kf-quota {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+}
+.ds-kf-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.ds-kf-title {
+  margin: 0;
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-heading);
+}
+.ds-kf-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.ds-kf-ok,
+.ds-kf-warn {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-row);
+  border: 1px solid var(--color-success-border);
+  background: var(--color-success-surface);
+  color: var(--color-success-foreground);
+}
+.ds-kf-warn {
+  border-color: var(--color-warning-border);
+  background: var(--color-warning-surface);
+  color: var(--color-warning-foreground);
+}
+.ds-kf-warn p { margin: 0; }
+.ds-kf-list summary {
+  cursor: pointer;
+  font-weight: var(--font-weight-label);
+}
+.ds-kf-list ol,
+.ds-kf-list ul {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding-inline-start: var(--space-5);
+  max-height: 24rem;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
