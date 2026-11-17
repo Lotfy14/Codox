@@ -37,7 +37,7 @@ export function setTriviadoxSite(site: TriviadoxSite): void {
 
 /**
  * The origin every Triviadox request goes to. Local dev (the Vite server on
- * localhost) talks to a local Triviadox. Match the hostname exactly, never a
+ * localhost) talks to beta. Match the hostname exactly, never a
  * substring: the Tauri desktop webview serves the app from
  * `http://tauri.localhost`, which *contains* "localhost" but is NOT the dev
  * server. A substring check there once pointed every desktop export at a
@@ -52,5 +52,7 @@ export function triviadoxOrigin(): string {
   const isLocalDev =
     (protocol === 'http:' || protocol === 'https:') &&
     (hostname === 'localhost' || hostname === '127.0.0.1')
-  return isLocalDev ? 'http://localhost:3000' : TRIVIADOX_ORIGINS[getTriviadoxSite()]
+  // A local dev server has no Triviadox of its own beside it, so it talks to
+  // beta: changes are tried there before they reach the live site.
+  return isLocalDev ? TRIVIADOX_ORIGINS.beta : TRIVIADOX_ORIGINS[getTriviadoxSite()]
 }

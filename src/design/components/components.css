@@ -3482,3 +3482,38 @@
   overflow-y: auto;
   overflow-wrap: anywhere;
 }
+
+/* Normal / Pro switch in the top strip, on the Key facts tab. */
+.ds-quota-strip--modes {
+  justify-items: center;
+}
+.ds-mode-switch {
+  display: inline-flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+}
+.ds-mode-switch__option {
+  border: 0;
+  border-radius: var(--radius-full);
+  padding: var(--space-1) var(--space-4);
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-label);
+  cursor: pointer;
+}
+.ds-mode-switch__option:hover {
+  color: var(--color-text-strong);
+}
+.ds-mode-switch__option[aria-checked='true'] {
+  background: var(--color-primary);
+  color: var(--color-text-on-primary);
+}
+.ds-mode-switch__option:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}

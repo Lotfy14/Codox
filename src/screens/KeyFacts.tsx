@@ -10,63 +10,23 @@
  * pause on quota or a closed app loses nothing.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Badge, Button, ChoiceGroup, GlassPanel, ProgressBar } from '../design/components'
-import type { ChoiceOption } from '../design/components'
+import { Badge, Button, GlassPanel, ProgressBar } from '../design/components'
 import { keyFactsMessages as m } from '../copy/messages'
 import { geminiController, type ControllerStatus } from '../providers/controller'
 import { useGeminiCredential } from '../state/credentials'
-import { useModelQuota } from '../state/quota'
 import { db } from '../state/db'
 import {
   createPairing, openConnectPage, TriviadoxError, waitForJob, type JobKind,
 } from '../triviadox/jobs'
-import { KEY_FACT_MODES, FACTS_PER_REQUEST, QUESTIONS_PER_REQUEST, type KeyFactMode } from '../keyfacts/models'
+import type { KeyFactMode } from '../keyfacts/models'
+import { setKeyFactMode, useKeyFactMode } from '../keyfacts/mode'
 import { exportJob, pendingFacts, pendingQuestions, RunStop, runJob } from '../keyfacts/runner'
 import { deleteKfJob, newKfJob, saveKfJob, useLatestKfJob, type KfJob } from '../keyfacts/state'
-
-const MODE_KEY = 'codox.keyFactMode'
-
-const MODE_OPTIONS: readonly ChoiceOption<KeyFactMode>[] = [
-  { value: 'normal', label: m.modeNormal, hint: m.modeNormalHint },
-  { value: 'pro', label: m.modePro, hint: m.modeProHint },
-]
-
-function readMode(): KeyFactMode {
-  try { return localStorage.getItem(MODE_KEY) === 'pro' ? 'pro' : 'normal' } catch { return 'normal' }
-}
-
-/** Next 00:00 UTC in the device's own clock, e.g. "02:00". */
-function resetTime(): string {
-  const d = new Date()
-  const next = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1)
-  return new Date(next).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-}
 
 function useControllerStatus(): ControllerStatus {
   const [status, setStatus] = useState<ControllerStatus>(geminiController.getStatus())
   useEffect(() => geminiController.subscribe(() => setStatus(geminiController.getStatus())), [])
   return status
-}
-
-function QuotaPanel({ mode, onMode }: { mode: KeyFactMode; onMode: (m: KeyFactMode) => void }) {
-  const pair = KEY_FACT_MODES[mode]
-  const quota = useModelQuota([pair.primary, pair.fallback])
-  const left = quota.reduce((n, q) => n + Math.max(0, q.limit - q.used), 0)
-  return (
-    <GlassPanel as="section" aria-label={m.modeLegend} padding="compact">
-      <div className="ds-stack">
-        <ChoiceGroup legend={m.modeLegend} onChange={onMode} options={MODE_OPTIONS} value={mode} />
-        <div className="ds-kf-quota">
-          {quota.map((q) => (
-            <ProgressBar key={q.model} label={q.model.replace('gemini-', 'Gemini ')} max={q.limit} showFraction value={Math.min(q.used, q.limit)} />
-          ))}
-        </div>
-        <p className="ds-muted">
-          {m.quotaLeft(left * QUESTIONS_PER_REQUEST, left * FACTS_PER_REQUEST)} · {m.quotaResets(resetTime())}. {m.quotaNote}
-        </p>
-      </div>
-    </GlassPanel>
-  )
 }
 
 function JobPanel({ kind, mode, onMode, onRequestApiKey }: {
@@ -265,11 +225,8 @@ function JobPanel({ kind, mode, onMode, onRequestApiKey }: {
 }
 
 export function KeyFacts({ onRequestApiKey }: { onRequestApiKey: () => void }) {
-  const [mode, setModeState] = useState<KeyFactMode>(readMode)
-  const setMode = (next: KeyFactMode) => {
-    setModeState(next)
-    try { localStorage.setItem(MODE_KEY, next) } catch { /* per-device convenience */ }
-  }
+  // Normal / Pro is switched in the top bar (App.tsx, KeyFactsQuotaStrip).
+  const mode = useKeyFactMode()
   return (
     <section aria-labelledby="keyfacts-heading" className="ds-convert">
       <header className="ds-work__head">
@@ -277,10 +234,9 @@ export function KeyFacts({ onRequestApiKey }: { onRequestApiKey: () => void }) {
       </header>
       <div className="ds-stack">
         <p className="ds-muted">{m.subtitle}</p>
-        <QuotaPanel mode={mode} onMode={setMode} />
         <div className="ds-kf-grid">
-          <JobPanel kind="facts" mode={mode} onMode={setMode} onRequestApiKey={onRequestApiKey} />
-          <JobPanel kind="cards" mode={mode} onMode={setMode} onRequestApiKey={onRequestApiKey} />
+          <JobPanel kind="facts" mode={mode} onMode={setKeyFactMode} onRequestApiKey={onRequestApiKey} />
+          <JobPanel kind="cards" mode={mode} onMode={setKeyFactMode} onRequestApiKey={onRequestApiKey} />
         </div>
       </div>
     </section>

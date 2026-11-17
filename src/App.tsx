@@ -31,7 +31,10 @@ import {
 import { runAutoBackup } from './state/auto-backup'
 import { useGeminiCredential } from './state/credentials'
 import { archiveFinishedCurrentJobOnStartup } from './state/jobs'
-import { useDailyQuota } from './state/quota'
+import { useDailyQuota, useModelQuota } from './state/quota'
+import { KEY_FACT_MODES, FACTS_PER_REQUEST, QUESTIONS_PER_REQUEST, type KeyFactMode } from './keyfacts/models'
+import { setKeyFactMode, useKeyFactMode } from './keyfacts/mode'
+import { keyFactsMessages } from './copy/messages'
 import { useStorageEstimate } from './state/storage'
 import { UpdateBanner } from './UpdateBanner.tsx'
 
@@ -49,10 +52,68 @@ const MODEL_QUOTA_LABELS: Record<EngineModel, string> = {
  * Device-local — other devices on the same key are invisible to it. Resets at
  * 00:00 UTC and whenever the stored key is replaced. Hidden until a key exists.
  */
-function DailyQuotaStrip() {
+/** "gemini-3.5-flash-lite" → "3.5 Flash-Lite", the strip's existing label style. */
+function shortModel(model: string): string {
+  return model.replace(/^gemini-/, '').replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()).replace(' Lite', '-Lite')
+}
+
+/** Next 00:00 UTC on the device's own clock. */
+function resetTime(): string {
+  const d = new Date()
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1))
+    .toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+/**
+ * On the Key facts tab the strip carries the Normal / Pro switch, and its bars
+ * show the active mode's two models, so the allowance that matters is always
+ * the one in view (Pro has only ~20 requests a day per model).
+ */
+function KeyFactsQuotaStrip() {
+  const mode = useKeyFactMode()
+  const pair = KEY_FACT_MODES[mode]
+  const quota = useModelQuota([pair.primary, pair.fallback])
+  const left = quota.reduce((n, q) => n + Math.max(0, q.limit - q.used), 0)
+  return (
+    <div className="ds-quota-strip ds-quota-strip--modes">
+      <div aria-label={keyFactsMessages.modeLegend} className="ds-mode-switch" role="radiogroup">
+        {(['normal', 'pro'] as const satisfies readonly KeyFactMode[]).map((m) => (
+          <button
+            aria-checked={mode === m}
+            className="ds-mode-switch__option"
+            key={m}
+            onClick={() => setKeyFactMode(m)}
+            role="radio"
+            title={m === 'normal' ? keyFactsMessages.modeNormalHint : keyFactsMessages.modeProHint}
+            type="button"
+          >
+            {m === 'normal' ? keyFactsMessages.modeNormal : keyFactsMessages.modePro}
+          </button>
+        ))}
+      </div>
+      <div className="ds-quota-strip__meters">
+        {quota.map(({ model, used, limit }) => (
+          <StorageMeter
+            key={model}
+            formatValue={(value) => `${Math.round(value)}`}
+            label={shortModel(model)}
+            total={limit}
+            used={Math.min(used, limit)}
+          />
+        ))}
+      </div>
+      <p className="ds-quota-strip__label">
+        {keyFactsMessages.quotaLeft(left * QUESTIONS_PER_REQUEST, left * FACTS_PER_REQUEST)} · {keyFactsMessages.quotaResets(resetTime())}
+      </p>
+    </div>
+  )
+}
+
+function DailyQuotaStrip({ activeTab }: { activeTab: AppTab }) {
   const credential = useGeminiCredential()
   const quota = useDailyQuota()
   if (credential === null || credential === undefined) return null
+  if (activeTab === 'keyfacts') return <KeyFactsQuotaStrip />
   return (
     <div className="ds-quota-strip">
       <p className="ds-quota-strip__label" id="daily-quota-label">
@@ -220,7 +281,7 @@ function App() {
   return (
     <div className={`ds-stage${showCoachmark ? ' app--coachmark' : ''}`}>
       <UpdateBanner />
-      <DailyQuotaStrip />
+      <DailyQuotaStrip activeTab={activeTab} />
       <div className="ds-frame">
         <aside className="ds-sidebar">
           <div className="ds-brand">
