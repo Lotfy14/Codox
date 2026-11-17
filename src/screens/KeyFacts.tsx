@@ -141,7 +141,7 @@ function JobPanel({ kind, mode, onMode, onRequestApiKey }: {
                 <strong>{m.sent}.</strong>{' '}
                 {kind === 'facts'
                   ? m.sentFacts(shown.result.created, shown.result.linked_new + shown.result.linked_existing, shown.result.linked_existing)
-                  : m.sentCards(shown.result.cards, shown.result.cards_skipped)}
+                  : m.sentCards(shown.result.cards, shown.result.cards_skipped, shown.result.thin ?? 0)}
               </p>
             ) : null}
             {expired ? <p className="ds-kf-warn">{m.expired}</p> : null}

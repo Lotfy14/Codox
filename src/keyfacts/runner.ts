@@ -74,11 +74,36 @@ export function pendingQuestions(job: KfJob): JobQuestion[] {
   return (job.payload?.questions ?? []).filter((q) => !done.has(q.id) && (scopeAll || q.keyFactId === null))
 }
 
-/** Facts this job still has to write a card for. */
+/** Facts this job still has to write a card for. A fact already judged too thin waits for Redo all or an edit. */
 export function pendingFacts(job: KfJob): JobFact[] {
   const done = new Set(job.handled)
   const scopeAll = job.payload?.job.scope === 'all'
-  return (job.payload?.facts ?? []).filter((f) => !done.has(String(f.id)) && (scopeAll || !f.hasCard || f.cardStale))
+  return (job.payload?.facts ?? []).filter((f) =>
+    !done.has(String(f.id)) && (scopeAll || ((!f.hasCard || f.cardStale) && !f.skipped)))
+}
+
+/** The reason recorded when the model itself SKIPs a fact; only these are sent to the site as skips. */
+export const THIN_REASON = 'Too thin to make a card'
+
+/**
+ * The facts the model judged too thin, as the site stores them: one per fact,
+ * only while the fact's text is the one the model read, and never for a fact
+ * this export also carries a card for. Cards dropped by `cardProblems` are not
+ * here on purpose: they are retried next time, under the prompt's rules.
+ */
+type Skip = NonNullable<SubmitBody['skips']>[number]
+
+export function thinSkips(job: KfJob, current: Map<number, JobFact>, carded: Set<number>): Skip[] {
+  const read = new Map((job.payload?.facts ?? []).map((f) => [f.id, f]))
+  const out = new Map<number, Skip>()
+  for (const s of job.skipped) {
+    if (s.reason !== THIN_REASON) continue
+    const id = Number(s.id)
+    const f = read.get(id)
+    if (!f || carded.has(id) || current.get(id)?.md5 !== f.md5) continue
+    out.set(id, { factId: id, factMd5: f.md5, model: s.model ?? '' })
+  }
+  return [...out.values()]
 }
 
 /** Gives up on an item the model left out twice; returns true when it is out. */
@@ -167,7 +192,7 @@ async function runCards(job: KfJob, deps: Deps) {
         job.handled.push(String(f.id))
       } else if (o.kind === 'skip') {
         job.handled.push(String(f.id))
-        job.skipped.push({ id: String(f.id), reason: 'Too thin to make a card' })
+        job.skipped.push({ id: String(f.id), reason: THIN_REASON, model })
       } else {
         strike(job, String(f.id), o.reason)
       }
@@ -222,7 +247,8 @@ export async function prepareExport(job: KfJob, deps: Deps): Promise<SubmitBody>
       if (!f || f.md5 !== c.factMd5) return false
       return !(missingOnly && f.hasCard && !f.cardStale)
     })
-    return { facts: [], links: [], cards }
+    const skips = thinSkips(job, current, new Set(cards.map((c) => c.factId)))
+    return { facts: [], links: [], cards, ...(skips.length ? { skips } : {}) }
   }
 
   const known = new Set(payload.facts.map((f) => f.id))

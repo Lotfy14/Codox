@@ -57,6 +57,11 @@ API), `src/keyfacts/` (models, prompts, runner, saved state),
   question must never get a new fact when one already covers it. Before export
   Codox re-reads the subtopics and reconciles against facts added meanwhile;
   Triviadox's `codox_apply_job` checks everything again.
+- **A fact the model SKIPs is reported to Triviadox** (`thinSkips` in
+  `src/keyfacts/runner.ts`, `skips` in the submit, left out when empty), which
+  stores it against the fact's md5. Missing only then leaves it out
+  (`JobFact.skipped`) until the fact's text changes. A card dropped by
+  `cardProblems` is not a skip: it is retried next job.
 - **Model pairs are per feature.** Normal is `gemini-3.1-flash-lite` →
   `gemini-3.5-flash-lite`; Pro is `gemini-3.5-flash` → `gemini-3.6-flash`. Both
   are passed per request as `modelId`/`fallbackModelId`; the conversion

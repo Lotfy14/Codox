@@ -42,6 +42,8 @@ export interface JobFact {
   md5: string
   hasCard: boolean
   cardStale: boolean
+  /** The model already judged this exact text too thin to card (absent from sites before 2026-11-17's skips). */
+  skipped?: boolean
 }
 
 export interface JobQuestion {
@@ -73,6 +75,11 @@ export interface SubmitBody {
   facts: { tmp: number; subtopicId: number; text: string; model: string }[]
   links: ({ qid: string; factId: number } | { qid: string; tmp: number })[]
   cards: { factId: number; factMd5: string; front: string; back: string; extra: string; model: string }[]
+  /**
+   * Facts the model judged too thin to card, so the site stops counting them as
+   * missing. Left out when empty: a site built before skips rejects the field.
+   */
+  skips?: { factId: number; factMd5: string; model: string }[]
 }
 
 export interface SubmitResult {
@@ -84,6 +91,8 @@ export interface SubmitResult {
   skipped_invalid: number
   cards: number
   cards_skipped: number
+  /** Facts stored as too thin to card. */
+  thin?: number
 }
 
 /** A refusal from Triviadox, with its message for the screen. */

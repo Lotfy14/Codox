@@ -884,8 +884,8 @@ export const keyFactsMessages = {
   sent: 'Sent to Triviadox',
   sentFacts: (created: number, linked: number, existing: number) =>
     `${created} new key facts written, ${linked} questions linked (${existing} to facts that were already there).`,
-  sentCards: (cards: number, skipped: number) =>
-    `${cards} flashcards saved${skipped ? `, ${skipped} skipped because their fact changed or already had one` : ''}.`,
+  sentCards: (cards: number, skipped: number, thin = 0) =>
+    `${cards} flashcards saved${skipped ? `, ${skipped} skipped because their fact changed or already had one` : ''}${thin ? `; ${thin} facts marked too thin to card, so they won't be sent again until they change` : ''}.`,
   another: 'Start another',
   discard: 'Discard this job',
   expired: 'This job expired before it was sent. Connect again.',

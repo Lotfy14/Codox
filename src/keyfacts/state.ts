@@ -32,6 +32,8 @@ export interface Skipped {
   /** Question id (facts) or key fact id (cards). */
   id: string
   reason: string
+  /** The model that judged a fact too thin (flashcards only). */
+  model?: string
 }
 
 export interface KfJob {
