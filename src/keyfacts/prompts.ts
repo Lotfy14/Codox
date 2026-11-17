@@ -141,6 +141,11 @@ const BANNED: [RegExp, string][] = [
   [/which of the following/i, '"which of the following"'],
   [/^(is|are|does|do|can) /i, 'yes/no question'],
   [/^why /i, '"why" question'],
+  // "Which nerve is NOT in the spermatic cord?" has countless right answers
+  // (owner, 2026-11-17). The prompt already says to turn a negative fact into a
+  // positive card; this catches the cards where the model did not. "Ineffective
+  // for which drug?" (the owner's lithium card) is not caught: no "not"/"except".
+  [/\b(not|except|never|least likely)\b/i, 'asks which one is not'],
 ]
 
 /** The automatic card checks (the same ones the training cards passed). Empty = fine. */

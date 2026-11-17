@@ -23,7 +23,7 @@ import {
 } from '../triviadox/jobs'
 import { FACTS_PER_REQUEST, KEY_FACT_MODES, QUESTIONS_PER_REQUEST } from './models'
 import {
-  buildCardsUserMessage, buildFactsUserMessage, buildReconcilePrompt, NEW_FACT_ID_BASE,
+  buildCardsUserMessage, buildFactsUserMessage, buildReconcilePrompt, cardProblems, NEW_FACT_ID_BASE,
   parseCardsReply, parseFactsReply, parseReconcileReply,
 } from './prompts'
 import { saveKfJob, type KfJob } from './state'
@@ -208,7 +208,16 @@ export async function prepareExport(job: KfJob, deps: Deps): Promise<SubmitBody>
 
   if (job.kind === 'cards') {
     const current = new Map(now.facts.map((f) => [f.id, f]))
-    const cards = job.cards.filter((c) => {
+    // Re-run the card checks: a rule added after the cards were written (e.g.
+    // no "which … is not" questions) still applies to this run's export.
+    const checked = job.cards.filter((c) => {
+      const problems = cardProblems(c)
+      if (problems.length) job.skipped.push({ id: String(c.factId), reason: problems.join(', ') })
+      return problems.length === 0
+    })
+    job.cards = checked
+    await save(job, deps)
+    const cards = checked.filter((c) => {
       const f = current.get(c.factId)
       if (!f || f.md5 !== c.factMd5) return false
       return !(missingOnly && f.hasCard && !f.cardStale)
