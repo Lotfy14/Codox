@@ -15,6 +15,15 @@
 import { openExternal } from '../external-open'
 import { triviadoxOrigin } from './site'
 
+/**
+ * The key-fact reply contract this build parses, declared as `?contract=` on
+ * the pair poll. 1: `newFacts` + `newIndex`; 2: each result carries its own
+ * fact, or `matchId`, or `sameAs` (`parseFactsReply` reads both). A site that
+ * predates contracts ignores it and sends 1.
+ */
+export type FactsContract = 1 | 2
+export const FACTS_CONTRACT: FactsContract = 2
+
 export type JobKind = 'facts' | 'cards'
 export type JobScope = 'missing' | 'all'
 
@@ -63,7 +72,8 @@ export interface JobPayload {
   subtopics: JobSubtopic[]
   facts: JobFact[]
   questions: JobQuestion[]
-  prompts: { keyFacts: string; cards: string }
+  /** `keyFactsContract`: the reply `keyFacts` asks for; absent from sites before contracts (= 1). */
+  prompts: { keyFacts: string; keyFactsContract?: FactsContract; cards: string }
 }
 
 export interface RecheckResult {
@@ -153,7 +163,7 @@ async function call<T>(p: Pairing, path: string, init: RequestInit = {}, signal?
 
 /** One poll: the job once the manager has sent it, or null while waiting. */
 export async function fetchJob(p: Pairing, signal?: AbortSignal): Promise<JobPayload | null> {
-  const body = await call<JobPayload | { waiting: true }>(p, 'pair', {}, signal)
+  const body = await call<JobPayload | { waiting: true }>(p, `pair?contract=${FACTS_CONTRACT}`, {}, signal)
   return 'waiting' in body ? null : body
 }
 

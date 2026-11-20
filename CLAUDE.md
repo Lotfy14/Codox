@@ -53,6 +53,17 @@ API), `src/keyfacts/` (models, prompts, runner, saved state),
   card rules. Codox owns only the user-message layout and the reply parsers
   (`src/keyfacts/prompts.ts`), which must stay in step with Triviadox's
   generator.
+- **Two key-fact reply contracts (2026-11-20).** Codox declares the one it
+  parses as `?contract=2` on the pair poll (`FACTS_CONTRACT`,
+  `src/triviadox/jobs.ts`); the site answers with that prompt and names it in
+  `prompts.keyFactsContract`, absent meaning 1. Contract 1 is `newFacts` +
+  `newIndex` at 25 questions a request; contract 2 (the key-fact lab's E2)
+  puts each question's fact on its own result with `tests`, or `matchId`, or
+  `sameAs`, at 40 a request (`QUESTIONS_PER_REQUEST`). `parseFactsReply` reads
+  both, repairs `"tests":"sameAs":N`, and reads each `{"q":…}` item on its own
+  when the reply is broken. Its tests use real Flash-Lite replies in
+  `src/keyfacts/fixtures/`. Raising `FACTS_CONTRACT` needs a parser for the new
+  contract first.
 - **Every subtopic's existing facts go in every request** (owner rule): a
   question must never get a new fact when one already covers it. Before export
   Codox re-reads the subtopics and reconciles against facts added meanwhile;

@@ -11,6 +11,8 @@
  * controller's runtime fallback and demotion work exactly as for conversions.
  * Same one key, Gemini only: these are models, never another key or provider.
  */
+import type { FactsContract } from '../triviadox/jobs'
+
 export type KeyFactMode = 'normal' | 'pro'
 
 export interface ModelPair {
@@ -23,7 +25,12 @@ export const KEY_FACT_MODES: Record<KeyFactMode, ModelPair> = {
   pro: { primary: 'gemini-3.5-flash', fallback: 'gemini-3.6-flash' },
 }
 
-/** Questions per key-fact request (measured on Flash-Lite, 2026-11-17). */
-export const QUESTIONS_PER_REQUEST = 25
+/**
+ * Questions per key-fact request, by the reply contract the job's prompt asks
+ * for (`JobPayload.prompts.keyFactsContract`). 25 measured on Flash-Lite
+ * 2026-11-17; 40 is the key-fact lab's E2 (2026-11-20), where writing each fact
+ * beside its question kept 40 a request accurate.
+ */
+export const QUESTIONS_PER_REQUEST: Record<FactsContract, number> = { 1: 25, 2: 40 }
 /** Facts per flashcard request (measured on Flash-Lite and Flash, 2026-11-17). */
 export const FACTS_PER_REQUEST = 20

@@ -118,9 +118,10 @@ function strike(job: KfJob, id: string, reason: string): boolean {
 
 async function runFacts(job: KfJob, deps: Deps) {
   const payload = job.payload!
+  const perRequest = QUESTIONS_PER_REQUEST[payload.prompts.keyFactsContract ?? 1]
   for (const sub of payload.subtopics) {
     for (;;) {
-      const batch = pendingQuestions(job).filter((q) => q.subtopicId === sub.id).slice(0, QUESTIONS_PER_REQUEST)
+      const batch = pendingQuestions(job).filter((q) => q.subtopicId === sub.id).slice(0, perRequest)
       if (batch.length === 0) break
       if (deps.signal.aborted) throw new RunStop('aborted', 'Stopped.')
 
@@ -142,6 +143,8 @@ async function runFacts(job: KfJob, deps: Deps) {
         }
       }
       const prompt = `${payload.prompts.keyFacts}\n\n${buildFactsUserMessage(batch, existing, notes)}`
+      // 6,400 tokens at 40 questions; contract 2 at 40 used ~1,150 a request in
+      // the key-fact lab (71 requests, none cut off).
       const { text, model } = await ask(job, prompt, images, Math.min(8192, 400 + batch.length * 150), deps)
 
       const known = new Set(existing.map((f) => f.id))

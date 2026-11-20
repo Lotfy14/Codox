@@ -33,6 +33,7 @@ import { useGeminiCredential } from './state/credentials'
 import { archiveFinishedCurrentJobOnStartup } from './state/jobs'
 import { useDailyQuota, useModelQuota } from './state/quota'
 import { KEY_FACT_MODES, FACTS_PER_REQUEST, QUESTIONS_PER_REQUEST, type KeyFactMode } from './keyfacts/models'
+import { FACTS_CONTRACT } from './triviadox/jobs'
 import { setKeyFactMode, useKeyFactMode } from './keyfacts/mode'
 import { keyFactsMessages } from './copy/messages'
 import { useStorageEstimate } from './state/storage'
@@ -103,7 +104,7 @@ function KeyFactsQuotaStrip() {
         ))}
       </div>
       <p className="ds-quota-strip__label">
-        {keyFactsMessages.quotaLeft(left * QUESTIONS_PER_REQUEST, left * FACTS_PER_REQUEST)} · {keyFactsMessages.quotaResets(resetTime())}
+        {keyFactsMessages.quotaLeft(left * QUESTIONS_PER_REQUEST[FACTS_CONTRACT], left * FACTS_PER_REQUEST)} · {keyFactsMessages.quotaResets(resetTime())}
       </p>
     </div>
   )

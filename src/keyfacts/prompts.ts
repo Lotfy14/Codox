@@ -59,31 +59,114 @@ function firstJson(raw: string): unknown {
 }
 
 /**
- * `{"newFacts":[...],"results":[{"q":n,"matchId":id}|{"q":n,"newIndex":i}]}`.
- * Drops a matchId that is not one of `knownIds`, a newIndex outside newFacts,
- * a question number out of range and any second answer for the same question.
+ * A key-fact reply, in either contract Triviadox may have asked for (it says
+ * which in `prompts.keyFactsContract`; both are read the same way here):
+ *  1: `{"newFacts":[...],"results":[{"q":n,"matchId":id}|{"q":n,"newIndex":i}]}`
+ *  2: `{"results":[{"q":n,"tests":"…","fact":"…"}|{…,"matchId":id}|{…,"sameAs":m}]}`
+ * Inline facts are returned as extra `newFacts` entries (one per distinct text),
+ * so callers handle both contracts alike.
+ *
+ * Drops a matchId that is not one of `knownIds`, a newIndex outside newFacts, a
+ * sameAs naming a question not answered earlier in the reply, an empty fact, a
+ * question number out of range and any second answer for the same question. A
+ * fact that is only a number is read as a matchId (Flash-Lite does this for
+ * about 1% of facts).
  */
 export function parseFactsReply(raw: string, questionCount: number, knownIds: ReadonlySet<number>): { newFacts: string[]; links: FactLink[] } {
-  const obj = firstJson(raw) as { newFacts?: unknown; results?: unknown } | undefined
-  if (!obj || typeof obj !== 'object') return { newFacts: [], links: [] }
-  const newFacts = Array.isArray(obj.newFacts) ? obj.newFacts.map((s) => String(s ?? '').replace(/\s+/g, ' ').trim()) : []
-  const seen = new Set<number>()
+  const { results, newFacts: listed } = readFactsReply(raw)
+  const newFacts = listed.map(squash)
+  const indexForText = new Map<string, number>()
+  const inlineIndex = (text: string) => {
+    const key = text.toLowerCase()
+    let i = indexForText.get(key)
+    if (i === undefined) {
+      i = newFacts.length
+      newFacts.push(text)
+      indexForText.set(key, i)
+    }
+    return i
+  }
+  const linkOf = new Map<number, FactLink>()
   const links: FactLink[] = []
-  for (const r of Array.isArray(obj.results) ? obj.results as Record<string, unknown>[] : []) {
+  const add = (link: FactLink) => { linkOf.set(link.q, link); links.push(link) }
+  for (const r of results) {
     const q = Number(r?.q)
-    if (!Number.isInteger(q) || q < 1 || q > questionCount || seen.has(q)) continue
+    if (!Number.isInteger(q) || q < 1 || q > questionCount || linkOf.has(q)) continue
+    const fact = typeof r.fact === 'string' || typeof r.fact === 'number' ? squash(String(r.fact)) : ''
+    const factId = /^\d+$/.test(fact) ? Number(fact) : null
+    const sameAs = linkOf.get(Number(r.sameAs))
     if (r.matchId != null && knownIds.has(Number(r.matchId))) {
-      seen.add(q)
-      links.push({ q, matchId: Number(r.matchId) })
+      add({ q, matchId: Number(r.matchId) })
+    } else if (factId !== null) {
+      if (knownIds.has(factId)) add({ q, matchId: factId })
+    } else if (fact) {
+      add({ q, newIndex: inlineIndex(fact) })
+    } else if (r.sameAs != null && sameAs) {
+      add({ ...sameAs, q })
     } else if (r.newIndex != null && Number.isInteger(Number(r.newIndex))) {
       const i = Number(r.newIndex)
-      if (i >= 0 && i < newFacts.length && newFacts[i]) {
-        seen.add(q)
-        links.push({ q, newIndex: i })
-      }
+      if (i >= 0 && i < listed.length && newFacts[i]) add({ q, newIndex: i })
     }
   }
   return { newFacts, links }
+}
+
+const squash = (s: unknown) => String(s ?? '').replace(/\s+/g, ' ').trim()
+
+/**
+ * The reply's result objects and its `newFacts` list, recovering what a broken
+ * reply still holds:
+ *  - `"tests":"sameAs":9` (a fusion Flash-Lite writes) is read as `"sameAs":9`;
+ *  - when the reply does not parse, or parses to fewer results than it plainly
+ *    contains (a second, empty `"results"` key overrides the first), each
+ *    `{"q":…}` object is read on its own, so one bad item never costs the batch.
+ */
+function readFactsReply(raw: string): { results: Record<string, unknown>[]; newFacts: unknown[] } {
+  const text = String(raw ?? '').trim()
+    .replace(/^```(?:json)?\s*|\s*```$/g, '')
+    .replace(/"tests"\s*:\s*"(sameAs|matchId|fact)"\s*:/g, '"$1":')
+  const whole = firstJson(text) as { newFacts?: unknown; results?: unknown } | undefined
+  const results = Array.isArray(whole?.results) ? (whole.results as unknown[]).filter(isObject) : []
+  let newFacts: unknown[] = Array.isArray(whole?.newFacts) ? whole.newFacts : []
+  const items = resultObjects(text)
+  if (items.length <= results.length) return { results, newFacts }
+  if (!newFacts.length) {
+    const m = text.match(/"newFacts"\s*:\s*(\[[\s\S]*?\])\s*,\s*"results"/)
+    try { newFacts = m ? JSON.parse(m[1]) : [] } catch { newFacts = [] }
+  }
+  return { results: items, newFacts: Array.isArray(newFacts) ? newFacts : [] }
+}
+
+const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
+
+/** Every `{"q":…}` object in `text` that parses on its own. */
+function resultObjects(text: string): Record<string, unknown>[] {
+  const out: Record<string, unknown>[] = []
+  for (const m of text.matchAll(/\{\s*"q"\s*:/g)) {
+    const end = objectEnd(text, m.index)
+    if (end < 0) continue
+    try {
+      const o = JSON.parse(text.slice(m.index, end))
+      if (isObject(o)) out.push(o)
+    } catch { /* a broken item: skip it */ }
+  }
+  return out
+}
+
+/** Index just past the `}` closing the object that opens at `start`, or -1. */
+function objectEnd(text: string, start: number): number {
+  let depth = 0
+  let inString = false
+  for (let i = start; i < text.length; i++) {
+    const c = text[i]
+    if (inString) {
+      if (c === '\\') i++
+      else if (c === '"') inString = false
+    } else if (c === '"') inString = true
+    else if (c === '{') depth++
+    else if (c === '}' && --depth === 0) return i + 1
+  }
+  return -1
 }
 
 // ── reconcile ────────────────────────────────────────────────────────────────
